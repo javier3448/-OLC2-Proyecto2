@@ -1,16 +1,17 @@
-const parser = require('../Translator/TranslatorParser');
-
-export let translation:string = "";
-
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.translate = exports.translation = void 0;
+var parser = require('../Translator/TranslatorParser');
+exports.translation = "";
 //retorna el texto traducido
 //chapuz: el resultado de la traduccion se va a escribir en una variable global
 //nunca puede retornar null porque se recupera 
 //de los 3 tipos de erorres
-export function translate(sourceCode:string){
+function translate(sourceCode) {
     //vaciamos el buffer donde vamos a guardar la traduccion resultante
-    translation = "";
-    console.log(parser.parse(sourceCode));
+    exports.translation = "";
     return parser.parse(sourceCode);
     //parse get AstNode
     //root.translate
 }
+exports.translate = translate;

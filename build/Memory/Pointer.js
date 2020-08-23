@@ -1,6 +1,8 @@
-import { MyObj } from "./MyObj";
-import { MyType, MyTypeKind } from "./MyType";
-
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.Pointer = void 0;
+var MyObj_1 = require("./MyObj");
+var MyType_1 = require("./MyType");
 //Hicimos esta clase porque ser requieren dos niveles de punteros para implementar el comportamiento pasar parametros por
 //ref y setear dos simbolos al mismo objeto
 //        |Symbol|*|---->|Pointer|*|----->|MyObj|
@@ -15,30 +17,25 @@ import { MyType, MyTypeKind } from "./MyType";
 //                                             //como al hacer asignaciones
 //                                             //(a = new obj;
 //                                                b = a;)
-export class Pointer{
-    private myObj:MyObj;
-
-    constructor(){
-        this.myObj = new MyObj(new MyType(MyTypeKind.BOOLEAN), null);
+var Pointer = /** @class */ (function () {
+    function Pointer() {
+        this.myObj = new MyObj_1.MyObj(new MyType_1.MyType(MyType_1.MyTypeKind.BOOLEAN), null);
     }
-
-    public getValue():MyObj{
+    Pointer.prototype.getValue = function () {
         return this.myObj.value;
-    }
-
-    public getType():MyType{
+    };
+    Pointer.prototype.getType = function () {
         return this.myObj.myType;
-    }
-
+    };
     //NO TYPECHECKING
-    public setValue(myObj:MyObj):void{
-        let originalType = this.getType();
-
-        if(myObj.isPrimitive()){
+    Pointer.prototype.setValue = function (myObj) {
+        var originalType = this.getType();
+        if (myObj.isPrimitive()) {
             //TODO
         }
-        if(myObj.value instanceof Number){
-
+        if (myObj.value instanceof Number) {
         }
-    }
-}
+    };
+    return Pointer;
+}());
+exports.Pointer = Pointer;

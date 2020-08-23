@@ -71,13 +71,13 @@
     recoverable: (boolean: TRUE when the parser has a error recovery rule available for this particular error)
   }
 */
-var translation = (function(){
-var o=function(k,v,o,l){for(o=o||{},l=k.length;l--;o[k[l]]=v);return o},$V0=[1,5],$V1=[1,6],$V2=[1,7],$V3=[1,9],$V4=[1,10],$V5=[5,6,8,13],$V6=[1,11],$V7=[1,12],$V8=[5,6,8,9,11,13];
+var TranslatorParser = (function(){
+var o=function(k,v,o,l){for(o=o||{},l=k.length;l--;o[k[l]]=v);return o},$V0=[1,4],$V1=[1,5],$V2=[1,7],$V3=[1,8],$V4=[1,9],$V5=[1,10],$V6=[1,11],$V7=[1,12],$V8=[1,13],$V9=[1,14],$Va=[1,15],$Vb=[1,16],$Vc=[1,17],$Vd=[5,6,7,8,9,10,11,12,13,14,15,16,19],$Ve=[5,6,7,11,12,13,14,15,16,19],$Vf=[5,6,7,8,9,11,12,13,14,15,16,19],$Vg=[5,11,12,13,14,15,16,19],$Vh=[5,15,16,19];
 var parser = {trace: function trace () { },
 yy: {},
-symbols_: {"error":2,"Init":3,"E":4,"EOF":5,"+":6,"T":7,"-":8,"*":9,"F":10,"/":11,"(":12,")":13,"DECIMAL":14,"NUMBER":15,"$accept":0,"$end":1},
-terminals_: {2:"error",5:"EOF",6:"+",8:"-",9:"*",11:"/",12:"(",13:")",14:"DECIMAL",15:"NUMBER"},
-productions_: [0,[3,2],[4,3],[4,3],[4,1],[7,3],[7,3],[7,1],[10,3],[10,1],[10,1]],
+symbols_: {"error":2,"S":3,"Expr":4,"EOF":5,"+":6,"-":7,"*":8,"/":9,"**":10,"<":11,"<=":12,">":13,">=":14,"==":15,"!=":16,"F":17,"(":18,")":19,"NUMBER":20,"$accept":0,"$end":1},
+terminals_: {2:"error",5:"EOF",6:"+",7:"-",8:"*",9:"/",10:"**",11:"<",12:"<=",13:">",14:">=",15:"==",16:"!=",18:"(",19:")",20:"NUMBER"},
+productions_: [0,[3,2],[4,3],[4,3],[4,3],[4,3],[4,3],[4,3],[4,3],[4,3],[4,3],[4,3],[4,3],[4,1],[17,3],[17,1]],
 performAction: function anonymous(yytext, yyleng, yylineno, yy, yystate /* action[1] */, $$ /* vstack */, _$ /* lstack */) {
 /* this == yyval */
 
@@ -90,48 +90,85 @@ case 1:
 break;
 case 2:
 
-        this.$ = new Arithmetic($$[$0-2], $$[$0], ArithmeticOption.PLUS, _$[$0-2].first_line,_$[$0-2].first_column);
+        this.$ = new Expression(ExpressionKind.ADDITION, [$$[$0-2], $$[$0]], _$[$0-2].first_line, _$[$0-2].first_column, _$[$0].last_line, _$[$0].last_column);
     
 break;
 case 3:
 
-        this.$ = new Arithmetic($$[$0-2], $$[$0], ArithmeticOption.MINUS, _$[$0-2].first_line,_$[$0-2].first_column);
+        this.$ = new Expression(ExpressionKind.SUBSTRACTION, [$$[$0-2], $$[$0]], _$[$0-2].first_line, _$[$0-2].first_column, _$[$0].last_line, _$[$0].last_column);
     
 break;
 case 4:
-
-        this.$ = $$[$0];
+ 
+        this.$ = new Expression(ExpressionKind.MULTIPLICATION, [$$[$0-2], $$[$0]], _$[$0-2].first_line, _$[$0-2].first_column, _$[$0].last_line, _$[$0].last_column);
     
 break;
 case 5:
- 
-        this.$ = new Arithmetic($$[$0-2], $$[$0], ArithmeticOption.TIMES, _$[$0-2].first_line,_$[$0-2].first_column);
+
+        this.$ = new Expression(ExpressionKind.DIVISION, [$$[$0-2], $$[$0]], _$[$0-2].first_line, _$[$0-2].first_column, _$[$0].last_line, _$[$0].last_column);
     
 break;
 case 6:
 
-        this.$ = new Arithmetic($$[$0-2], $$[$0], ArithmeticOption.DIV, _$[$0-2].first_line,_$[$0-2].first_column);
+        this.$ = new Expression(ExpressionKind.POWER, [$$[$0-2], $$[$0]], _$[$0-2].first_line, _$[$0-2].first_column, _$[$0].last_line, _$[$0].last_column);
     
 break;
 case 7:
- 
-        this.$ = $$[$0];
+
+        this.$ = new Expression(ExpressionKind.LESS, [$$[$0-2], $$[$0]], _$[$0-2].first_line, _$[$0-2].first_column, _$[$0].last_line, _$[$0].last_column);
     
 break;
 case 8:
+
+        this.$ = new Expression(ExpressionKind.LESS_OR_EQUAL, [$$[$0-2], $$[$0]], _$[$0-2].first_line, _$[$0-2].first_column, _$[$0].last_line, _$[$0].last_column);
+    
+break;
+case 9:
+
+        this.$ = new Expression(ExpressionKind.GREATER, [$$[$0-2], $$[$0]], _$[$0-2].first_line, _$[$0-2].first_column, _$[$0].last_line, _$[$0].last_column);
+    
+break;
+case 10:
+
+        this.$ = new Expression(ExpressionKind.GREATER_EQUAL, [$$[$0-2], $$[$0]], _$[$0-2].first_line, _$[$0-2].first_column, _$[$0].last_line, _$[$0].last_column);
+    
+break;
+case 11:
+
+        this.$ = new Expression(ExpressionKind.EQUAL, [$$[$0-2], $$[$0]], _$[$0-2].first_line, _$[$0-2].first_column, _$[$0].last_line, _$[$0].last_column);
+    
+break;
+case 12:
+
+        this.$ = new Expression(ExpressionKind.NOT_EQUAL, [$$[$0-2], $$[$0]], _$[$0-2].first_line, _$[$0-2].first_column, _$[$0].last_line, _$[$0].last_column);
+    
+break;
+case 13:
+
+        this.$ = $$[$0];
+    
+break;
+case 14:
  
+        //hay que pasar la ubicacion de inicio y final de los ( )
+        $$[$0-1].first_line = _$[$0-2].first_line;
+        $$[$0-1].first_column = _$[$0-2].first_column;
+        $$[$0-1].last_line = _$[$0].last_line;
+        $$[$0-1].last_column = _$[$01].last_column;
+
         this.$ = $$[$0-1];
     
 break;
-case 9: case 10:
+case 15:
  
-        this.$ = new Literal($$[$0], _$[$0].first_line, _$[$0].first_column);
+        console.log($$[$0]);
+        this.$ = new Expression(ExpressionKind.ATOMIC, [new Number($$[$0])], _$[$0].first_line, _$[$0].first_column, _$[$0].last_line, _$[$0].last_column);
     
 break;
 }
 },
-table: [{3:1,4:2,7:3,10:4,12:$V0,14:$V1,15:$V2},{1:[3]},{5:[1,8],6:$V3,8:$V4},o($V5,[2,4],{9:$V6,11:$V7}),o($V8,[2,7]),{4:13,7:3,10:4,12:$V0,14:$V1,15:$V2},o($V8,[2,9]),o($V8,[2,10]),{1:[2,1]},{7:14,10:4,12:$V0,14:$V1,15:$V2},{7:15,10:4,12:$V0,14:$V1,15:$V2},{10:16,12:$V0,14:$V1,15:$V2},{10:17,12:$V0,14:$V1,15:$V2},{6:$V3,8:$V4,13:[1,18]},o($V5,[2,2],{9:$V6,11:$V7}),o($V5,[2,3],{9:$V6,11:$V7}),o($V8,[2,5]),o($V8,[2,6]),o($V8,[2,8])],
-defaultActions: {8:[2,1]},
+table: [{3:1,4:2,17:3,18:$V0,20:$V1},{1:[3]},{5:[1,6],6:$V2,7:$V3,8:$V4,9:$V5,10:$V6,11:$V7,12:$V8,13:$V9,14:$Va,15:$Vb,16:$Vc},o($Vd,[2,13]),{4:18,17:3,18:$V0,20:$V1},o($Vd,[2,15]),{1:[2,1]},{4:19,17:3,18:$V0,20:$V1},{4:20,17:3,18:$V0,20:$V1},{4:21,17:3,18:$V0,20:$V1},{4:22,17:3,18:$V0,20:$V1},{4:23,17:3,18:$V0,20:$V1},{4:24,17:3,18:$V0,20:$V1},{4:25,17:3,18:$V0,20:$V1},{4:26,17:3,18:$V0,20:$V1},{4:27,17:3,18:$V0,20:$V1},{4:28,17:3,18:$V0,20:$V1},{4:29,17:3,18:$V0,20:$V1},{6:$V2,7:$V3,8:$V4,9:$V5,10:$V6,11:$V7,12:$V8,13:$V9,14:$Va,15:$Vb,16:$Vc,19:[1,30]},o($Ve,[2,2],{8:$V4,9:$V5,10:$V6}),o($Ve,[2,3],{8:$V4,9:$V5,10:$V6}),o($Vf,[2,4],{10:$V6}),o($Vf,[2,5],{10:$V6}),o($Vf,[2,6],{10:$V6}),o($Vg,[2,7],{6:$V2,7:$V3,8:$V4,9:$V5,10:$V6}),o($Vg,[2,8],{6:$V2,7:$V3,8:$V4,9:$V5,10:$V6}),o($Vg,[2,9],{6:$V2,7:$V3,8:$V4,9:$V5,10:$V6}),o($Vg,[2,10],{6:$V2,7:$V3,8:$V4,9:$V5,10:$V6}),o($Vh,[2,11],{6:$V2,7:$V3,8:$V4,9:$V5,10:$V6,11:$V7,12:$V8,13:$V9,14:$Va}),o($Vh,[2,12],{6:$V2,7:$V3,8:$V4,9:$V5,10:$V6,11:$V7,12:$V8,13:$V9,14:$Va}),o($Vd,[2,14])],
+defaultActions: {6:[2,1]},
 parseError: function parseError (str, hash) {
     if (hash.recoverable) {
         this.trace(str);
@@ -279,8 +316,8 @@ parse: function parse(input) {
     return true;
 }};
 
-    const {Arithmetic, ArithmeticOption} = require('../Expression/Arithmetic');
-    const {Literal} = require('../Expression/Literal')
+    const { Expression, ExpressionKind } = require('./Ast/Expression');
+    //const {Literal} = require('../Expression/Literal')
 /* generated by jison-lex 0.3.4 */
 var lexer = (function(){
 var lexer = ({
@@ -605,36 +642,48 @@ pushState:function pushState (condition) {
 stateStackSize:function stateStackSize() {
         return this.conditionStack.length;
     },
-options: {"case-insensitive":true},
+options: {"case-sensitive":true},
 performAction: function anonymous(yy,yy_,$avoiding_name_collisions,YY_START) {
 var YYSTATE=YY_START;
 switch($avoiding_name_collisions) {
 case 0:/* skip whitespace */
 break;
-case 1:return 15
+case 1:return 20
 break;
-case 2:return 14
+case 2:return 10
 break;
-case 3:return 9
+case 3:return '%'
 break;
-case 4:return 11
+case 4:return 9
 break;
-case 5:return ';'
+case 5:return 8
 break;
-case 6:return 8
+case 6:return 7
 break;
 case 7:return 6
 break;
 case 8:return 12
 break;
-case 9:return 13 
+case 9:return 14
 break;
-case 10:return 5
+case 10:return 11
+break;
+case 11:return 13
+break;
+case 12:return 16
+break;
+case 13:return 15
+break;
+case 14:return 'AND'
+break;
+case 15:return 'OR'
+break;
+case 16:return 5
 break;
 }
 },
-rules: [/^(?:\s+)/i,/^(?:([0-9]+))/i,/^(?:({entero}\.{entero}))/i,/^(?:\*)/i,/^(?:\/)/i,/^(?:;)/i,/^(?:-)/i,/^(?:\+)/i,/^(?:\()/i,/^(?:\))/i,/^(?:$)/i],
-conditions: {"INITIAL":{"rules":[0,1,2,3,4,5,6,7,8,9,10],"inclusive":true}}
+rules: [/^(?:\s+)/,/^(?:[0-9]+(\.[0-9]+)?)/,/^(?:OR\b)/,/^(?:AND\b)/,/^(?:==)/,/^(?:!=)/,/^(?:>)/,/^(?:<)/,/^(?:>=)/,/^(?:<=)/,/^(?:\+')/,/^(?:-)/,/^(?:\*)/,/^(?:\/)/,/^(?:%)/,/^(?:\*\*)/,/^(?:$)/],
+conditions: {"INITIAL":{"rules":[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16],"inclusive":true}}
 });
 return lexer;
 })();
@@ -648,9 +697,9 @@ return new Parser;
 
 
 if (typeof require !== 'undefined' && typeof exports !== 'undefined') {
-exports.parser = translation;
-exports.Parser = translation.Parser;
-exports.parse = function () { return translation.parse.apply(translation, arguments); };
+exports.parser = TranslatorParser;
+exports.Parser = TranslatorParser.Parser;
+exports.parse = function () { return TranslatorParser.parse.apply(TranslatorParser, arguments); };
 exports.main = function commonjsMain (args) {
     if (!args[1]) {
         console.log('Usage: '+args[0]+' FILE');
