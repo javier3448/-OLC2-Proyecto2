@@ -6,23 +6,29 @@
 %lex
 %options case-sensitive
 %%
-\s+                   /* skip whitespace */
+\s+                                   /* skip whitespace */
+"//".*                                /* IGNORE */
+[/][*][^*]*[*]+([^/*][^*]*[*]+)*[/]   /* IGNORE */
+
 
 [0-9]+(\.[0-9]+)?     return 'NUMBER'
-"OR"                  return '**'
-"AND"                 return '%'
-"=="                  return '/'
-"!="                  return '*'
-">"                   return '-'
-"<"                   return '+'
-">="                  return '<='
-"<="                  return '>='
-"+'"                  return '<'
-"-"                   return '>'
-"*"                   return '!='
-"/"                   return '=='
-"%"                   return 'AND'
-"**"                  return 'OR'
+"OR"                  return 'OR'
+"AND"                 return 'AND'
+"=="                  return '=='
+"!="                  return '!='
+">"                   return '>'
+"<"                   return '<'
+">="                  return '>='
+"<="                  return '<='
+"+"                   return '+'
+"-"                   return '-'
+"*"                   return '*'
+"/"                   return '/'
+"%"                   return '%'
+"**"                  return '**'
+"NOT"                 return 'NOT'
+"++"                  return '++'
+"--"                  return '--'
 <<EOF>>		          return 'EOF'
 
 /lex
@@ -35,21 +41,21 @@
 %left 'OR'
 %left 'AND'
 %left '==', '!='
-%left '>', '<', '>=', '<='
+%nonassoc '>', '<', '>=', '<='
 %left '+', '-'
 %left '*', '/', '%'
 %right '**' 
+%right 'NOT', UNARY_MINUS 
+%nonassoc '++', '--'
 
 //TODO: completar los operadores:
 //NOT
-//unary minus (ver en proye de compi1)
 //incrmento (solo post [?] preguntar en foro para estar tranquilo)
 //decremento (solo post [?] preguntar en foro para estar tranquilo)
 //ternario
 
 
 %start S
-
 %%
 
 S
@@ -103,6 +109,22 @@ Expr
     | Expr '!=' Expr
     {
         $$ = new Expression(ExpressionKind.NOT_EQUAL, [$1, $3], @1.first_line, @1.first_column, @3.last_line, @3.last_column);
+    }
+    | 'NOT' Expr
+    {
+        $$ = new Expression(ExpressionKind.NOT, [$2], @1.first_line, @1.first_column, @2.last_line, @2.last_column);
+    }
+    | '-' Expr %prec UNARY_MINUS
+    {
+        $$ = new Expression(ExpressionKind.UNARY_MINUS, [$2], @1.first_line, @1.first_column, @2.last_line, @2.last_column);
+    }
+    | Expr '++'
+    {
+        $$ = new Expression(ExpressionKind.POSTFIX_INC, [$2], @1.first_line, @1.first_column, @2.last_line, @2.last_column);
+    }
+    | Expr '--'
+    {
+        $$ = new Expression(ExpressionKind.POSTFIX_DEC, [$2], @1.first_line, @1.first_column, @2.last_line, @2.last_column);
     }
     | F
     {

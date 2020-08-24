@@ -14,8 +14,10 @@ export enum ExpressionKind{
     POWER = '**',
 
     //unary
-    MINUS = '-',
+    UNARY_MINUS = '-',
     NEGATION = '!',
+    POSTFIX_INC = '++',
+    POSTFIX_DEC = '--',
 
     ATOMIC = '',
 
@@ -86,7 +88,9 @@ export class Expression{
             break;
 
             //unary
-            case ExpressionKind.MINUS:
+            case ExpressionKind.UNARY_MINUS:
+            case ExpressionKind.POSTFIX_INC:
+            case ExpressionKind.POSTFIX_DEC:
             case ExpressionKind.NEGATION:
             case ExpressionKind.ATOMIC:
                 if(children.length != 1){
@@ -100,6 +104,9 @@ export class Expression{
                     throw new Error(`Assertion Error: Operator ${operatorKind.toString()} must have 1 subexpressions instead of ${children.length}`);
                 }
             break;
+            //Solo para que no se nos olvide incluir todos los operadores posibles en este switch
+            default:
+                throw new Error(`[!!!] No se ha implementado todavia el operador ${operatorKind.toString()}`);
         }
 
         this.operatorKind = operatorKind
