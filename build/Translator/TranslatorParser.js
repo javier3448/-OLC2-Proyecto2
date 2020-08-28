@@ -171,12 +171,11 @@ break;
 case 18:
  
         //hay que pasar la ubicacion de inicio y final de los ( )
-        $$[$0-1].first_line = _$[$0-2].first_line;
-        $$[$0-1].first_column = _$[$0-2].first_column;
-        $$[$0-1].last_line = _$[$0].last_line;
-        $$[$0-1].last_column = _$[$01].last_column;
-
         this.$ = $$[$0-1];
+        this.$.first_line = _$[$0-2].first_line;
+        this.$.first_column = _$[$0-2].first_column;
+        this.$.last_line = _$[$0].last_line;
+        this.$.last_column = _$[$0].last_column;
     
 break;
 case 19:
@@ -708,12 +707,16 @@ case 19:return 18
 break;
 case 20:return 19
 break;
-case 21:return 5
+case 21:return 21
+break;
+case 22:return 22
+break;
+case 23:return 5
 break;
 }
 },
-rules: [/^(?:\s+)/,/^(?:\/\/.*)/,/^(?:[/][*][^*]*[*]+([^/*][^*]*[*]+)*[/])/,/^(?:[0-9]+(\.[0-9]+)?)/,/^(?:OR\b)/,/^(?:AND\b)/,/^(?:==)/,/^(?:!=)/,/^(?:>)/,/^(?:<)/,/^(?:>=)/,/^(?:<=)/,/^(?:\+)/,/^(?:-)/,/^(?:\*)/,/^(?:\/)/,/^(?:%)/,/^(?:\*\*)/,/^(?:NOT\b)/,/^(?:\+\+)/,/^(?:--)/,/^(?:$)/],
-conditions: {"INITIAL":{"rules":[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21],"inclusive":true}}
+rules: [/^(?:\s+)/,/^(?:\/\/.*)/,/^(?:[/][*][^*]*[*]+([^/*][^*]*[*]+)*[/])/,/^(?:[0-9]+(\.[0-9]+)?)/,/^(?:OR\b)/,/^(?:AND\b)/,/^(?:==)/,/^(?:!=)/,/^(?:>)/,/^(?:<)/,/^(?:>=)/,/^(?:<=)/,/^(?:\+)/,/^(?:-)/,/^(?:\*)/,/^(?:\/)/,/^(?:%)/,/^(?:\*\*)/,/^(?:NOT\b)/,/^(?:\+\+)/,/^(?:--)/,/^(?:\()/,/^(?:\))/,/^(?:$)/],
+conditions: {"INITIAL":{"rules":[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23],"inclusive":true}}
 });
 return lexer;
 })();

@@ -10,7 +10,8 @@ exports.translation = "";
 function translate(sourceCode) {
     //vaciamos el buffer donde vamos a guardar la traduccion resultante
     exports.translation = "";
-    return parser.parse(sourceCode);
+    var result = parser.parse(sourceCode);
+    return result;
     //parse get AstNode
     //root.translate
 }

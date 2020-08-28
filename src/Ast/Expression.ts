@@ -1,3 +1,6 @@
+import { AstNode } from "./AstNode";
+
+
 export enum ExpressionKind{
     //binary
     LESS = '<',
@@ -56,18 +59,15 @@ export function stringToExpressionKind(s:string):ExpressionKind{
     throw new Error(`Assertion Error: string <${s}> doesn't represent a valid ExpressionKind`);
 }
 
-export class Expression{
-    public firstLine: number;
-    public firstColumn: number;
-
-    public lastLine: number;
-    public lastColumn: number;
-
+export class Expression extends AstNode{
     public operatorKind: ExpressionKind;
     public children: Array<(Expression | Number)>
 
     constructor(operatorKind:ExpressionKind, children: Array<Expression | Number>, 
                 firstLine:number, firstColumn:number, lastLine:number, lastColumn:number){
+        //Common AST attributes
+        super(firstLine, firstColumn, lastLine, lastColumn);
+
         //assertions
         switch(operatorKind){
             //binary
@@ -106,16 +106,14 @@ export class Expression{
             break;
             //Solo para que no se nos olvide incluir todos los operadores posibles en este switch
             default:
-                throw new Error(`[!!!] No se ha implementado todavia el operador ${operatorKind.toString()}`);
+                throw new Error(`[!!!] No se ha implementado todavia el operador ${operatorKind}`);
         }
 
         this.operatorKind = operatorKind
         this.children = children;
+    }
 
-        //Common AST attributes
-        this.firstLine = firstLine;
-        this.firstColumn = firstColumn;
-        this.lastLine = lastLine;
-        this.lastColumn = lastColumn;
+    public getNodeId(): number {
+        return this.nodeId;
     }
 }

@@ -29,6 +29,8 @@
 "NOT"                 return 'NOT'
 "++"                  return '++'
 "--"                  return '--'
+"("                   return '('
+")"                   return ')'
 <<EOF>>		          return 'EOF'
 
 /lex
@@ -69,6 +71,7 @@ Expr
     : Expr '+' Expr
     {
         $$ = new Expression(ExpressionKind.ADDITION, [$1, $3], @1.first_line, @1.first_column, @3.last_line, @3.last_column);
+        $$.getNodeId();//Esta linea tira la excepcion: TypeError: expr.getNodeId is not a function
     }       
     | Expr '-' Expr
     {
@@ -135,12 +138,11 @@ Expr
 F   : '(' Expr ')'
     { 
         //hay que pasar la ubicacion de inicio y final de los ( )
-        $2.first_line = @1.first_line;
-        $2.first_column = @1.first_column;
-        $2.last_line = @3.last_line;
-        $2.last_column = @4.last_column;
-
         $$ = $2;
+        $$.first_line = @1.first_line;
+        $$.first_column = @1.first_column;
+        $$.last_line = @3.last_line;
+        $$.last_column = @3.last_column;
     }
     | NUMBER
     { 

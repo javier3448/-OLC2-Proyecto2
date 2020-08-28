@@ -9,8 +9,8 @@ export let translation:string = "";
 export function translate(sourceCode:string){
     //vaciamos el buffer donde vamos a guardar la traduccion resultante
     translation = "";
-    console.log(parser.parse(sourceCode));
-    return parser.parse(sourceCode);
+    let result = parser.parse(sourceCode);
+    return result;
     //parse get AstNode
     //root.translate
 }
