@@ -44,7 +44,7 @@ class Expresiones {
         log(temp2);
 
         //9
-        var temp3 =  (8 - 7 +  2 pow (3) );
+        var temp3 =  (8 - 7 +  2 ** (3) );
         log(temp3);
         
         //Verifico los resultados

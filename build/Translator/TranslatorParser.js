@@ -91,6 +91,7 @@ break;
 case 2:
 
         this.$ = new Expression(ExpressionKind.ADDITION, [$$[$0-2], $$[$0]], _$[$0-2].first_line, _$[$0-2].first_column, _$[$0].last_line, _$[$0].last_column);
+        this.$.getNodeId();//Esta linea tira la excepcion: TypeError: expr.getNodeId is not a function
     
 break;
 case 3:

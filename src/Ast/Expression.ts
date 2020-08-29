@@ -113,7 +113,7 @@ export class Expression extends AstNode{
         this.children = children;
     }
 
-    public getNodeId(): number {
+    getNodeId(): number {
         return this.nodeId;
     }
 }

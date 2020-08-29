@@ -50,12 +50,7 @@ var Expression_1 = require("../Ast/Expression");
 // //R: solo escribe uno, no tira exception ni aviasa de ninguna manera
 */
 //AQUI AQUI AQUI
-//Why the fuck doesnt .getNodeId() work fucking anywhere. not even 
-//from fukcing piece of shit jison
 {
     var expr = new Expression_1.Expression(Expression_1.ExpressionKind.ADDITION, [1, 2], 1, 3, 4, 5);
-    console.log(expr.getNodeId());
-    //it has it here :( 
-    //Why are they making us write compilers in fucking piece of shit typescript of all things
-    //Its fucking embarrassing
+    console.log(expr.getNodeId()); //aqui si funciona :(
 }
