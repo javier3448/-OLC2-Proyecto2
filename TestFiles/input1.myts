@@ -1,4 +1,0 @@
-// Javier asd;lfjk a;sl;kjadsl;kjdflkj
-// FIXME: postfix increment/decrement doesnt work at all
-// FIXME: (2 - 5) ** 3 doesnt work either
-10 * (1 + 3) + 10 

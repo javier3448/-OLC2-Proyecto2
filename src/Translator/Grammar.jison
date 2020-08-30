@@ -1,5 +1,5 @@
 %{
-    const { Expression, ExpressionKind } = require('./Ast/Expression');
+    const { Expression, ExpressionKind } = require('../Ast/Expression');
     //const {Literal} = require('../Expression/Literal')
 %}
 
