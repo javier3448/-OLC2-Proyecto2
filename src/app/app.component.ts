@@ -15,5 +15,18 @@ export class AppComponent implements OnInit{
   ngOnInit(): void {
     test();
   }
+
+
+  traducir(){
+    alert('translate');
+  }
+
+  ejecutar(){
+    alert('ejecutar');
+  }
+
+  test(){
+    alert('test');
+  }
 }
 
