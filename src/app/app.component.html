@@ -297,15 +297,15 @@
     }
   }
 </style>
-<table style="width: 100%">
+<table style="width: 100%; table-layout: fixed;">
 <thead>
   <tr>
     <th></th>
     <th>
-        <button (click)="traducir()">Traducir</button>
+        <button (click)="traducir(textBoxSource)">Traducir</button>
     </th>
     <th>
-        <button (click)="ejecutar()">Ejecutar</button>
+        <button (click)="ejecutar(textBoxSource)">Ejecutar</button>
     </th>
     <th></th>
   </tr>
@@ -314,7 +314,7 @@
     <th></th>
     <th></th>
     <th>
-        <button (click)="test()">Test</button>
+        <button (click)="test(textBoxSource)">Test</button>
     </th>
     <th></th>
   </tr>
@@ -322,8 +322,9 @@
 </thead>
 <tbody>
   <tr>
-    <td colspan="2">
-        <ngx-codemirror id="textBoxSource"
+    <td colspan="2" style="width: 50%">
+        <!-- DEBUGGING ONLY: for the this [(ngModel)] -->
+        <ngx-codemirror #textBoxSource [(ngModel)]="sourceString"
             [options]="{
                 lineNumbers: true,
                 theme: 'material',
@@ -331,8 +332,8 @@
             }"
         ></ngx-codemirror>
     </td>
-    <td colspan="2">
-        <ngx-codemirror
+    <td colspan="2" style="width: 50%">
+        <ngx-codemirror #textBoxJs [(ngModel)]="runtimeInterface.translation"
             [options]="{
                 lineNumbers: true,
                 theme: 'material',
@@ -342,10 +343,20 @@
     </td>
   </tr>
   <tr>
-    <td colspan="4"></td>
+    <td colspan="4">
+        <ngx-codemirror #textBoxJs [(ngModel)]="runtimeInterface.myConsole"
+            [options]="{
+                lineNumbers: false,
+                theme: 'material',
+                mode: 'null',
+                readOnly: 'true'
+            }"
+        ></ngx-codemirror>
+    </td>
   </tr>
   <tr>
-    <td colspan="4"></td>
+    <td colspan="4" id="astBox">
+    </td>
   </tr>
 </tbody>
 </table>

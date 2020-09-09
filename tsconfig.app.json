@@ -7,9 +7,17 @@
   },
   "files": [
     "src/main.ts",
+    "src/Grapher.ts",
+    "src/Runner/Runner.ts",
     "src/Ast/Expression.ts",
+    "src/Ast/MemberAccess.ts",
+    "src/Ast/RootAccess.ts",
+    "src/Ast/Statement.ts",
+    "src/Ast/Assignment.ts",
+    "src/Ast/Declaration.ts",
     "src/Ast/AstNode.ts",
-    "src/polyfills.ts"
+    "src/Ast/MyTypeNode.ts",
+    "src/polyfills.ts",
   ],
   "include": [
     "src/**/*.d.ts"

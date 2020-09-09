@@ -1,6 +1,10 @@
 import { AstNode } from "./AstNode";
+import { MemberAccess } from './MemberAccess';
+import { FunctionCall } from '@angular/compiler';
 
-
+// even though we have typeof and instanceof in typescript this is necessary because 
+// jison does some weird js things and sometimes we like 'loose the type and its
+// functions'. idk
 export enum ExpressionKind{
     //binary
     LESS = '<',
@@ -22,54 +26,60 @@ export enum ExpressionKind{
     POSTFIX_INC = '++',
     POSTFIX_DEC = '--',
 
-    ATOMIC = '',
-
     //ternary
-    TERNARY = '?'
+    TERNARY = '?',
+
+    //Atomic
+    MEMBER_ACCESS = 'MemberAccess',
+    LITERAL = 'LITERAL',
+    IDENTIFIER = 'IDENTIFIER',
+    FUNCTION_CALL = 'FUNCTION_CALL',
 }
 
-//There is probably a more idomatica way of doing this in typescript but this is fine for now
-//empty string returns ATOMIC ExpressionKind
-//"?" return TERNARY ExpressionKind
-export function stringToExpressionKind(s:string):ExpressionKind{
-    switch(s){
-        case '+':
-            return ExpressionKind.ADDITION;
-        case '-':
-            return ExpressionKind.SUBSTRACTION;
-        case '*':
-            return ExpressionKind.MULTIPLICATION;
-        case '/':
-            return ExpressionKind.DIVISION;
-        case '<':
-            return ExpressionKind.LESS;
-        case '<=':
-            return ExpressionKind.LESS_OR_EQUAL;
-        case '>':
-            return ExpressionKind.GREATER;
-        case '>=':
-            return ExpressionKind.GREATER_OR_EQUAL;
-        case '==':
-            return ExpressionKind.EQUAL;
-        case '!=':
-            return ExpressionKind.NOT_EQUAL;
-    }
-
-    //TODO: Terminar de poner los operadores
-    throw new Error(`Assertion Error: string <${s}> doesn't represent a valid ExpressionKind`);
+export class UnaryExpression{
+    constructor(public expr:Expression){   }
 }
 
-export class Expression extends AstNode{
-    public operatorKind: ExpressionKind;
-    public children: Array<(Expression | Number)>
+export class BinaryExpression{
+    constructor(public left:Expression, public right:Expression){   }
+}
 
-    constructor(operatorKind:ExpressionKind, children: Array<Expression | Number>, 
+export class TernaryExpression{
+    constructor(public left:Expression, public middle:Expression, public right:Expression){   }
+}
+
+export class LiteralExpression{
+    constructor(public literal:(String | Number | Boolean | undefined | null)){   }
+}
+
+export class IdentifierExpression{
+    constructor(public name:string){   }
+}
+
+export class FunctionCallExpression{
+    constructor(public name:string, public functionArgs:Expression[]){   }
+}
+
+export class MemberAccessExpression{
+    constructor(public expression:Expression, public memberAccess:MemberAccess){   }
+}
+
+export class Expression {
+    //Common AST attributes
+    public astNode: AstNode;
+
+    public expressionKind: ExpressionKind;
+    // TODO: Think of a better name, might not be possible
+    public specification: (UnaryExpression | BinaryExpression | TernaryExpression | IdentifierExpression | LiteralExpression | MemberAccessExpression);
+
+    constructor(expressionKind:ExpressionKind, specification:(UnaryExpression | BinaryExpression | TernaryExpression | LiteralExpression | MemberAccessExpression),
                 firstLine:number, firstColumn:number, lastLine:number, lastColumn:number){
-        //Common AST attributes
-        super(firstLine, firstColumn, lastLine, lastColumn);
+
+        this.astNode = new AstNode(firstLine, firstColumn, lastLine, lastColumn);
 
         //assertions
-        switch(operatorKind){
+        //TODO: las exceptions ocn typeof(ads;fkj) no van a imprimir nada util cambiar a class.name o lo que sea que use typescript
+        switch(expressionKind){
             //binary
             case ExpressionKind.LESS:
             case ExpressionKind.GREATER:
@@ -82,8 +92,8 @@ export class Expression extends AstNode{
             case ExpressionKind.MULTIPLICATION:
             case ExpressionKind.DIVISION:
             case ExpressionKind.POWER:
-                if(children.length != 2){
-                    throw new Error(`Assertion Error: Operator ${operatorKind.toString()} must have 2 subexpressions instead of ${children.length}`);
+                if(!(specification instanceof BinaryExpression)){
+                    throw new Error(`Assertion Error: Operator ${expressionKind.toString()} must be Type BinaryExpression insstead of ${typeof(specification)}`);
                 }
             break;
 
@@ -92,28 +102,42 @@ export class Expression extends AstNode{
             case ExpressionKind.POSTFIX_INC:
             case ExpressionKind.POSTFIX_DEC:
             case ExpressionKind.NEGATION:
-            case ExpressionKind.ATOMIC:
-                if(children.length != 1){
-                    throw new Error(`Assertion Error: Operator ${operatorKind.toString()} must have 1 subexpressions instead of ${children.length}`);
+                if(!(specification instanceof UnaryExpression)){
+                    throw new Error(`Assertion Error: Operator ${expressionKind.toString()} must be type UnaryExpression instead of ${typeof(specification)}`);
+                }
+            case ExpressionKind.IDENTIFIER:
+                if(!(specification instanceof IdentifierExpression)){
+                    throw new Error(`Assertion Error: expressionKind ${expressionKind.toString()} must be type IdentifierExpression instead of ${typeof(specification)}`);
+                }
+            break;
+            case ExpressionKind.FUNCTION_CALL:
+                if(!(specification instanceof FunctionCallExpression)){
+                    throw new Error(`Assertion Error: expressionKind ${expressionKind.toString()} must be type IdentifierExpression instead of ${typeof(specification)}`);
+                }
+            break;
+            case ExpressionKind.LITERAL:
+                if(!(specification instanceof LiteralExpression)){
+                    throw new Error(`Assertion Error: expressionKind ${expressionKind.toString()} must be type LiteralExpression instead of ${typeof(specification)}`);
                 }
             break;
 
             //ternary
             case ExpressionKind.TERNARY:
-                if(children.length != 3){
-                    throw new Error(`Assertion Error: Operator ${operatorKind.toString()} must have 1 subexpressions instead of ${children.length}`);
+                if(!(specification instanceof TernaryExpression)){
+                    throw new Error(`Assertion Error: expressionKind ${expressionKind.toString()} must be type TernaryExpression instead of ${typeof(specification)}`);
+                }
+            break;
+            case ExpressionKind.MEMBER_ACCESS:
+                if(!(specification instanceof MemberAccessExpression)){
+                    throw new Error(`Assertion Error: expressionKind ${expressionKind.toString()} must be type MemberAccessExpression instead of ${typeof(specification)}`);
                 }
             break;
             //Solo para que no se nos olvide incluir todos los operadores posibles en este switch
             default:
-                throw new Error(`[!!!] No se ha implementado todavia el operador ${operatorKind}`);
+                throw new Error(`[!!!] No se ha implementado todavia el operador ${expressionKind}`);
         }
 
-        this.operatorKind = operatorKind
-        this.children = children;
-    }
-
-    getNodeId(): number {
-        return this.nodeId;
+        this.expressionKind = expressionKind;
+        this.specification = specification;
     }
 }

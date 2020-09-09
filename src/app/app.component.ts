@@ -1,9 +1,18 @@
 import { Component, OnInit } from '@angular/core';
 
 import { parser } from "../Translator/TranslatorParser.js";
-import { graphExpression, test } from "../Grapher";
+import { graphExpression, test as graphTest } from "../Grapher";
+import { test as runTest } from "../Runner/Runner"
 
-var numero = 1;
+//Si ts fuera un lenguaje de verdad esta clase no seria necesaria
+//solo mandariamos un puntero al string donde esta la consola al runner :(
+export class RuntimeInterface {
+  myConsole:string = "";
+  translation:string = "";
+  //TODO: donde poner el AST, talvez
+  //TODO: para errores.
+}
+
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
@@ -12,21 +21,38 @@ var numero = 1;
 export class AppComponent implements OnInit{
   title = 'Proyecto1';
 
+  //No podemos hacer que la rutime interface sea estatica porque los ngmodules
+  //no funcionan 
+  runtimeInterface: RuntimeInterface = new RuntimeInterface();
+
+  sourceString:string;
+
   ngOnInit(): void {
-    test();
+    //test string 1
+    {
+    let testString = `
+let a:string = 10 + 20;
+a.lol[1][1].fun(1, 2, 3);
+lol();
+lol(1, 2, 3);`;
+    }
+    let testString = `console.log("Javier");`
+    this.sourceString = testString;
+    this.runtimeInterface.translation = graphTest(testString);
+    runTest(this.sourceString, this.runtimeInterface);
   }
 
-
-  traducir(){
-    alert('translate');
+  traducir(textBoxSource){
+    //TODO: reemplazar por traducirTest
+    this.runtimeInterface.translation = graphTest(textBoxSource.value);
   }
 
-  ejecutar(){
-    alert('ejecutar');
+  ejecutar(textBoxSource){
+    runTest(this.sourceString, this.runtimeInterface);
   }
 
-  test(){
-    alert('test');
+  test(textBoxSource){
+    this.runtimeInterface.translation = graphTest(textBoxSource.value);
   }
 }
 

@@ -71,13 +71,13 @@
     recoverable: (boolean: TRUE when the parser has a error recovery rule available for this particular error)
   }
 */
-var TranslatorParser = (function(){
-var o=function(k,v,o,l){for(o=o||{},l=k.length;l--;o[k[l]]=v);return o},$V0=[1,4],$V1=[1,3],$V2=[1,6],$V3=[1,7],$V4=[1,9],$V5=[1,10],$V6=[1,11],$V7=[1,12],$V8=[1,13],$V9=[1,14],$Va=[1,15],$Vb=[1,16],$Vc=[1,17],$Vd=[1,18],$Ve=[1,19],$Vf=[1,20],$Vg=[1,21],$Vh=[5,6,7,8,9,10,11,12,13,14,15,16,18,19,22],$Vi=[5,6,7,8,9,10,11,12,13,14,15,16,22],$Vj=[5,6,7,11,12,13,14,15,16,22],$Vk=[5,6,7,8,9,11,12,13,14,15,16,22],$Vl=[5,15,16,22];
+var RunnerParser = (function(){
+var o=function(k,v,o,l){for(o=o||{},l=k.length;l--;o[k[l]]=v);return o},$V0=[1,9],$V1=[1,17],$V2=[1,11],$V3=[1,12],$V4=[1,7],$V5=[1,6],$V6=[1,10],$V7=[1,13],$V8=[1,14],$V9=[1,15],$Va=[1,16],$Vb=[5,11,12,16,17,20,30,35,37,38,39,40],$Vc=[1,21],$Vd=[1,22],$Ve=[1,23],$Vf=[1,24],$Vg=[1,25],$Vh=[1,26],$Vi=[1,27],$Vj=[1,28],$Vk=[1,29],$Vl=[1,30],$Vm=[1,31],$Vn=[1,32],$Vo=[1,33],$Vp=[1,35],$Vq=[1,36],$Vr=[9,19,20,21,22,23,24,25,26,27,28,29,31,32,36,43,44,45,46],$Vs=[9,19,20,21,22,23,24,25,26,27,28,29,36,43,46],$Vt=[2,42],$Vu=[9,19,20,24,25,26,27,28,29,36,43,46],$Vv=[9,19,20,21,22,24,25,26,27,28,29,36,43,46],$Vw=[9,28,29,36,43,46],$Vx=[36,43],$Vy=[9,13];
 var parser = {trace: function trace () { },
 yy: {},
-symbols_: {"error":2,"S":3,"Expr":4,"EOF":5,"+":6,"-":7,"*":8,"/":9,"**":10,"<":11,"<=":12,">":13,">=":14,"==":15,"!=":16,"NOT":17,"++":18,"--":19,"F":20,"(":21,")":22,"NUMBER":23,"$accept":0,"$end":1},
-terminals_: {2:"error",5:"EOF",6:"+",7:"-",8:"*",9:"/",10:"**",11:"<",12:"<=",13:">",14:">=",15:"==",16:"!=",17:"NOT",18:"++",19:"--",21:"(",22:")",23:"NUMBER"},
-productions_: [0,[3,2],[4,3],[4,3],[4,3],[4,3],[4,3],[4,3],[4,3],[4,3],[4,3],[4,3],[4,3],[4,2],[4,2],[4,2],[4,2],[4,1],[20,3],[20,1]],
+symbols_: {"error":2,"S":3,"StatementList":4,"EOF":5,"StatementList_":6,"Statement":7,"Expression":8,";":9,"Declaration":10,"LET":11,"IDENTIFIER":12,"=":13,":":14,"Type":15,"NUMBER":16,"STRING":17,"BOOLEAN":18,"+":19,"-":20,"*":21,"/":22,"**":23,"<":24,"<=":25,">":26,">=":27,"==":28,"!=":29,"NOT":30,"++":31,"--":32,"MemberAccess":33,"F":34,"(":35,")":36,"TRUE":37,"FALSE":38,"NULL":39,"UNDEFINED":40,"ExpressionList_":41,"ExpressionList":42,",":43,".":44,"[":45,"]":46,"$accept":0,"$end":1},
+terminals_: {2:"error",5:"EOF",9:";",11:"LET",12:"IDENTIFIER",13:"=",14:":",16:"NUMBER",17:"STRING",18:"BOOLEAN",19:"+",20:"-",21:"*",22:"/",23:"**",24:"<",25:"<=",26:">",27:">=",28:"==",29:"!=",30:"NOT",31:"++",32:"--",35:"(",36:")",37:"TRUE",38:"FALSE",39:"NULL",40:"UNDEFINED",43:",",44:".",45:"[",46:"]"},
+productions_: [0,[3,2],[6,1],[6,0],[4,2],[4,1],[7,2],[7,2],[10,4],[10,6],[10,4],[15,1],[15,1],[15,1],[15,1],[8,3],[8,3],[8,3],[8,3],[8,3],[8,3],[8,3],[8,3],[8,3],[8,3],[8,3],[8,2],[8,2],[8,2],[8,2],[8,2],[8,1],[34,3],[34,1],[34,1],[34,1],[34,1],[34,1],[34,1],[34,1],[34,4],[41,1],[41,0],[42,3],[42,1],[33,5],[33,2],[33,3]],
 performAction: function anonymous(yytext, yyleng, yylineno, yy, yystate /* action[1] */, $$ /* vstack */, _$ /* lstack */) {
 /* this == yyval */
 
@@ -88,106 +88,228 @@ case 1:
         return $$[$0-1];
     
 break;
-case 2:
-
-        this.$ = new Expression(ExpressionKind.ADDITION, [$$[$0-2], $$[$0]], _$[$0-2].first_line, _$[$0-2].first_column, _$[$0].last_line, _$[$0].last_column);
-        this.$.getNodeId();//Esta linea tira la excepcion: TypeError: expr.getNodeId is not a function
-    
-break;
-case 3:
-
-        this.$ = new Expression(ExpressionKind.SUBSTRACTION, [$$[$0-2], $$[$0]], _$[$0-2].first_line, _$[$0-2].first_column, _$[$0].last_line, _$[$0].last_column);
-    
-break;
-case 4:
- 
-        this.$ = new Expression(ExpressionKind.MULTIPLICATION, [$$[$0-2], $$[$0]], _$[$0-2].first_line, _$[$0-2].first_column, _$[$0].last_line, _$[$0].last_column);
-    
-break;
-case 5:
-
-        this.$ = new Expression(ExpressionKind.DIVISION, [$$[$0-2], $$[$0]], _$[$0-2].first_line, _$[$0-2].first_column, _$[$0].last_line, _$[$0].last_column);
-    
-break;
-case 6:
-
-        this.$ = new Expression(ExpressionKind.POWER, [$$[$0-2], $$[$0]], _$[$0-2].first_line, _$[$0-2].first_column, _$[$0].last_line, _$[$0].last_column);
-    
-break;
-case 7:
-
-        this.$ = new Expression(ExpressionKind.LESS, [$$[$0-2], $$[$0]], _$[$0-2].first_line, _$[$0-2].first_column, _$[$0].last_line, _$[$0].last_column);
-    
-break;
-case 8:
-
-        this.$ = new Expression(ExpressionKind.LESS_OR_EQUAL, [$$[$0-2], $$[$0]], _$[$0-2].first_line, _$[$0-2].first_column, _$[$0].last_line, _$[$0].last_column);
-    
-break;
-case 9:
-
-        this.$ = new Expression(ExpressionKind.GREATER, [$$[$0-2], $$[$0]], _$[$0-2].first_line, _$[$0-2].first_column, _$[$0].last_line, _$[$0].last_column);
-    
-break;
-case 10:
-
-        this.$ = new Expression(ExpressionKind.GREATER_EQUAL, [$$[$0-2], $$[$0]], _$[$0-2].first_line, _$[$0-2].first_column, _$[$0].last_line, _$[$0].last_column);
-    
-break;
-case 11:
-
-        this.$ = new Expression(ExpressionKind.EQUAL, [$$[$0-2], $$[$0]], _$[$0-2].first_line, _$[$0-2].first_column, _$[$0].last_line, _$[$0].last_column);
-    
-break;
-case 12:
-
-        this.$ = new Expression(ExpressionKind.NOT_EQUAL, [$$[$0-2], $$[$0]], _$[$0-2].first_line, _$[$0-2].first_column, _$[$0].last_line, _$[$0].last_column);
-    
-break;
-case 13:
-
-        this.$ = new Expression(ExpressionKind.NOT, [$$[$0]], _$[$0-1].first_line, _$[$0-1].first_column, _$[$0].last_line, _$[$0].last_column);
-    
-break;
-case 14:
-
-        this.$ = new Expression(ExpressionKind.UNARY_MINUS, [$$[$0]], _$[$0-1].first_line, _$[$0-1].first_column, _$[$0].last_line, _$[$0].last_column);
-    
-break;
-case 15:
-
-        this.$ = new Expression(ExpressionKind.POSTFIX_INC, [$$[$0]], _$[$0-1].first_line, _$[$0-1].first_column, _$[$0].last_line, _$[$0].last_column);
-    
-break;
-case 16:
-
-        this.$ = new Expression(ExpressionKind.POSTFIX_DEC, [$$[$0]], _$[$0-1].first_line, _$[$0-1].first_column, _$[$0].last_line, _$[$0].last_column);
-    
-break;
-case 17:
+case 2: case 31: case 41:
 
         this.$ = $$[$0];
     
 break;
+case 3: case 42:
+
+        this.$ = new Array();
+    
+break;
+case 4:
+
+        this.$ = $$[$0-1];
+        this.$.push($$[$0]);
+    
+break;
+case 5: case 44:
+
+        this.$ = new Array($$[$0]);
+    
+break;
+case 6:
+
+        this.$ = new Statement(StatementKind.ExpressionKind, $$[$0-1], _$[$0-1].first_line, _$[$0-1].first_column, _$[$0].last_line, _$[$0].last_column);
+    
+break;
+case 7:
+
+        this.$ = new Statement(StatementKind.DeclarationKind, $$[$0-1], _$[$0-1].first_line, _$[$0-1].first_column, _$[$0].last_line, _$[$0].last_column);
+    
+break;
+case 8:
+
+        this.$ = new Declaration($$[$0-2], null, $$[$0], _$[$0-3].first_line, _$[$0-3].first_column, _$[$0].last_line, _$[$0].last_column);
+    
+break;
+case 9:
+
+        this.$ = new Declaration($$[$0-4], $$[$0-2], $$[$0], _$[$0-5].first_line, _$[$0-5].first_column, _$[$0].last_line, _$[$0].last_column);
+    
+break;
+case 10:
+
+        this.$ = new Declaration($$[$0-3], $$[$0], null, _$[$0-3].first_line, _$[$0-3].first_column, _$[$0].last_line, _$[$0].last_column);
+    
+break;
+case 11:
+
+        this.$ = new MyTypeNode (MyTypeNodeKind.NUMBER, null);
+    
+break;
+case 12:
+
+        this.$ = new MyTypeNode (MyTypeNodeKind.STRING, null);
+    
+break;
+case 13:
+
+        this.$ = new MyTypeNode (MyTypeNodeKind.BOOLEAN, null);
+    
+break;
+case 14:
+
+        this.$ = new MyTypeNode (MyTypeNodeKind.CUSTOM, $$[$0]);
+    
+break;
+case 15:
+
+        this.$ = new Expression(ExpressionKind.ADDITION, new BinaryExpression($$[$0-2], $$[$0]), _$[$0-2].first_line, _$[$0-2].first_column, _$[$0].last_line, _$[$0].last_column);
+    
+break;
+case 16:
+
+        this.$ = new Expression(ExpressionKind.SUBSTRACTION, new BinaryExpression($$[$0-2], $$[$0]), _$[$0-2].first_line, _$[$0-2].first_column, _$[$0].last_line, _$[$0].last_column);
+    
+break;
+case 17:
+ 
+        this.$ = new Expression(ExpressionKind.MULTIPLICATION, new BinaryExpression($$[$0-2], $$[$0]), _$[$0-2].first_line, _$[$0-2].first_column, _$[$0].last_line, _$[$0].last_column);
+    
+break;
 case 18:
+
+        this.$ = new Expression(ExpressionKind.DIVISION, new BinaryExpression($$[$0-2], $$[$0]), _$[$0-2].first_line, _$[$0-2].first_column, _$[$0].last_line, _$[$0].last_column);
+    
+break;
+case 19:
+
+        this.$ = new Expression(ExpressionKind.POWER, new BinaryExpression($$[$0-2], $$[$0]), _$[$0-2].first_line, _$[$0-2].first_column, _$[$0].last_line, _$[$0].last_column);
+    
+break;
+case 20:
+
+        this.$ = new Expression(ExpressionKind.LESS, new BinaryExpression($$[$0-2], $$[$0]), _$[$0-2].first_line, _$[$0-2].first_column, _$[$0].last_line, _$[$0].last_column);
+    
+break;
+case 21:
+
+        this.$ = new Expression(ExpressionKind.LESS_OR_EQUAL, new BinaryExpression($$[$0-2], $$[$0]), _$[$0-2].first_line, _$[$0-2].first_column, _$[$0].last_line, _$[$0].last_column);
+    
+break;
+case 22:
+
+        this.$ = new Expression(ExpressionKind.GREATER, new BinaryExpression($$[$0-2], $$[$0]), _$[$0-2].first_line, _$[$0-2].first_column, _$[$0].last_line, _$[$0].last_column);
+    
+break;
+case 23:
+
+        this.$ = new Expression(ExpressionKind.GREATER_EQUAL, new BinaryExpression($$[$0-2], $$[$0]), _$[$0-2].first_line, _$[$0-2].first_column, _$[$0].last_line, _$[$0].last_column);
+    
+break;
+case 24:
+
+        this.$ = new Expression(ExpressionKind.EQUAL, new BinaryExpression($$[$0-2], $$[$0]), _$[$0-2].first_line, _$[$0-2].first_column, _$[$0].last_line, _$[$0].last_column);
+    
+break;
+case 25:
+
+        this.$ = new Expression(ExpressionKind.NOT_EQUAL, new BinaryExpression($$[$0-2], $$[$0]), _$[$0-2].first_line, _$[$0-2].first_column, _$[$0].last_line, _$[$0].last_column);
+    
+break;
+case 26:
+
+        this.$ = new Expression(ExpressionKind.NOT, new UnaryExpression($$[$0]), _$[$0-1].first_line, _$[$0-1].first_column, _$[$0].last_line, _$[$0].last_column);
+    
+break;
+case 27:
+
+        this.$ = new Expression(ExpressionKind.UNARY_MINUS, new UnaryExpression($$[$0]), _$[$0-1].first_line, _$[$0-1].first_column, _$[$0].last_line, _$[$0].last_column);
+    
+break;
+case 28:
+
+        this.$ = new Expression(ExpressionKind.POSTFIX_INC, new UnaryExpression($$[$0-1]), _$[$0-1].first_line, _$[$0-1].first_column, _$[$0].last_line, _$[$0].last_column);
+    
+break;
+case 29:
+
+        this.$ = new Expression(ExpressionKind.POSTFIX_DEC, new UnaryExpression($$[$0-1]), _$[$0-1].first_line, _$[$0-1].first_column, _$[$0].last_line, _$[$0].last_column);
+    
+break;
+case 30:
+
+        this.$ = new Expression(ExpressionKind.MEMBER_ACCESS, new MemberAccessExpression($$[$0-1], $$[$0]), _$[$0-1].first_line, _$[$0-1].first_column, _$[$0].last_line, _$[$0].last_column);
+    
+break;
+case 32:
  
         //hay que pasar la ubicacion de inicio y final de los ( )
         this.$ = $$[$0-1];
         this.$.first_line = _$[$0-2].first_line;
         this.$.first_column = _$[$0-2].first_column;
         this.$.last_line = _$[$0].last_line;
+
         this.$.last_column = _$[$0].last_column;
     
 break;
-case 19:
+case 33:
  
-        this.$ = new Expression(ExpressionKind.ATOMIC, [new Number($$[$0])], _$[$0].first_line, _$[$0].first_column, _$[$0].last_line, _$[$0].last_column);
+        this.$ = new Expression(ExpressionKind.LITERAL, new LiteralExpression(new Number($$[$0])), _$[$0].first_line, _$[$0].first_column, _$[$0].last_line, _$[$0].last_column);
+    
+break;
+case 34:
+
+        this.$ = new Expression(ExpressionKind.LITERAL, new LiteralExpression(new String($$[$0])), _$[$0].first_line, _$[$0].first_column, _$[$0].last_line, _$[$0].last_column);
+    
+break;
+case 35:
+
+        this.$ = new Expression(ExpressionKind.LITERAL, new LiteralExpression(new Boolean(true)), _$[$0].first_line, _$[$0].first_column, _$[$0].last_line, _$[$0].last_column);
+    
+break;
+case 36:
+
+        this.$ = new Expression(ExpressionKind.LITERAL, new LiteralExpression(new Boolean(false)), _$[$0].first_line, _$[$0].first_column, _$[$0].last_line, _$[$0].last_column);
+    
+break;
+case 37:
+
+        this.$ = new Expression(ExpressionKind.LITERAL, new LiteralExpression(null), _$[$0].first_line, _$[$0].first_column, _$[$0].last_line, _$[$0].last_column);
+    
+break;
+case 38:
+
+        this.$ = new Expression(ExpressionKind.LITERAL, new LiteralExpression(undefined), _$[$0].first_line, _$[$0].first_column, _$[$0].last_line, _$[$0].last_column);
+    
+break;
+case 39:
+
+        this.$ = new Expression(ExpressionKind.IDENTIFIER, new IdentifierExpression(new String($$[$0])), _$[$0].first_line, _$[$0].first_column, _$[$0].last_line, _$[$0].last_column);
+    
+break;
+case 40:
+
+        this.$ = new Expression(ExpressionKind.FUNCTION_CALL, new FunctionCallExpression(new String($$[$0-3]), $$[$0-1]), _$[$0-3].first_line, _$[$0-3].first_column, _$[$0-3].last_line, _$[$0-3].last_column);
+    
+break;
+case 43:
+
+        this.$ = $$[$0-2];
+        this.$.push($$[$0]);
+    
+break;
+case 45:
+
+        this.$ = new MemberAccess(AccessKind.FunctionAccess, new FunctionAccess($$[$0-3], $$[$0-1]), _$[$0-4].first_line, _$[$0-4].first_column, _$[$0].last_line, _$[$0].last_column);
+    
+break;
+case 46:
+
+        this.$ = new MemberAccess(AccessKind.AttributeAccess, new AttributeAccess($$[$0]), _$[$0-1].first_line, _$[$0-1].first_column, _$[$0].last_line, _$[$0].last_column);
+    
+break;
+case 47:
+
+        this.$ = new MemberAccess(AccessKind.IndexAccess, new IndexAccess($$[$0-1]), _$[$0-2].first_line, _$[$0-2].first_column, _$[$0].last_line, _$[$0].last_column);
     
 break;
 }
 },
-table: [{3:1,4:2,7:$V0,17:$V1,20:5,21:$V2,23:$V3},{1:[3]},{5:[1,8],6:$V4,7:$V5,8:$V6,9:$V7,10:$V8,11:$V9,12:$Va,13:$Vb,14:$Vc,15:$Vd,16:$Ve,18:$Vf,19:$Vg},{4:22,7:$V0,17:$V1,20:5,21:$V2,23:$V3},{4:23,7:$V0,17:$V1,20:5,21:$V2,23:$V3},o($Vh,[2,17]),{4:24,7:$V0,17:$V1,20:5,21:$V2,23:$V3},o($Vh,[2,19]),{1:[2,1]},{4:25,7:$V0,17:$V1,20:5,21:$V2,23:$V3},{4:26,7:$V0,17:$V1,20:5,21:$V2,23:$V3},{4:27,7:$V0,17:$V1,20:5,21:$V2,23:$V3},{4:28,7:$V0,17:$V1,20:5,21:$V2,23:$V3},{4:29,7:$V0,17:$V1,20:5,21:$V2,23:$V3},{4:30,7:$V0,17:$V1,20:5,21:$V2,23:$V3},{4:31,7:$V0,17:$V1,20:5,21:$V2,23:$V3},{4:32,7:$V0,17:$V1,20:5,21:$V2,23:$V3},{4:33,7:$V0,17:$V1,20:5,21:$V2,23:$V3},{4:34,7:$V0,17:$V1,20:5,21:$V2,23:$V3},{4:35,7:$V0,17:$V1,20:5,21:$V2,23:$V3},o($Vh,[2,15]),o($Vh,[2,16]),o($Vi,[2,13],{18:$Vf,19:$Vg}),o($Vi,[2,14],{18:$Vf,19:$Vg}),{6:$V4,7:$V5,8:$V6,9:$V7,10:$V8,11:$V9,12:$Va,13:$Vb,14:$Vc,15:$Vd,16:$Ve,18:$Vf,19:$Vg,22:[1,36]},o($Vj,[2,2],{8:$V6,9:$V7,10:$V8,18:$Vf,19:$Vg}),o($Vj,[2,3],{8:$V6,9:$V7,10:$V8,18:$Vf,19:$Vg}),o($Vk,[2,4],{10:$V8,18:$Vf,19:$Vg}),o($Vk,[2,5],{10:$V8,18:$Vf,19:$Vg}),o($Vk,[2,6],{10:$V8,18:$Vf,19:$Vg}),o($Vl,[2,7],{6:$V4,7:$V5,8:$V6,9:$V7,10:$V8,18:$Vf,19:$Vg}),o($Vl,[2,8],{6:$V4,7:$V5,8:$V6,9:$V7,10:$V8,18:$Vf,19:$Vg}),o($Vl,[2,9],{6:$V4,7:$V5,8:$V6,9:$V7,10:$V8,18:$Vf,19:$Vg}),o($Vl,[2,10],{6:$V4,7:$V5,8:$V6,9:$V7,10:$V8,18:$Vf,19:$Vg}),o($Vl,[2,11],{6:$V4,7:$V5,8:$V6,9:$V7,10:$V8,11:$V9,12:$Va,13:$Vb,14:$Vc,18:$Vf,19:$Vg}),o($Vl,[2,12],{6:$V4,7:$V5,8:$V6,9:$V7,10:$V8,11:$V9,12:$Va,13:$Vb,14:$Vc,18:$Vf,19:$Vg}),o($Vh,[2,18])],
-defaultActions: {8:[2,1]},
+table: [{3:1,4:2,7:3,8:4,10:5,11:$V0,12:$V1,16:$V2,17:$V3,20:$V4,30:$V5,34:8,35:$V6,37:$V7,38:$V8,39:$V9,40:$Va},{1:[3]},{5:[1,18],7:19,8:4,10:5,11:$V0,12:$V1,16:$V2,17:$V3,20:$V4,30:$V5,34:8,35:$V6,37:$V7,38:$V8,39:$V9,40:$Va},o($Vb,[2,5]),{9:[1,20],19:$Vc,20:$Vd,21:$Ve,22:$Vf,23:$Vg,24:$Vh,25:$Vi,26:$Vj,27:$Vk,28:$Vl,29:$Vm,31:$Vn,32:$Vo,33:34,44:$Vp,45:$Vq},{9:[1,37]},{8:38,12:$V1,16:$V2,17:$V3,20:$V4,30:$V5,34:8,35:$V6,37:$V7,38:$V8,39:$V9,40:$Va},{8:39,12:$V1,16:$V2,17:$V3,20:$V4,30:$V5,34:8,35:$V6,37:$V7,38:$V8,39:$V9,40:$Va},o($Vr,[2,31]),{12:[1,40]},{8:41,12:$V1,16:$V2,17:$V3,20:$V4,30:$V5,34:8,35:$V6,37:$V7,38:$V8,39:$V9,40:$Va},o($Vr,[2,33]),o($Vr,[2,34]),o($Vr,[2,35]),o($Vr,[2,36]),o($Vr,[2,37]),o($Vr,[2,38]),o($Vr,[2,39],{35:[1,42]}),{1:[2,1]},o($Vb,[2,4]),o($Vb,[2,6]),{8:43,12:$V1,16:$V2,17:$V3,20:$V4,30:$V5,34:8,35:$V6,37:$V7,38:$V8,39:$V9,40:$Va},{8:44,12:$V1,16:$V2,17:$V3,20:$V4,30:$V5,34:8,35:$V6,37:$V7,38:$V8,39:$V9,40:$Va},{8:45,12:$V1,16:$V2,17:$V3,20:$V4,30:$V5,34:8,35:$V6,37:$V7,38:$V8,39:$V9,40:$Va},{8:46,12:$V1,16:$V2,17:$V3,20:$V4,30:$V5,34:8,35:$V6,37:$V7,38:$V8,39:$V9,40:$Va},{8:47,12:$V1,16:$V2,17:$V3,20:$V4,30:$V5,34:8,35:$V6,37:$V7,38:$V8,39:$V9,40:$Va},{8:48,12:$V1,16:$V2,17:$V3,20:$V4,30:$V5,34:8,35:$V6,37:$V7,38:$V8,39:$V9,40:$Va},{8:49,12:$V1,16:$V2,17:$V3,20:$V4,30:$V5,34:8,35:$V6,37:$V7,38:$V8,39:$V9,40:$Va},{8:50,12:$V1,16:$V2,17:$V3,20:$V4,30:$V5,34:8,35:$V6,37:$V7,38:$V8,39:$V9,40:$Va},{8:51,12:$V1,16:$V2,17:$V3,20:$V4,30:$V5,34:8,35:$V6,37:$V7,38:$V8,39:$V9,40:$Va},{8:52,12:$V1,16:$V2,17:$V3,20:$V4,30:$V5,34:8,35:$V6,37:$V7,38:$V8,39:$V9,40:$Va},{8:53,12:$V1,16:$V2,17:$V3,20:$V4,30:$V5,34:8,35:$V6,37:$V7,38:$V8,39:$V9,40:$Va},o($Vr,[2,28]),o($Vr,[2,29]),o($Vr,[2,30]),{12:[1,54]},{8:55,12:$V1,16:$V2,17:$V3,20:$V4,30:$V5,34:8,35:$V6,37:$V7,38:$V8,39:$V9,40:$Va},o($Vb,[2,7]),o($Vs,[2,26],{33:34,31:$Vn,32:$Vo,44:$Vp,45:$Vq}),o($Vs,[2,27],{33:34,31:$Vn,32:$Vo,44:$Vp,45:$Vq}),{13:[1,56],14:[1,57]},{19:$Vc,20:$Vd,21:$Ve,22:$Vf,23:$Vg,24:$Vh,25:$Vi,26:$Vj,27:$Vk,28:$Vl,29:$Vm,31:$Vn,32:$Vo,33:34,36:[1,58],44:$Vp,45:$Vq},{8:61,12:$V1,16:$V2,17:$V3,20:$V4,30:$V5,34:8,35:$V6,36:$Vt,37:$V7,38:$V8,39:$V9,40:$Va,41:59,42:60},o($Vu,[2,15],{33:34,21:$Ve,22:$Vf,23:$Vg,31:$Vn,32:$Vo,44:$Vp,45:$Vq}),o($Vu,[2,16],{33:34,21:$Ve,22:$Vf,23:$Vg,31:$Vn,32:$Vo,44:$Vp,45:$Vq}),o($Vv,[2,17],{33:34,23:$Vg,31:$Vn,32:$Vo,44:$Vp,45:$Vq}),o($Vv,[2,18],{33:34,23:$Vg,31:$Vn,32:$Vo,44:$Vp,45:$Vq}),o($Vv,[2,19],{33:34,23:$Vg,31:$Vn,32:$Vo,44:$Vp,45:$Vq}),o($Vw,[2,20],{33:34,19:$Vc,20:$Vd,21:$Ve,22:$Vf,23:$Vg,31:$Vn,32:$Vo,44:$Vp,45:$Vq}),o($Vw,[2,21],{33:34,19:$Vc,20:$Vd,21:$Ve,22:$Vf,23:$Vg,31:$Vn,32:$Vo,44:$Vp,45:$Vq}),o($Vw,[2,22],{33:34,19:$Vc,20:$Vd,21:$Ve,22:$Vf,23:$Vg,31:$Vn,32:$Vo,44:$Vp,45:$Vq}),o($Vw,[2,23],{33:34,19:$Vc,20:$Vd,21:$Ve,22:$Vf,23:$Vg,31:$Vn,32:$Vo,44:$Vp,45:$Vq}),o($Vw,[2,24],{33:34,19:$Vc,20:$Vd,21:$Ve,22:$Vf,23:$Vg,24:$Vh,25:$Vi,26:$Vj,27:$Vk,31:$Vn,32:$Vo,44:$Vp,45:$Vq}),o($Vw,[2,25],{33:34,19:$Vc,20:$Vd,21:$Ve,22:$Vf,23:$Vg,24:$Vh,25:$Vi,26:$Vj,27:$Vk,31:$Vn,32:$Vo,44:$Vp,45:$Vq}),o($Vr,[2,46],{35:[1,62]}),{19:$Vc,20:$Vd,21:$Ve,22:$Vf,23:$Vg,24:$Vh,25:$Vi,26:$Vj,27:$Vk,28:$Vl,29:$Vm,31:$Vn,32:$Vo,33:34,44:$Vp,45:$Vq,46:[1,63]},{8:64,12:$V1,16:$V2,17:$V3,20:$V4,30:$V5,34:8,35:$V6,37:$V7,38:$V8,39:$V9,40:$Va},{12:[1,69],15:65,16:[1,66],17:[1,67],18:[1,68]},o($Vr,[2,32]),{36:[1,70]},{36:[2,41],43:[1,71]},o($Vx,[2,44],{33:34,19:$Vc,20:$Vd,21:$Ve,22:$Vf,23:$Vg,24:$Vh,25:$Vi,26:$Vj,27:$Vk,28:$Vl,29:$Vm,31:$Vn,32:$Vo,44:$Vp,45:$Vq}),{8:61,12:$V1,16:$V2,17:$V3,20:$V4,30:$V5,34:8,35:$V6,36:$Vt,37:$V7,38:$V8,39:$V9,40:$Va,41:72,42:60},o($Vr,[2,47]),{9:[2,8],19:$Vc,20:$Vd,21:$Ve,22:$Vf,23:$Vg,24:$Vh,25:$Vi,26:$Vj,27:$Vk,28:$Vl,29:$Vm,31:$Vn,32:$Vo,33:34,44:$Vp,45:$Vq},{9:[2,10],13:[1,73]},o($Vy,[2,11]),o($Vy,[2,12]),o($Vy,[2,13]),o($Vy,[2,14]),o($Vr,[2,40]),{8:74,12:$V1,16:$V2,17:$V3,20:$V4,30:$V5,34:8,35:$V6,37:$V7,38:$V8,39:$V9,40:$Va},{36:[1,75]},{8:76,12:$V1,16:$V2,17:$V3,20:$V4,30:$V5,34:8,35:$V6,37:$V7,38:$V8,39:$V9,40:$Va},o($Vx,[2,43],{33:34,19:$Vc,20:$Vd,21:$Ve,22:$Vf,23:$Vg,24:$Vh,25:$Vi,26:$Vj,27:$Vk,28:$Vl,29:$Vm,31:$Vn,32:$Vo,44:$Vp,45:$Vq}),o($Vr,[2,45]),{9:[2,9],19:$Vc,20:$Vd,21:$Ve,22:$Vf,23:$Vg,24:$Vh,25:$Vi,26:$Vj,27:$Vk,28:$Vl,29:$Vm,31:$Vn,32:$Vo,33:34,44:$Vp,45:$Vq}],
+defaultActions: {18:[2,1]},
 parseError: function parseError (str, hash) {
     if (hash.recoverable) {
         this.trace(str);
@@ -335,8 +457,13 @@ parse: function parse(input) {
     return true;
 }};
 
-    const { Expression, ExpressionKind } = require('../Ast/Expression');
-    //const {Literal} = require('../Expression/Literal')
+    const { Expression, ExpressionKind, UnaryExpression, BinaryExpression, TernaryExpression, LiteralExpression, IdentifierExpression, FunctionCallExpression, MemberAccessExpression} = require('../Ast/Expression');
+    const { MemberAccess, AccessKind, FunctionAccess, IndexAccess, AttributeAccess } = require('../Ast/MemberAccess');
+    const { Statement, StatementKind } = require('../Ast/Statement');
+    const { Assignment } = require('../Ast/Assignment');
+    const { Declaration } = require('../Ast/Declaration');
+    const { MyTypeNode, MyTypeNodeKind } = require('../Ast/MyTypeNode');
+    //const {Literal} = require('../Expression/Literal');
 /* generated by jison-lex 0.3.4 */
 var lexer = (function(){
 var lexer = ({
@@ -671,52 +798,92 @@ case 1:/* IGNORE */
 break;
 case 2:/* IGNORE */
 break;
-case 3:return 23
+case 3:return 37
 break;
-case 4:return 'OR'
+case 4:return 38
 break;
-case 5:return 'AND'
+case 5:return 40
 break;
-case 6:return 15
+case 6:return 39
 break;
-case 7:return 16
+case 7:return 'OR'
 break;
-case 8:return 13
+case 8:return 'AND'
 break;
-case 9:return 11
+case 9:return 28
 break;
-case 10:return 14
+case 10:return 29
 break;
-case 11:return 12
+case 11:return 26
 break;
-case 12:return 6
+case 12:return 24
 break;
-case 13:return 7
+case 13:return 27
 break;
-case 14:return 8
+case 14:return 25
 break;
-case 15:return 9
+case 15:return 19
 break;
-case 16:return '%'
+case 16:return 20
 break;
-case 17:return 10
+case 17:return 21
 break;
-case 18:return 17
+case 18:return 22
 break;
-case 19:return 18
+case 19:return '%'
 break;
-case 20:return 19
+case 20:return 23
 break;
-case 21:return 21
+case 21:return 30
 break;
-case 22:return 22
+case 22:return 31
 break;
-case 23:return 5
+case 23:return 32
+break;
+case 24:return 35
+break;
+case 25:return 36
+break;
+case 26:return 13
+break;
+case 27:return 44
+break;
+case 28:return 45
+break;
+case 29:return 46
+break;
+case 30:return 11
+break;
+case 31:return 16
+break;
+case 32:return 17
+break;
+case 33:return 18
+break;
+case 34:return 43
+break;
+case 35:return 9
+break;
+case 36:return '{'
+break;
+case 37:return '}'
+break;
+case 38:return 14
+break;
+case 39:return '~'
+break;
+case 40:return 5
+break;
+case 41:return 16
+break;
+case 42:return 12
+break;
+case 43:return 17
 break;
 }
 },
-rules: [/^(?:\s+)/,/^(?:\/\/.*)/,/^(?:[/][*][^*]*[*]+([^/*][^*]*[*]+)*[/])/,/^(?:[0-9]+(\.[0-9]+)?)/,/^(?:OR\b)/,/^(?:AND\b)/,/^(?:==)/,/^(?:!=)/,/^(?:>)/,/^(?:<)/,/^(?:>=)/,/^(?:<=)/,/^(?:\+)/,/^(?:-)/,/^(?:\*)/,/^(?:\/)/,/^(?:%)/,/^(?:\*\*)/,/^(?:NOT\b)/,/^(?:\+\+)/,/^(?:--)/,/^(?:\()/,/^(?:\))/,/^(?:$)/],
-conditions: {"INITIAL":{"rules":[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23],"inclusive":true}}
+rules: [/^(?:\s+)/,/^(?:\/\/.*)/,/^(?:[/][*][^*]*[*]+([^/*][^*]*[*]+)*[/])/,/^(?:true\b)/,/^(?:false\b)/,/^(?:undefined\b)/,/^(?:null\b)/,/^(?:OR\b)/,/^(?:AND\b)/,/^(?:==)/,/^(?:!=)/,/^(?:>)/,/^(?:<)/,/^(?:>=)/,/^(?:<=)/,/^(?:\+)/,/^(?:-)/,/^(?:\*)/,/^(?:\/)/,/^(?:%)/,/^(?:\*\*)/,/^(?:NOT\b)/,/^(?:\+\+)/,/^(?:--)/,/^(?:\()/,/^(?:\))/,/^(?:=)/,/^(?:\.)/,/^(?:\[)/,/^(?:\])/,/^(?:let\b)/,/^(?:number\b)/,/^(?:string\b)/,/^(?:boolean\b)/,/^(?:,)/,/^(?:;)/,/^(?:\{)/,/^(?:\})/,/^(?::)/,/^(?:~)/,/^(?:$)/,/^(?:[0-9]+(\.[0-9]+)?)/,/^(?:([a-zA-Z_])[a-zA-Z0-9_????]*)/,/^(?:("[^"]*"))/],
+conditions: {"INITIAL":{"rules":[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43],"inclusive":true}}
 });
 return lexer;
 })();
@@ -730,14 +897,14 @@ return new Parser;
 
 
 if (typeof require !== 'undefined' && typeof exports !== 'undefined') {
-exports.parser = TranslatorParser;
-exports.Parser = TranslatorParser.Parser;
-exports.parse = function () { return TranslatorParser.parse.apply(TranslatorParser, arguments); };
+exports.parser = RunnerParser;
+exports.Parser = RunnerParser.Parser;
+exports.parse = function () { return RunnerParser.parse.apply(RunnerParser, arguments); };
 exports.main = function commonjsMain (args) {
     if (!args[1]) {
+        console.log('Usage: '+args[0]+' FILE');
         process.exit(1);
     }
-    //me la trueno, no se porque
     //var source = require('fs').readFileSync(require('path').normalize(args[1]), "utf8");
     return exports.parser.parse(source);
 };

@@ -146,7 +146,6 @@ F   : '(' Expr ')'
     }
     | NUMBER
     { 
-        console.log($1);
         $$ = new Expression(ExpressionKind.ATOMIC, [new Number($1)], @1.first_line, @1.first_column, @1.last_line, @1.last_column);
     }
     // | STRING

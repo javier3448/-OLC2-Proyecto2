@@ -1,0 +1,96 @@
+{
+    console = null;//Deberia de tronarse la consola :s
+    console.log("a");//no deberia de funcionar
+}
+
+//algo que testee que sea posible sobreescribir el console
+{
+    let console:number = 10;
+    console.log("Javier");//Deberia de dar error
+}
+
+// I DONT EVEN KNOW WHAT THE FUCK HAPPENS HERE BUT IT SHOULD BE TESTED
+// it might even be a problem
+{
+    type A = {
+        a:number,
+        b:number
+    }
+
+    function setParam(a:number){
+        a = 10;
+    }
+
+    let myA = { a:10, b:undefined }
+
+    console.log(myA.b);//no longer prints undefined
+    console.log(myA.c);//prints undefinded??????
+
+    setParam(myA.b);
+    setParam(myA.c);
+
+    // we could set the params like this too???
+    // myA.b = 10;
+    // myA.c = 10;
+
+    console.log(myA.b);//no longer prints undefined
+    console.log(myA.c);//prints undefinded??????
+}
+
+//algo que testee que sea posible sobreescribir el console
+{
+    let console:number = 10;
+    console.log("Javier");//Deberia de dar error
+}
+
+//Algo que verifique si se tira error cuando se llama una funcion
+//con un custom type o con array
+
+//Verificar que NO exista conflicto entre dos custom types cuando sea
+//adecuado
+{
+    type A = {
+        a:number,
+        b:number
+    }
+    function aFunc(a:A){
+        
+    }
+    {
+        //No importa si el nombre de B es A. Esto corre de cualquier manera
+        type B = {
+            a:number,
+            b:number
+        }
+
+        let a:B = {a:10, b:10};
+        aFunc(a);
+    }
+}
+
+{
+    type A = {
+        a:number,
+        b:number
+    }
+    {
+        type A = {
+            a:string,
+            b:string
+        }
+
+        //Esta function debe de tener la segunda def de A
+        function afunc(a:A){
+            
+        }
+    }
+}
+
+
+// TODO algo que verifique que la verificacion de tipos no 
+// solo revise si dos tipos son CUSTOM
+
+
+// TODO: algo que pruebe que los primitivos si se pasen por valor
+
+// TODO: algo que pruebe que los Array y los custom se pase por referencia
