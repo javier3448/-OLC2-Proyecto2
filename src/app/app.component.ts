@@ -36,7 +36,17 @@ a.lol[1][1].fun(1, 2, 3);
 lol();
 lol(1, 2, 3);`;
     }
-    let testString = `console.log("Javier");`
+    //test string 2
+    {
+      let testString = `console.log(10 + 20);`
+    }
+    let testString = `
+console.log(20 > 10);
+console.log("10" <= "verdad");
+console.log(true >= false);
+console.log(console < console);//Error (even tho in TS is not an error)`
+    ;
+
     this.sourceString = testString;
     this.runtimeInterface.translation = graphTest(testString);
     runTest(this.sourceString, this.runtimeInterface);

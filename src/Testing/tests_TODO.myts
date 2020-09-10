@@ -1,3 +1,7 @@
+//TODO EN GENERAL: que las pruebas impriman un mensaje facil de leer
+//cuando pasan y cuando no
+
+
 {
     console = null;//Deberia de tronarse la consola :s
     console.log("a");//no deberia de funcionar
@@ -89,8 +93,178 @@
 
 // TODO algo que verifique que la verificacion de tipos no 
 // solo revise si dos tipos son CUSTOM
-
+ 
 
 // TODO: algo que pruebe que los primitivos si se pasen por valor
 
 // TODO: algo que pruebe que los Array y los custom se pase por referencia
+ 
+ 
+//Pruebas de + con string
+{
+    //Number
+    console.log("*******************Number*******************");
+    let num = 10;
+    let a = num + "s";
+    console.log(a);
+    let b = "s" + num;
+    console.log(b);
+
+    //String
+    console.log("*******************String*******************");
+    let s = "10";
+    let c = s + "s";
+    console.log(c);
+    let d = "s" + num;
+    console.log(d);
+
+    //Boolean
+    console.log("*******************Boolean*******************");
+    let bool = true;
+    let e = bool + "s";
+    console.log(e);
+    let f = "s" + bool;
+    console.log(f);
+
+    //null
+    console.log("********************null********************");
+    let _null = null;
+    let g = _null + "s";
+    console.log(g);
+    let h = "s" + _null;
+    console.log(h);   
+
+    //undefined
+    console.log("******************undefined******************");
+    let _undefined = undefined;;
+    let i = _undefined + "s";
+    console.log(i);
+    let j = "s" + _undefined
+    console.log(j);   
+
+    //console
+    console.log("*******************console*******************");
+    let _my_console = console;;
+    let k = _my_console + "s";
+    console.log(k);
+    let l = "s" + _my_console;
+    console.log(l);
+
+    //Array
+    console.log("*******************Array********************");
+    let myArray:Array<string> = ["10", "10"];
+    let m = myArray + "s";//string
+    console.log(m);
+    let n = "s" + myArray;//string
+    console.log(n);
+
+    //Custom
+    console.log("*******************Custom*******************");
+    type A = {
+        a:number,
+        b:number
+    }
+    let myType:A = { a: 10, b: 10 };
+    let o = "s" + myType;//string
+    console.log(o);
+    let p = myType + "s";//string
+    console.log(p);
+
+    //EmptyArray
+    console.log("****************EmptyArray*****************");
+    let myEmptyArray:Array<string> = [];
+    let q = myEmptyArray + "s";//string
+    console.log(q);
+    let r = "s" + myEmptyArray;//string
+    console.log(r);
+}
+
+//Probar que los los MyType se pasen por referencia
+//sin importar si vinieron de un member access
+{
+
+    type A = {
+        a:number,
+        b:number
+    }
+    type B = {
+        a:number,
+        b:A
+    }
+    let myType:A = { a: 10, b: 10 };
+    let o = "s" + myType;//string
+    console.log(o);
+    let p = myType + "s";//string
+    console.log(p);
+}
+//TODO: hacer la prueba anterior para arreglos tambien
+
+//TODO: Probar que las definiciones de tipos puedan venir en 
+//desorden y que puedan ser circulares
+
+
+//TODO: Probar que las dos expresiones en un operacion de potencia (**)
+//se calculen de derecha a izquierda (no solo es que se parceen de derecha
+//a izquierda, tambien  se tienen que calcular de derecha a izquierda)
+
+//TODO: Poner expresiones aritmeticas super largas (ver pruebas de compi 1)
+
+//TODO: Poner expresiones en las que - unario y - binario pueden dar problema
+
+
+//Probar que poner en null otra variable con el mismo objeto no afecte a la
+//variable original
+{
+    type A = {
+        a:string,
+        b:number
+    }
+
+    let a:A = { a:"Javier", b:1 };
+    let b = a;
+    b = null;
+    console.log(a);//No deberia de imprimir null
+}
+
+//IMPORTANTE: que la comparacion con el literal null y una variable que fue
+//asignada a null si funcione bien!
+{
+    type A = {
+        a:string,
+        b:number
+    }
+
+    let a:A = { a:"Javier", b:1 };
+    a = null;
+    if(a == null){
+        console.log(true);
+    }
+    console.log(a);//No deberia de imprimir null
+}
+
+//Que pase los member access por referencia tambien
+{
+    //TODO: ponerle mejores nombres
+    type A = {
+        a:B,
+        b:number
+    }
+    type B = {
+        a:string
+    }
+    
+    function nullify(b:B){
+        b = null;
+    }
+
+    let b:B = {
+        a:"Javier"
+    }
+    let a:A = {
+        a:b,
+        b:10
+    }
+
+    nullify(a.a);
+    console.log(a.a);//Deberia de imprimir null
+}

@@ -1,4 +1,5 @@
 import { Pointer } from "./Pointer"; 
+import { ReturnValue, ReturnKind } from "./ReturnValue"; 
        
 import { parser } from "./RunnerParser.js";
 import { RuntimeInterface } from "../app/app.component";
@@ -9,11 +10,12 @@ import { Statement } from "../Ast/Statement";
 import { MyObj, MyTypeKind, CustomObj, MyType } from "./MyObj";
 import { MyFunction, MyFunctionKind, GraficarTs, Parameter } from "./MyFunction";
 import { MyError } from './MyError';
-import { Expression, ExpressionKind, FunctionCallExpression, LiteralExpression, IdentifierExpression, MemberAccessExpression } from '../Ast/Expression';
+import { Expression, ExpressionKind, FunctionCallExpression, LiteralExpression, IdentifierExpression, MemberAccessExpression, BinaryExpression, UnaryExpression, TernaryExpression } from '../Ast/Expression';
 import { Declaration } from '../Ast/Declaration';
 import { Assignment } from '../Ast/Assignment';
 import { AccessKind, AttributeAccess, FunctionAccess } from 'src/Ast/MemberAccess';
 import { Attribute } from '@angular/core';
+import { getLocaleNumberFormat } from '@angular/common';
 
 
 
@@ -21,7 +23,7 @@ import { Attribute } from '@angular/core';
 let runtimeInterface:RuntimeInterface;
 
 export function myPrint(/* pointer to static console instance, */ myObj:MyObj){
-    runtimeInterface.myConsole += myObj.toString() + "\n";
+    runtimeInterface.myConsole += myObj.toPrintableString() + "\n";
 }
 
 export function resetRuntimeInterface(){
@@ -58,10 +60,10 @@ export function runStatement(statement:Statement){
         let child = statement.child;
         //TODO: Hacer un StatmentKind y cambiar esto por un switch de statement.kind
         if(child instanceof Expression){
-            let result:Pointer = runExpression(child as Expression);
+            runExpression(child as Expression);
         }
         else if(child instanceof Declaration){
-            throw new Error(`runStatment no implementado para Declaration}`);
+            throw new Error(`runStatment no implementado para Declaration`);
         }
         else if(child instanceof Assignment){
             throw new Error(`runStatment no implementado para Assignment`);
@@ -72,7 +74,9 @@ export function runStatement(statement:Statement){
 
     } catch (myError) {
         if(myError instanceof MyError){
-            throw myError;
+            //throw myError;
+            //TODO: que lo ponga en la tabla de errores o algo asi
+            console.log(myError);
         }else{
             throw myError;
         }
@@ -80,7 +84,216 @@ export function runStatement(statement:Statement){
 
 }
 
-export function runExpression(expr:Expression):Pointer{
+// function add
+//[throws_MyError]
+// Atrapa si la operacion no se puede realizar entre por los tipos de los operandos
+export function runExpression(expr:Expression):ReturnValue{
+
+    if(expr.specification instanceof BinaryExpression){
+
+        //Chapuz: porque el orden en el que se evalua left y right expression
+        //es de izquierda a derecha EXCEPTO por el operador **
+        if(expr.expressionKind == ExpressionKind.POWER){
+            let rightResult = runExpression(expr.specification.right).getMyObj();
+            let rightType:MyType = rightResult.myType;
+            let leftResult= runExpression(expr.specification.left).getMyObj();
+            let leftType:MyType = leftResult.myType;
+
+            if(leftType.kind == MyTypeKind.NUMBER && rightType.kind == MyTypeKind.NUMBER){
+                let leftValue:number = (leftResult.value as Number).valueOf();
+                let rightValue:number = (rightResult.value as Number).valueOf();
+                return ReturnValue.makeNumberReturn(leftValue ** rightValue);
+            }
+            else{
+                throw new MyError(`Operador '${expr.expressionKind}' no acepta los tipos: '${leftType.kind}' y '${rightType.kind}'`)
+            }
+        }
+
+        //los operadores OR y AND tambien son casos especiales porque implementan
+        //shorcircuiting como en C. Entonces hay casos en los que no se evaluan ambas 
+        //expresiones
+        if(expr.expressionKind == ExpressionKind.OR){
+            throw new Error(`Binary expression no implemented for ${expr.expressionKind}`);
+        }
+        if(expr.expressionKind == ExpressionKind.AND){
+            throw new Error(`Binary expression no implemented for ${expr.expressionKind}`);
+        }
+        
+        let leftResult = runExpression(expr.specification.left).getMyObj();
+        let leftType:MyType = leftResult.myType;
+        let rightResult = runExpression(expr.specification.right).getMyObj();
+        let rightType:MyType = rightResult.myType;
+
+        switch (expr.expressionKind) {
+            case ExpressionKind.LESS:
+                if(leftType.kind == MyTypeKind.NUMBER && rightType.kind == MyTypeKind.NUMBER){
+                    let leftValue:number = (leftResult.value as Number).valueOf();
+                    let rightValue:number = (rightResult.value as Number).valueOf();
+                    return ReturnValue.makeBooleanReturn(leftValue < rightValue);
+                }
+                else if(leftType.kind == MyTypeKind.STRING && rightType.kind == MyTypeKind.STRING){
+                    let leftValue:string = (leftResult.value as String).valueOf();
+                    let rightValue:string = (rightResult.value as String).valueOf();
+                    return ReturnValue.makeBooleanReturn(leftValue < rightValue);
+                }
+                else{
+                    throw new MyError(`Operador '${expr.expressionKind}' no acepta los tipos: '${leftType.kind}' y '${rightType.kind}'`)
+                }
+            break;
+            case ExpressionKind.GREATER:
+                if(leftType.kind == MyTypeKind.NUMBER && rightType.kind == MyTypeKind.NUMBER){
+                    let leftValue:number = (leftResult.value as Number).valueOf();
+                    let rightValue:number = (rightResult.value as Number).valueOf();
+                    return ReturnValue.makeBooleanReturn(leftValue > rightValue);
+                }
+                else if(leftType.kind == MyTypeKind.STRING && rightType.kind == MyTypeKind.STRING){
+                    let leftValue:string = (leftResult.value as String).valueOf();
+                    let rightValue:string = (rightResult.value as String).valueOf();
+                    return ReturnValue.makeBooleanReturn(leftValue > rightValue);
+                }
+                else{
+                    throw new MyError(`Operador '${expr.expressionKind}' no acepta los tipos: '${leftType.kind}' y '${rightType.kind}'`)
+                }
+            break;
+            case ExpressionKind.LESS_OR_EQUAL:
+                if(leftType.kind == MyTypeKind.NUMBER && rightType.kind == MyTypeKind.NUMBER){
+                    let leftValue:number = (leftResult.value as Number).valueOf();
+                    let rightValue:number = (rightResult.value as Number).valueOf();
+                    return ReturnValue.makeBooleanReturn(leftValue <= rightValue);
+                }
+                else if(leftType.kind == MyTypeKind.STRING && rightType.kind == MyTypeKind.STRING){
+                    let leftValue:string = (leftResult.value as String).valueOf();
+                    let rightValue:string = (rightResult.value as String).valueOf();
+                    return ReturnValue.makeBooleanReturn(leftValue <= rightValue);
+                }
+                else{
+                    throw new MyError(`Operador '${expr.expressionKind}' no acepta los tipos: '${leftType.kind}' y '${rightType.kind}'`)
+                }
+            break;
+            case ExpressionKind.GREATER_OR_EQUAL:
+                if(leftType.kind == MyTypeKind.NUMBER && rightType.kind == MyTypeKind.NUMBER){
+                    let leftValue:number = (leftResult.value as Number).valueOf();
+                    let rightValue:number = (rightResult.value as Number).valueOf();
+                    return ReturnValue.makeBooleanReturn(leftValue >= rightValue);
+                }
+                else if(leftType.kind == MyTypeKind.STRING && rightType.kind == MyTypeKind.STRING){
+                    let leftValue:string = (leftResult.value as String).valueOf();
+                    let rightValue:string = (rightResult.value as String).valueOf();
+                    return ReturnValue.makeBooleanReturn(leftValue >= rightValue);
+                }
+                else{
+                    throw new MyError(`Operador '${expr.expressionKind}' no acepta los tipos: '${leftType.kind}' y '${rightType.kind}'`)
+                }
+            break;
+            case ExpressionKind.EQUAL:
+                // if(leftType.kind == MyTypeKind.NULL && rightType.kind != MyTypeKind.NULL
+                //     ||
+                //     leftType.kind != MyTypeKind.NULL && rightType.kind == MyTypeKind.NULL
+                //     ||
+                //     leftType.kind == MyTypeKind.UNDEFINED && rightType.kind != MyTypeKind.UNDEFINED
+                //     ||
+                //     leftType.kind != MyTypeKind.UNDEFINED && rightType.kind == MyTypeKind.UNDEFINED
+                // )
+                // {
+                //     return ReturnValue.makeBooleanReturn(false);
+                // }
+                //Maybe we can just use the TS ==. idk :/
+                //it is the easiest thing now, so fuck it 
+                //TODO: Test the fuck out of this, it might not work at all
+                //TODO: maybe using the value would be better i dont fucking now
+                if(leftType.kind == MyTypeKind.NUMBER && rightType.kind == MyTypeKind.NUMBER){
+                    let leftValue:number = (leftResult.value as Number).valueOf();
+                    let rightValue:number = (rightResult.value as Number).valueOf();
+                    return ReturnValue.makeBooleanReturn(leftValue == rightValue);
+                }
+                else if(leftType.kind == MyTypeKind.STRING && rightType.kind == MyTypeKind.STRING){
+                    let leftValue:string = (leftResult.value as String).valueOf();
+                    let rightValue:string = (rightResult.value as String).valueOf();
+                    return ReturnValue.makeBooleanReturn(leftValue == rightValue);
+                }
+                else if(leftType.kind == MyTypeKind.BOOLEAN && rightType.kind == MyTypeKind.BOOLEAN){
+                    let leftValue:string = (leftResult.value as String).valueOf();
+                    let rightValue:string = (rightResult.value as String).valueOf();
+                    return ReturnValue.makeBooleanReturn(leftValue == rightValue);
+                }
+
+                //POTENCIAL BUG: WE CANT COMPARE POINTERS ANYMORE
+                return ReturnValue.makeBooleanReturn(leftResult == rightResult);
+            break;
+            case ExpressionKind.NOT_EQUAL:
+                if(leftType.kind == MyTypeKind.NUMBER && rightType.kind == MyTypeKind.NUMBER){
+                    let leftValue:number = (leftResult.value as Number).valueOf();
+                    let rightValue:number = (rightResult.value as Number).valueOf();
+                    return ReturnValue.makeBooleanReturn(leftValue != rightValue);
+                }
+                else if(leftType.kind == MyTypeKind.STRING && rightType.kind == MyTypeKind.STRING){
+                    let leftValue:string = (leftResult.value as String).valueOf();
+                    let rightValue:string = (rightResult.value as String).valueOf();
+                    return ReturnValue.makeBooleanReturn(leftValue != rightValue);
+                }
+                else if(leftType.kind == MyTypeKind.BOOLEAN && rightType.kind == MyTypeKind.BOOLEAN){
+                    let leftValue:string = (leftResult.value as String).valueOf();
+                    let rightValue:string = (rightResult.value as String).valueOf();
+                    return ReturnValue.makeBooleanReturn(leftValue != rightValue);
+                }
+
+                //POTENCIAL BUG: WE CANT COMPARE POINTERS ANYMORE
+                return ReturnValue.makeBooleanReturn(leftResult != rightResult);
+            break;
+            case ExpressionKind.ADDITION:
+                if(leftType.kind == MyTypeKind.STRING || rightType.kind == MyTypeKind.STRING){
+                    return ReturnValue.makeStringReturn(leftResult.myToString() + rightResult.myToString());
+                }
+                else if(leftType.kind == MyTypeKind.NUMBER && rightType.kind == MyTypeKind.NUMBER){
+                    let leftValue:number = (leftResult.value as Number).valueOf();
+                    let rightValue:number = (rightResult.value as Number).valueOf();
+                    return ReturnValue.makeNumberReturn(leftValue + rightValue);
+                }
+                else{
+                    throw new MyError(`Operador '${expr.expressionKind}' no acepta los tipos: '${leftType.kind}' y '${rightType.kind}'`)
+                }
+            break;
+            case ExpressionKind.SUBSTRACTION:
+                if(leftType.kind == MyTypeKind.NUMBER && rightType.kind == MyTypeKind.NUMBER){
+                    let leftValue:number = (leftResult.value as Number).valueOf();
+                    let rightValue:number = (rightResult.value as Number).valueOf();
+                    return ReturnValue.makeNumberReturn(leftValue - rightValue);
+                }
+                else{
+                    throw new MyError(`Operador '${expr.expressionKind}' no acepta los tipos: '${leftType.kind}' y '${rightType.kind}'`)
+                }
+            break;
+            case ExpressionKind.MULTIPLICATION:
+                if(leftType.kind == MyTypeKind.NUMBER && rightType.kind == MyTypeKind.NUMBER){
+                    let leftValue:number = (leftResult.value as Number).valueOf();
+                    let rightValue:number = (rightResult.value as Number).valueOf();
+                    return ReturnValue.makeNumberReturn(leftValue * rightValue);
+                }
+                else{
+                    throw new MyError(`Operador '${expr.expressionKind}' no acepta los tipos: '${leftType.kind}' y '${rightType.kind}'`)
+                }
+            break;
+            case ExpressionKind.DIVISION:
+                if(leftType.kind == MyTypeKind.NUMBER && rightType.kind == MyTypeKind.NUMBER){
+                    let leftValue:number = (leftResult.value as Number).valueOf();
+                    let rightValue:number = (rightResult.value as Number).valueOf();
+                    return ReturnValue.makeNumberReturn(leftValue / rightValue);
+                }
+                else{
+                    throw new MyError(`Operador '${expr.expressionKind}' no acepta los tipos: '${leftType.kind}' y '${rightType.kind}'`)
+                }
+            break;
+            default:
+                throw new Error(`runExpression con expr.specification de tipo Binary expression no tienen implementacion para expression kind ${expr.expressionKind}`)
+        }
+    }
+    else if(expr.specification instanceof UnaryExpression){
+        throw new Error(`runExpression no implementado para ninguna UnaryExpression todavia`);
+    }
+
+    //If we reach this point in the code it means that the expression must
+    //be atomic or ternary, which means that for each possible expr.expressionKind
+    //there is a different type for expr.specification. 
     switch (expr.expressionKind) {
         case ExpressionKind.FUNCTION_CALL:
         {
@@ -88,12 +301,12 @@ export function runExpression(expr:Expression):Pointer{
             let functionName = functionCall.name;
             let functionArgs = functionCall.functionArgs;
 
-            let computedArgs:Array<Pointer>;
+            let computedArgs:Array<ReturnValue>;
             functionArgs.forEach(arg => {
                 computedArgs.push(runExpression(arg));
             });
 
-            return Env.callFunction(functionName, computedArgs);
+            return ReturnValue.makeMyObjReturn(Env.callFunction(functionName, computedArgs));
 
         }break;
         case ExpressionKind.IDENTIFIER:
@@ -107,27 +320,27 @@ export function runExpression(expr:Expression):Pointer{
         {
             let memberAccessExpression = expr.specification as MemberAccessExpression;
 
-            let resultingPointer = runExpression(memberAccessExpression.expression);
+            //TODO: think of a better name that ilustrastes the weird traversal we have to do 
+            //to run the memberaccess
+            let result = runExpression(memberAccessExpression.expression);
 
             switch (memberAccessExpression.memberAccess.accessKind) {
                 case AccessKind.AttributeAccess:
                 {
-                    //TODO: check if this actually works:
                     let attributeAccess = memberAccessExpression.memberAccess.access as AttributeAccess;
                     
-                    return resultingPointer.myObj.getAttribute(attributeAccess.name.toString());
+                    return result.getMyObj().getAttribute(attributeAccess.name.toString());
                 }break;
 
                 case AccessKind.FunctionAccess:
                 {
-                    //TODO: check if this actually works:
                     let functionAccess = memberAccessExpression.memberAccess.access as FunctionAccess;
                     
-                    let computedArgs = new Array<Pointer>();
+                    let computedArgs = new Array<ReturnValue>();
                     functionAccess.functionArguments.forEach(arg => {
                         computedArgs.push(runExpression(arg));
                     });
-                    return resultingPointer.myObj.callFunction(functionAccess.functionName.toString(), computedArgs);
+                    return ReturnValue.makeMyObjReturn(result.getMyObj().callFunction(functionAccess.functionName.toString(), computedArgs));
                 }break;
 
                 case AccessKind.IndexAccess:
@@ -142,8 +355,13 @@ export function runExpression(expr:Expression):Pointer{
         case ExpressionKind.LITERAL:
         {
             let literalExpr = expr.specification as LiteralExpression;
+            return ReturnValue.makeLiteralExpressionReturn(literalExpr);
+        }break;
+        case ExpressionKind.TERNARY:
+        {
+            let ternary = expr.specification as TernaryExpression;
             //BIG TODO: si es templated string hay que calcular todas sus subexpresiones
-            return Pointer.makeLiteralExpressionPointer(literalExpr);
+            throw new Error(`runExpression no implementado todavia para ExpresionKind.TERNARY`);
         }break;
     
         default:

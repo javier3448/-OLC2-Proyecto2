@@ -22,6 +22,7 @@ export class Pointer{
         this.myObj = myObj;
     }
 
+    //TODO: Consider cleaning up all these functions, I dont think they are being used, maybe
     public static makeLiteralExpressionPointer(literalExpression:LiteralExpression):Pointer{
         let val = literalExpression.literal;
         if(val instanceof String){
@@ -56,11 +57,11 @@ export class Pointer{
     }
 
     public static makeNullPointer():Pointer{
-        return new Pointer(new MyObj(new MyType(MyTypeKind.NULL, null), undefined));
+        return new Pointer(MyObj.nullInstance);
     }
 
     public static makeUndefinedPointer():Pointer{
-        return new Pointer(new MyObj(new MyType(MyTypeKind.UNDEFINED, null), null));
+        return new Pointer(MyObj.undefinedInstance);
     }
     //the copy methods
 }

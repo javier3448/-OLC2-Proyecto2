@@ -6,6 +6,7 @@ import { MyFunction, MyFunctionKind, GraficarTs, MyNonNativeFunction } from "./M
 import { MyObj, MyType, MyTypeKind, CustomObj, MyConsole } from './MyObj';
 import { MyError } from './MyError';
 import { runExpression } from './Runner';
+import { ReturnValue } from './ReturnValue';
 
 export class SymbolTableVariables{
     [key: string]: Pointer;
@@ -60,7 +61,10 @@ export module Env{
     //END: Funciones y variables nativas
 
     //Retorna undefined si no existe el id en niguno de los scopes
-    export function getVariable(id:string):Pointer{
+    //if ReturnValue is not a pointer then it means the variable doesnt exist
+    //in the current scope or the previous ones
+    //i.e. ReturnValue can only be Pointer of NullInstance
+    export function getVariable(id:string):ReturnValue{
 
         let iter:(Scope | null) = current;
         let myVariable:Pointer;
@@ -70,15 +74,15 @@ export module Env{
         while(iter != null){
             myVariable = iter.myVariables[id];
             if(myVariable !== undefined){
-                return myVariable;
+                return ReturnValue.makePointerReturn(myVariable);
             }
             iter = iter.previous;
         }
         if(myVariable == undefined){
-            myVariable =  Pointer.makeUndefinedPointer();
+            return ReturnValue.makeUndefinedReturn();
         }
 
-        return myVariable;
+        return ReturnValue.makePointerReturn(myVariable);
     }
 
     //[throws_MyError]
@@ -86,7 +90,7 @@ export module Env{
     //Atrapa si el numero de parametros es diferente
     //Atrapa si tiene diferente tipo de parametros
     //Atrapa cualquier error que ocurra mientras se ejecuta el codigo de la funcion
-    export function callFunction(id:string, myArgs:Pointer[]):Pointer{
+    export function callFunction(id:string, myArgs:ReturnValue[]):MyObj{
 
         let iter:(Scope | null) = current;
         let myFunctionSignature:(MyFunction | undefined);
@@ -113,7 +117,8 @@ export module Env{
                 throw new MyError(`No se puede llamar a la funcion <graficar_ts> con ${myArgs.length} argumentos`)
             }
             graficar_ts();
-            return Pointer.makeUndefinedPointer();
+            //we return 'void' which is 'undefined' in typescript
+            return MyObj.undefinedInstance;
         }
 
         let nonNativeFunctionSignature = myFunctionSignature.specification as MyNonNativeFunction;
@@ -125,15 +130,15 @@ export module Env{
 
         // we check the correctness of the types
         for (let i = 0; i < myArgs.length; i++) {
-            const pointer = myArgs[i];
+            const resultValue = myArgs[i];
 
-            if(pointer.myObj.myType.kind == MyTypeKind.ARRAY ||
-                pointer.myObj.myType.kind == MyTypeKind.CUSTOM)
+            if(resultValue.getMyObj().myType.kind == MyTypeKind.ARRAY ||
+                resultValue.getMyObj().myType.kind == MyTypeKind.CUSTOM)
             {
                 throw new Error("Env.callFunction no chequea con tipos Array ni Custom TODAVIA");
             }
             //POSIBLE BUG: no se como se manejan las comparaciones en TypeScript!
-            let typeArg = pointer.myObj.myType.kind;
+            let typeArg = resultValue.getMyObj().myType.kind;
             let typeParam = nonNativeFunctionSignature.params[i].myType.kind;
             if(typeArg !== typeParam){
                 throw new MyError(`Types no compatibles en el argumento: ${i}. Se tiene: ${typeArg.toString()} se esperaba: ${typeParam.toString()}`)

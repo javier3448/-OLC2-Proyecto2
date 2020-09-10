@@ -1,6 +1,7 @@
 import { Pointer } from './Pointer';
 import { MyError } from './MyError';
 import { myPrint } from "./Runner";
+import { ReturnValue } from './ReturnValue';
 
 
 export enum MyTypeKind {
@@ -101,7 +102,44 @@ export class MyObj {
         this.value = value;
     }
 
-    public toString(originalPadding:string = ""):string{
+    public myToString():string{
+
+        switch (this.myType.kind) {
+            case MyTypeKind.STRING:
+                return (this.value as String).toString();
+            case MyTypeKind.NUMBER:
+                return (this.value as Number).toString();
+            case MyTypeKind.BOOLEAN:
+                return (this.value as Boolean).toString();
+            case MyTypeKind.ARRAY :
+            {
+                let myArray = this.value as MyArray;
+                if (myArray.array.length < 1){
+                    return "";
+                }
+                let result = "";
+                myArray.array.forEach(pointer => {
+                    result += pointer.myObj.myToString() + ", ";
+                });
+                result.slice(0, -2);
+            }break;
+            //this is just how typescript does it, not my fault if it is shitty
+            //it is kinda lame that we cant get the string that the console woud
+            //print
+            case MyTypeKind.MY_CONSOLE:
+            case MyTypeKind.CUSTOM:
+                return "[object Object]";
+            case MyTypeKind.NULL:
+                return "null";
+            case MyTypeKind.UNDEFINED:
+                return "undefined";
+
+            default:
+                throw new Error(`Constructor MyObj: no implementado para el tipo: <${this.myType.kind}`);
+        }
+    }
+
+    public toPrintableString(originalPadding:string = ""):string{
 
         switch (this.myType.kind) {
             case MyTypeKind.STRING:
@@ -112,6 +150,8 @@ export class MyObj {
                 return originalPadding + (this.value as Boolean).toString();
             case MyTypeKind.ARRAY :
                 return originalPadding + (this.value as MyArray).toString(originalPadding);
+            case MyTypeKind.MY_CONSOLE:
+                return "{}";
             case MyTypeKind.CUSTOM:
                 return originalPadding + customObjToString(this.value as CustomObj, originalPadding);
             case MyTypeKind.NULL:
@@ -129,7 +169,11 @@ export class MyObj {
     // return pointer to undefined if the attribute doesnt exist or is undefined
     //[throws_MyError]
     //TODO: Poner que atrapa y que no
-    public getAttribute(id:string):Pointer{
+    //TODO: [!!!] pensar en que tiene que devolver. Mi intuicion dice que siempre debe devolver Pointer
+    //pero el .length de array lo complica todo. porque tendriamos que matener un attributo length en my array
+    //Y mantener el .length real y el mio de acuedo siempre
+    //Por ahora retornamos ReturnValue porque si no existe el atributo retornamos undefined. Ver comentarios de Env.callFunction para mas info
+    public getAttribute(id:string):ReturnValue{
 
         switch (this.myType.kind) {
             case MyTypeKind.STRING:
@@ -143,7 +187,8 @@ export class MyObj {
                 if(id == "length"){
                     let myArray = this.value as MyArray;
                     //just return the length of the array array of 
-                    return Pointer.makeNumberPointer(myArray.array.length);
+                    //POTENCIAL BUG!!!!
+                    return ReturnValue.makePointerReturn(Pointer.makeNumberPointer(myArray.array.length));
                 }
             case MyTypeKind.CUSTOM:
             {
@@ -153,7 +198,7 @@ export class MyObj {
                 if(custom[id] === undefined){
                     //return new pointer to undef
                 }
-                return custom[id];
+                return ReturnValue.makePointerReturn(custom[id]);
             }
             case MyTypeKind.NULL:
                 throw new MyError(`No se puede leer propiedad <${id}> de null`);
@@ -169,15 +214,16 @@ export class MyObj {
 
     //[throws_MyError]
     //TODO: Poner que atrapa y que no
-    public callFunction(id:string, functionArguments:Pointer[]):Pointer{
+    //TODO: consider if functionArguments should be pointers or... something else i dont fucking now
+    public callFunction(id:string, functionArguments:ReturnValue[]):MyObj{
         
         switch (this.myType.kind) {
             case MyTypeKind.MY_CONSOLE:
                 if(id == "log"){
                     functionArguments.forEach(functionArgument => {
-                        myPrint(functionArgument.myObj);
+                        myPrint(functionArgument.getMyObj());
                     });
-                    return Pointer.makeUndefinedPointer();
+                    return MyObj.nullInstance;
                 }else{
                     throw new MyError(`<${id}> no es una funcion de <console>`);
                 }
@@ -200,6 +246,19 @@ export class MyObj {
                 throw new Error(`GetAttribute: no implementado para el tipo: <${this.myType.kind}`);
         }
     }
+
+    //Para que solo tengamos una instancia de NullObject.
+    //Talvez seria bueno poner privado el constructor para asegurar que no se puedan instanciar mas
+    //NullObj
+    //por ahora dejarlos public esta bien
+    public static nullInstance = new MyObj(new MyType(MyTypeKind.NULL, null), null);
+    //public static getNullObject()MyObj{  }
+
+    //Para que solo tengamos una instancia de UndefinedObject.
+    //Talvez seria bueno poner privado el constructor para asegurar que no se puedan instanciar mas
+    //UndefinedObj
+    public static undefinedInstance = new MyObj(new MyType(MyTypeKind.UNDEFINED, null), undefined);
+    //public static getUndefinedObject():MyObj{   }
 }
 
 export class CustomObj {
@@ -231,7 +290,7 @@ export function customObjToString(customObj:CustomObj, originalPadding:string):s
 
     let result = "{";
     for(const attributeName in customObj){
-        result += "\n" + nextPadding + attributeName + ":" + customObj[attributeName].myObj.toString(nextPadding) + ","
+        result += "\n" + nextPadding + attributeName + ":" + customObj[attributeName].myObj.toPrintableString(nextPadding) + ","
         isEmpty = false;
     }
 
@@ -246,7 +305,7 @@ export function customObjToString(customObj:CustomObj, originalPadding:string):s
 }
 
 export class MyArray {
-    array: Array<MyObj>;
+    array: Array<Pointer>;
 
     //we dont have to do the switch for every single element. If one element has a type,
     //then all other elments must have the same type AND we can pass the subtype from
@@ -260,8 +319,8 @@ export class MyArray {
         let nextPadding:string = ' '.repeat + originalPadding;
         let result = "[";
 
-        this.array.forEach(element => {
-            result += "\n" + nextPadding + element.toString(nextPadding) + ",";
+        this.array.forEach(pointer => {
+            result += "\n" + nextPadding + pointer.myObj.toPrintableString(nextPadding) + ",";
         });
 
         result = result.slice(0, -1);

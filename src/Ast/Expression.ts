@@ -13,6 +13,8 @@ export enum ExpressionKind{
     GREATER_OR_EQUAL = '>=',
     EQUAL = '==',
     NOT_EQUAL = '!=',
+    OR = 'OR',
+    AND = 'AND',
 
     ADDITION = '+',
     SUBSTRACTION = '-',
@@ -87,6 +89,8 @@ export class Expression {
             case ExpressionKind.GREATER_OR_EQUAL:
             case ExpressionKind.EQUAL:
             case ExpressionKind.NOT_EQUAL:
+            case ExpressionKind.OR:
+            case ExpressionKind.AND:
             case ExpressionKind.ADDITION:
             case ExpressionKind.SUBSTRACTION:
             case ExpressionKind.MULTIPLICATION:

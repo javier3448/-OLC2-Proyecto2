@@ -39,6 +39,8 @@ export function graphExpression(g:Digraph, expr:Expression):INode{
         case ExpressionKind.GREATER_OR_EQUAL:
         case ExpressionKind.EQUAL:
         case ExpressionKind.NOT_EQUAL:
+        case ExpressionKind.OR:
+        case ExpressionKind.AND:
         case ExpressionKind.ADDITION:
         case ExpressionKind.SUBSTRACTION:
         case ExpressionKind.MULTIPLICATION:
@@ -225,6 +227,10 @@ function expressionToLabel(expr:Expression):string{
             return "<<B>==</B>>";
         case ExpressionKind.NOT_EQUAL:
             return "<<B>!=</B>>";
+        case ExpressionKind.OR:
+            return "<<B>OR</B>>"
+        case ExpressionKind.AND:
+            return "<<B>OR</B>>"
 
         case ExpressionKind.ADDITION:
             return "<<B>+</B>>";

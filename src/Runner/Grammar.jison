@@ -27,10 +27,10 @@
 "AND"                         return 'AND'
 "=="                          return '=='
 "!="                          return '!='
-">"                           return '>'
-"<"                           return '<'
 ">="                          return '>='
 "<="                          return '<='
+">"                           return '>'
+"<"                           return '<'
 "+"                           return '+'
 "-"                           return '-'
 "*"                           return '*'
@@ -206,7 +206,7 @@ Expression
     }
     | Expression '>=' Expression
     {
-        $$ = new Expression(ExpressionKind.GREATER_EQUAL, new BinaryExpression($1, $3), @1.first_line, @1.first_column, @3.last_line, @3.last_column);
+        $$ = new Expression(ExpressionKind.GREATER_OR_EQUAL, new BinaryExpression($1, $3), @1.first_line, @1.first_column, @3.last_line, @3.last_column);
     }
     | Expression '==' Expression
     {
@@ -215,6 +215,14 @@ Expression
     | Expression '!=' Expression
     {
         $$ = new Expression(ExpressionKind.NOT_EQUAL, new BinaryExpression($1, $3), @1.first_line, @1.first_column, @3.last_line, @3.last_column);
+    }
+    | Expression 'OR' Expression
+    {
+        $$ = new Expression(ExpressionKind.OR, new BinaryExpression($1, $3), @1.first_line, @1.first_column, @3.last_line, @3.last_column);
+    }
+    | Expression 'AND' Expression
+    {
+        $$ = new Expression(ExpressionKind.AND, new BinaryExpression($1, $3), @1.first_line, @1.first_column, @3.last_line, @3.last_column);
     }
     | 'NOT' Expression
     {

@@ -333,23 +333,23 @@
         ></ngx-codemirror>
     </td>
     <td colspan="2" style="width: 50%">
-        <ngx-codemirror #textBoxJs [(ngModel)]="runtimeInterface.translation"
-            [options]="{
-                lineNumbers: true,
-                theme: 'material',
-                mode: 'javascript'
-            }"
-        ></ngx-codemirror>
-    </td>
-  </tr>
-  <tr>
-    <td colspan="4">
         <ngx-codemirror #textBoxJs [(ngModel)]="runtimeInterface.myConsole"
             [options]="{
                 lineNumbers: false,
                 theme: 'material',
                 mode: 'null',
                 readOnly: 'true'
+            }"
+        ></ngx-codemirror>
+    </td>
+  </tr>
+  <tr>
+    <td colspan="4">
+        <ngx-codemirror #textBoxJs [(ngModel)]="runtimeInterface.translation"
+            [options]="{
+                lineNumbers: true,
+                theme: 'material',
+                mode: 'javascript'
             }"
         ></ngx-codemirror>
     </td>
