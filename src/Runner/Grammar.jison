@@ -1,7 +1,7 @@
 %{
     const { Expression, ExpressionKind, UnaryExpression, BinaryExpression, TernaryExpression, LiteralExpression, IdentifierExpression, FunctionCallExpression, MemberAccessExpression} = require('../Ast/Expression');
     const { MemberAccess, AccessKind, FunctionAccess, IndexAccess, AttributeAccess } = require('../Ast/MemberAccess');
-    const { Statement, StatementKind } = require('../Ast/Statement');
+    const { Statement, StatementKind, Block, WhileStatement } = require('../Ast/Statement');
     const { Assignment } = require('../Ast/Assignment');
     const { Declaration } = require('../Ast/Declaration');
     const { MyTypeNode, MyTypeNodeKind } = require('../Ast/MyTypeNode');
@@ -22,6 +22,10 @@
 "false"                       return 'FALSE'
 "undefined"                   return 'UNDEFINED'
 "null"                        return 'NULL'
+
+"while"                       return 'WHILE'
+
+"break"                       return 'BREAK'
 
 "OR"                          return 'OR'
 "AND"                         return 'AND'
@@ -74,6 +78,7 @@
 //falta el operador %
 //[?] tenemos que hacer los operadores: = += <unary+>
 //TODO: como hacer el unary minux
+%right '='
 %left 'OR'
 %left 'AND'
 %left '==', '!='
@@ -135,8 +140,28 @@ Statement
     {
         $$ = new Statement(StatementKind.DeclarationKind, $1, @1.first_line, @1.first_column, @2.last_line, @2.last_column);
     }
+    | Block
+    {
+        $$ = new Statement(StatementKind.DeclarationKind, new Block($1), @1.first_line, @1.first_column, @2.last_line, @2.last_column);
+    }
+    | WHILE '(' Expression ')' Block
+    {
+        $$ = new Statement(StatementKind.WhileKind, new WhileStatement($3, $5), @1.first_line, @1.first_column, @5.last_line, @5.last_column);
+    }
+    //Jumpers
+    | BREAK ';'
+    {
+        $$ = new Statement(StatementKind.BreakKind, null, @1.first_line, @1.first_column, @2.last_line, @2.last_column);
+    }
 ;
- 
+
+Block
+    : '{' StatementList_ '}'
+    {
+        $$ = new Block($2);
+    }
+;
+
 Declaration
     : LET IDENTIFIER '=' Expression
     {
@@ -151,6 +176,7 @@ Declaration
         $$ = new Declaration($1, $4, null, @1.first_line, @1.first_column, @4.last_line, @4.last_column);
     }
 ;
+
 
 Type
     : 'NUMBER'
@@ -243,6 +269,10 @@ Expression
     | Expression MemberAccess %prec DOT /* Esta precedencia si es necesaria */
     {
         $$ = new Expression(ExpressionKind.MEMBER_ACCESS, new MemberAccessExpression($1, $2), @1.first_line, @1.first_column, @2.last_line, @2.last_column);
+    }
+    | Expression '=' Expression
+    {
+        $$ = new Expression(ExpressionKind.ASSINGMENT, new BinaryExpression($1, $3), @1.first_line, @1.first_column, @3.last_line, @3.last_column);
     }
     | F
     {

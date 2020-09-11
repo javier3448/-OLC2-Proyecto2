@@ -118,9 +118,9 @@ export class MyObj {
                     return "";
                 }
                 let result = "";
-                myArray.array.forEach(pointer => {
+                for (const pointer of myArray.array) {
                     result += pointer.myObj.myToString() + ", ";
-                });
+                }
                 result.slice(0, -2);
             }break;
             //this is just how typescript does it, not my fault if it is shitty
@@ -220,9 +220,9 @@ export class MyObj {
         switch (this.myType.kind) {
             case MyTypeKind.MY_CONSOLE:
                 if(id == "log"){
-                    functionArguments.forEach(functionArgument => {
+                    for (const functionArgument of functionArguments) {
                         myPrint(functionArgument.getMyObj());
-                    });
+                    }
                     return MyObj.nullInstance;
                 }else{
                     throw new MyError(`<${id}> no es una funcion de <console>`);
@@ -244,6 +244,37 @@ export class MyObj {
 
             default:
                 throw new Error(`GetAttribute: no implementado para el tipo: <${this.myType.kind}`);
+        }
+    }
+
+    public getTruthy():boolean{
+        switch (this.myType.kind) {
+            case MyTypeKind.STRING:
+                if((this.value as String).toString()){
+                    return true;
+                }
+                else{
+                    return false;
+                }
+            case MyTypeKind.NUMBER:
+                if((this.value as Number).valueOf()){
+                    return true;
+                }
+                else{
+                    return false;
+                }
+            case MyTypeKind.BOOLEAN:
+                return (this.value as Boolean).valueOf();
+            case MyTypeKind.ARRAY :
+            case MyTypeKind.CUSTOM:
+            case MyTypeKind.MY_CONSOLE:
+                return true;
+            case MyTypeKind.NULL:
+            case MyTypeKind.UNDEFINED:
+                return false;
+        
+            default:
+                throw new Error(`Constructor MyObj: no implementado para el tipo: '${this.myType}'`);
         }
     }
 
@@ -319,9 +350,10 @@ export class MyArray {
         let nextPadding:string = ' '.repeat + originalPadding;
         let result = "[";
 
-        this.array.forEach(pointer => {
+        for (const pointer of this.array) {
+            
             result += "\n" + nextPadding + pointer.myObj.toPrintableString(nextPadding) + ",";
-        });
+        }
 
         result = result.slice(0, -1);
         result += "\n" + originalPadding + "]";

@@ -21,6 +21,7 @@ export enum ExpressionKind{
     MULTIPLICATION = '*',
     DIVISION = '/',
     POWER = '**',
+    ASSIGNMENT = '=',
 
     //unary
     UNARY_MINUS = '-',
@@ -95,9 +96,10 @@ export class Expression {
             case ExpressionKind.SUBSTRACTION:
             case ExpressionKind.MULTIPLICATION:
             case ExpressionKind.DIVISION:
+            case ExpressionKind.ASSIGNMENT:
             case ExpressionKind.POWER:
                 if(!(specification instanceof BinaryExpression)){
-                    throw new Error(`Assertion Error: Operator ${expressionKind.toString()} must be Type BinaryExpression insstead of ${typeof(specification)}`);
+                    throw new Error(`Assertion Error: Operator ${expressionKind.toString()} must be Type BinaryExpression insstead of ${(specification)}`);
                 }
             break;
 
@@ -107,33 +109,33 @@ export class Expression {
             case ExpressionKind.POSTFIX_DEC:
             case ExpressionKind.NEGATION:
                 if(!(specification instanceof UnaryExpression)){
-                    throw new Error(`Assertion Error: Operator ${expressionKind.toString()} must be type UnaryExpression instead of ${typeof(specification)}`);
+                    throw new Error(`Assertion Error: Operator ${expressionKind.toString()} must be type UnaryExpression instead of ${(specification)}`);
                 }
             case ExpressionKind.IDENTIFIER:
                 if(!(specification instanceof IdentifierExpression)){
-                    throw new Error(`Assertion Error: expressionKind ${expressionKind.toString()} must be type IdentifierExpression instead of ${typeof(specification)}`);
+                    throw new Error(`Assertion Error: expressionKind ${expressionKind.toString()} must be type IdentifierExpression instead of ${(specification)}`);
                 }
             break;
             case ExpressionKind.FUNCTION_CALL:
                 if(!(specification instanceof FunctionCallExpression)){
-                    throw new Error(`Assertion Error: expressionKind ${expressionKind.toString()} must be type IdentifierExpression instead of ${typeof(specification)}`);
+                    throw new Error(`Assertion Error: expressionKind ${expressionKind.toString()} must be type IdentifierExpression instead of ${(specification)}`);
                 }
             break;
             case ExpressionKind.LITERAL:
                 if(!(specification instanceof LiteralExpression)){
-                    throw new Error(`Assertion Error: expressionKind ${expressionKind.toString()} must be type LiteralExpression instead of ${typeof(specification)}`);
+                    throw new Error(`Assertion Error: expressionKind ${expressionKind.toString()} must be type LiteralExpression instead of ${(specification)}`);
                 }
             break;
 
             //ternary
             case ExpressionKind.TERNARY:
                 if(!(specification instanceof TernaryExpression)){
-                    throw new Error(`Assertion Error: expressionKind ${expressionKind.toString()} must be type TernaryExpression instead of ${typeof(specification)}`);
+                    throw new Error(`Assertion Error: expressionKind ${expressionKind.toString()} must be type TernaryExpression instead of ${(specification)}`);
                 }
             break;
             case ExpressionKind.MEMBER_ACCESS:
                 if(!(specification instanceof MemberAccessExpression)){
-                    throw new Error(`Assertion Error: expressionKind ${expressionKind.toString()} must be type MemberAccessExpression instead of ${typeof(specification)}`);
+                    throw new Error(`Assertion Error: expressionKind ${expressionKind.toString()} must be type MemberAccessExpression instead of ${(specification)}`);
                 }
             break;
             //Solo para que no se nos olvide incluir todos los operadores posibles en este switch

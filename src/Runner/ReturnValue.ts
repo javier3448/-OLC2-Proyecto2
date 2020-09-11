@@ -7,6 +7,8 @@ export enum ReturnKind{
 }
 
 //basically a simple union between (Pointer | MyObj)
+//TODO: Think of a better name because the name ReturnValue might get confused
+//with the jumpers: return; and return expr;
 export class ReturnValue{
     kind:ReturnKind;
     specification:(Pointer | MyObj);

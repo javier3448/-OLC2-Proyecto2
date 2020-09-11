@@ -1,7 +1,6 @@
-import { AstNode } from "./AstNode";
-import { Expression } from "./Expression"
-import { MyTypeNode } from "./MyTypeNode"
-import { sanitizeIdentifier } from '@angular/compiler';
+import { AstNode } from './AstNode';
+import { MyTypeNode } from './MyTypeNode';
+import { Expression } from './Expression';
 
 export class Declaration {
     //Common AST attributes

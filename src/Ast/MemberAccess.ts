@@ -37,17 +37,17 @@ export class MemberAccess {
         switch (accessKind) {
             case AccessKind.FunctionAccess:
                 if(!(access instanceof FunctionAccess)){
-                    throw new Error(`Constructor MemberAccess: accessKind: <${accessKind}> solo puede tener access con tipo FunctionAccess y no: <${typeof access}>`);
+                    throw new Error(`Constructor MemberAccess: accessKind: <${accessKind}> solo puede tener access con tipo FunctionAccess y no: <${access}>`);
                 }
                 break;
             case AccessKind.IndexAccess:
                 if(!(access instanceof IndexAccess)){
-                    throw new Error(`Constructor MemberAccess: accessKind: <${accessKind}> solo puede tener access con tipo IndexAccess y no: <${typeof access}>`);
+                    throw new Error(`Constructor MemberAccess: accessKind: <${accessKind}> solo puede tener access con tipo IndexAccess y no: <${access}>`);
                 }
                 break;
             case AccessKind.AttributeAccess:
                 if(!(access instanceof AttributeAccess)){
-                    throw new Error(`Constructor MemberAccess: accessKind: <${accessKind}> solo puede tener access con tipo AttributeAccess y no: <${typeof access}>`);
+                    throw new Error(`Constructor MemberAccess: accessKind: <${accessKind}> solo puede tener access con tipo AttributeAccess y no: <${access}>`);
                 }
                 break;
         

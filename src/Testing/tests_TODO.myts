@@ -268,3 +268,185 @@
     nullify(a.a);
     console.log(a.a);//Deberia de imprimir null
 }
+
+//TODO: 'formalizar' esta prueba
+{
+    //this, somehow prints: [ null, null, null, null, null, null, null, null, null, null ]
+    let anArray:number[] = [];
+    anArray.length = 10;
+    console.log(anArray);
+}
+  
+{
+    [10] = [1,2,3,4];//deberia ser un error
+    [10, 10].length = 10;//No deberia ser error
+
+}
+
+{
+    let anArray:number[]
+    console.log(anArray = [10, 2, 3]);//esto imprime el arreglo
+}
+
+{
+    console.log(let anArray:number[] = [10, 2, 3]);//Pero las declaraciones no pueden ser expresion
+}
+
+//TODO: algo que revice si el operator precedence de '=' al hacer assignment es correcto
+
+{
+    type A = {
+        a:string,
+        b:string
+    }
+    type B = {
+        a:string,
+        b:string
+    }
+
+    function test(a:A){
+        console.log(a);
+    }
+
+    let b:B = {a:"Javier", b:"Antonio"};
+    test(b);//Esto NO debe dar error de tipos
+}
+
+{
+    type A = {
+        a:string,
+        b:string
+    }
+
+    function test1(a:A){
+        console.log(a);
+    }
+
+    test({a:"Javier", b:"Javier"});//Esto NO debe dar error de tipos
+}
+
+{
+    type A = {
+        a:string,
+        b:string
+    }
+
+    let a = ({a:"Javier", b:"Javier"});//Should work
+}
+{
+    type A = {
+        a:number,
+        b:B
+    }
+    type B = {
+        a:A,
+        b:number
+    }
+}
+
+{
+    function A(){
+        B();
+    }
+    function B(){
+        A();
+    }
+}
+
+// Truthiness porque typescript es una mierda:
+{
+    if(true){
+        console.log("PASS");
+    }
+    else{
+        console.log("FAIL");
+    }
+    if(!(false)){
+        console.log("PASS");
+    }
+    else{
+        console.log("FAIL");
+    }
+
+    if(10){//Any non 0 number
+        console.log("PASS");
+    }
+    else{
+        console.log("FAIL");
+    }
+    if(!(0)){
+        console.log("PASS");
+    }
+    else{
+        console.log("FAIL");
+    }
+
+    if(!('')){
+        console.log("PASS");
+    }
+    else{
+        console.log("FAIL");
+    }
+    if('false'){//i.e. any other string
+        console.log("PASS");
+    }
+    else{
+        console.log("FAIL");
+    }
+
+    if(!(null)){//null is never true
+        console.log("PASS");
+    }
+    else{
+        console.log("FAIL");
+    }
+
+    if(!(undefined)){//undefined is never true
+        console.log("PASS");
+    }
+    else{
+        console.log("FAIL");
+    }
+
+    if([]){//any array empty or not is never false
+        console.log("PASS");
+    }
+    else{
+        console.log("FAIL");
+    }
+
+    if({}){//any object empty or not is never false
+        console.log("PASS");
+    }
+    else{
+        console.log("FAIL");
+    }
+}
+
+// About truthiness
+// copied from: https://medium.com/coding-in-simple-english/what-are-truthy-values-in-javascript-e037bdfa76f8
+// might be useful in one way or another
+{
+    const empty = {}
+    empty ? "truthy" : "falsy"; // truthy
+
+    [] ? "truthy" : "falsy"; // truthy
+
+    0 ? "truthy" : "falsy"; // falsy
+    37 ? "truthy" : "falsy"; // truthy
+
+    false ? "truthy" : "falsy"; // falsy
+    true ? "truthy" : "falsy"; // truthy
+
+    0n ? "truthy" : "falsy"; // falsy
+    37n ? "truthy" : "falsy"; // truthy
+
+    "" ? "truthy" : "falsy"; // falsy
+    "any string" ? "truthy" : "falsy"; // truthy
+
+    null ? "truthy" : "falsy"; // falsy
+    undefined ? "truthy" : "falsy"; // falsy
+}
+
+//TODO: Algo para probar truthiness con operadores
+//TODO: Revisar bien que cosas son las que causan truthiness

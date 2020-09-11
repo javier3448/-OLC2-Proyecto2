@@ -1,11 +1,12 @@
 import { Pointer } from "./Pointer"; 
 import { ReturnValue, ReturnKind } from "./ReturnValue"; 
+import { Jumper, JumperKind } from "./Jumper";
        
 import { parser } from "./RunnerParser.js";
 import { RuntimeInterface } from "../app/app.component";
 import { Env, Scope } from "./Environment";
 
-import { Statement } from "../Ast/Statement";
+import { Statement, StatementKind, WhileStatement, Block} from "../Ast/Statement";
 
 import { MyObj, MyTypeKind, CustomObj, MyType } from "./MyObj";
 import { MyFunction, MyFunctionKind, GraficarTs, Parameter } from "./MyFunction";
@@ -44,34 +45,69 @@ export function test(source:string, _runtimeInterface:RuntimeInterface):void{
     // we start walking that damn AST for realz here
     let root =  parser.parse(source) as Statement[];
 
-    runStatements(root);
+    runGlobalStatements(root);
 }
 
-export function runStatements(statements:Statement[]):void{
-    statements.forEach(statement => {
-    runStatement(statement);
-    });
+export function runGlobalStatements(statements:Statement[]):void{
+    for (const statement of statements) {
+        let result = runStatement(statement);
+        // BIG TODO: Implementar bien los jumpers sin que se truene todo el programa
+        // y/o cause comportamiento extranno a travez de funciones
+        if(result != null){
+            console.log(new MyError(`No se puede usar el jumper: ${result} en ejecucion global`))
+        }
+    }
 }
 
-export function runStatement(statement:Statement){
+export function runStatement(statement:Statement):(Jumper | null){
     // This is basically dynamic dispatching, but at least I can see it... I guess
     try {
 
         let child = statement.child;
-        //TODO: Hacer un StatmentKind y cambiar esto por un switch de statement.kind
-        if(child instanceof Expression){
-            runExpression(child as Expression);
-        }
-        else if(child instanceof Declaration){
-            throw new Error(`runStatment no implementado para Declaration`);
-        }
-        else if(child instanceof Assignment){
-            throw new Error(`runStatment no implementado para Assignment`);
-        }
-        else{
-            throw new Error(`runStatment no implementado para myTypeNode: ${child}`);
-        }
 
+        switch (statement.statementKind) {
+            case StatementKind.ExpressionKind:
+                // No retornamos lo de expression porque no es posible que 
+                // expression retorne jumper
+                runExpression(child as Expression);
+                return null;
+        
+            case StatementKind.DeclarationKind:
+                //Igual a expression
+                throw new Error(`runStatment no implementado para myTypeNode: ${child}`);
+                break;
+
+            case StatementKind.WhileKind:
+                return runWhile(child as WhileStatement);
+                break;
+
+            case StatementKind.BlockKind:
+                return runBlock(child as Block);
+                break;
+
+            case StatementKind.BreakKind:
+                return new Jumper(JumperKind.BREAK, null);
+                break;
+
+            case StatementKind.ContinueKind:
+                throw new Error(`runStatment no implementado para myTypeNode: ${child}`);
+                break;
+
+            case StatementKind.ReturnKind:
+                throw new Error(`runStatment no implementado para myTypeNode: ${child}`);
+                break;
+
+            case StatementKind.ReturnWithValueKind:
+                throw new Error(`runStatment no implementado para myTypeNode: ${child}`);
+                break;
+
+            case StatementKind.ExpressionKind:
+                throw new Error(`runStatment no implementado para myTypeNode: ${child}`);
+                break;
+
+            default:
+                throw new Error(`runStatment no implementado para myTypeNode: ${child}`);
+        }
     } catch (myError) {
         if(myError instanceof MyError){
             //throw myError;
@@ -113,10 +149,17 @@ export function runExpression(expr:Expression):ReturnValue{
         //shorcircuiting como en C. Entonces hay casos en los que no se evaluan ambas 
         //expresiones
         if(expr.expressionKind == ExpressionKind.OR){
-            throw new Error(`Binary expression no implemented for ${expr.expressionKind}`);
+            //we do the shortcircuiting 'implicitly'
+            return ReturnValue.makeBooleanReturn(
+                runExpression(expr.specification.left).getMyObj().getTruthy() || 
+                runExpression(expr.specification.right).getMyObj().getTruthy()
+            );
         }
         if(expr.expressionKind == ExpressionKind.AND){
-            throw new Error(`Binary expression no implemented for ${expr.expressionKind}`);
+            return ReturnValue.makeBooleanReturn(
+                runExpression(expr.specification.left).getMyObj().getTruthy() &&
+                runExpression(expr.specification.right).getMyObj().getTruthy()
+            );
         }
         
         let leftResult = runExpression(expr.specification.left).getMyObj();
@@ -302,9 +345,9 @@ export function runExpression(expr:Expression):ReturnValue{
             let functionArgs = functionCall.functionArgs;
 
             let computedArgs:Array<ReturnValue>;
-            functionArgs.forEach(arg => {
+            for (const arg of functionArgs) {
                 computedArgs.push(runExpression(arg));
-            });
+            }
 
             return ReturnValue.makeMyObjReturn(Env.callFunction(functionName, computedArgs));
 
@@ -337,9 +380,9 @@ export function runExpression(expr:Expression):ReturnValue{
                     let functionAccess = memberAccessExpression.memberAccess.access as FunctionAccess;
                     
                     let computedArgs = new Array<ReturnValue>();
-                    functionAccess.functionArguments.forEach(arg => {
+                    for (const arg of functionAccess.functionArguments) {
                         computedArgs.push(runExpression(arg));
-                    });
+                    }
                     return ReturnValue.makeMyObjReturn(result.getMyObj().callFunction(functionAccess.functionName.toString(), computedArgs));
                 }break;
 
@@ -367,4 +410,43 @@ export function runExpression(expr:Expression):ReturnValue{
         default:
             throw new Error(`runExpression no implementado para myTypeNode: ${expr}`);
     }
+}
+
+export function runBlock(block:Block):(Jumper | null){
+    for (const statement of block.statements) {
+        let result = runStatement(statement);
+        if(result != null){//Then it must be jumper
+            return result;
+        }
+    }
+    return null;
+}
+
+export function runWhile(whileStatement:WhileStatement):(Jumper | null){
+    while(true){
+        let exprResult = runExpression(whileStatement.expr);
+        if(!exprResult.getMyObj().getTruthy()){
+            break;
+        }
+        let blockResult = runBlock(whileStatement.block);
+        //we do this check here and in runBlock redundantly.
+        //but we would require to restructure a bit to avoid that
+        //so fuck it
+        if(blockResult != null){//then it must be jumper
+            if(blockResult.kind == JumperKind.BREAK){
+                break;
+            }
+            else if(blockResult.kind == JumperKind.CONTINUE){
+                continue;
+            }
+            else if(blockResult.kind == JumperKind.RETURN ||
+                    blockResult.kind == JumperKind.RETURN_VALUE){
+                return blockResult;
+            }
+            else{//a sneaky assertion just in case
+                throw new Error(`runWhile no implentado para resultado de bloque: ${blockResult.kind}`);
+            }
+        }
+    }
+    return null;
 }

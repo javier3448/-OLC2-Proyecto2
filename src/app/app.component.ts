@@ -40,12 +40,25 @@ lol(1, 2, 3);`;
     {
       let testString = `console.log(10 + 20);`
     }
-    let testString = `
+    {
+      let testString = `
 console.log(20 > 10);
 console.log("10" <= "verdad");
 console.log(true >= false);
 console.log(console < console);//Error (even tho in TS is not an error)`
-    ;
+    }
+    {
+    let testString = `
+while(true){
+  console.log("Javier");
+  break;
+}
+`;
+    }
+    let testString = `
+let a = "Javier";
+console.log(a);
+`;
 
     this.sourceString = testString;
     this.runtimeInterface.translation = graphTest(testString);

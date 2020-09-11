@@ -1,6 +1,6 @@
 import { digraph, Digraph, ISubgraph, attribute, INode, toDot } from "ts-graphviz";
 import { Expression, ExpressionKind, LiteralExpression, IdentifierExpression, BinaryExpression, UnaryExpression, TernaryExpression, MemberAccessExpression, FunctionCallExpression } from "./Ast/Expression";
-import { Statement } from "./Ast/Statement";
+import { Statement, WhileStatement, Block, StatementKind } from "./Ast/Statement";
 import { AstNode } from "./Ast/AstNode";
 
 import { parser } from "./Runner/RunnerParser.js";
@@ -125,10 +125,10 @@ function graphMemberAccesses(g:Digraph, memberAccesses:MemberAccess[]):INode{
         [attribute.shape]: 'box',
     });
 
-    memberAccesses.forEach(memberAccess => {
+    for (const memberAccess of memberAccesses) {
         let child: INode = graphMemberAccess(g, memberAccess);
         g.createEdge([result, child]);
-    });
+    }
 
     return result;
 }
@@ -205,10 +205,10 @@ function graphExpressionList(g:Digraph, expressions:Expression[]):INode{
         [attribute.shape]: 'box',
     });
 
-    expressions.forEach(expression => {
+    for (const expression of expressions) {
         let child: INode = graphExpression(g, expression);
         g.createEdge([result, child]);
-    });
+    }
 
     return result;
 }
@@ -291,10 +291,10 @@ function graphStatements(g:Digraph, stmts:Statement[]):INode{
         [attribute.shape]: 'box',
     });
 
-    stmts.forEach(statement => {
+    for (const statement of stmts) {
         let child: INode = graphStatement(g, statement);
         g.createEdge([result, child]);
-    });
+    }
 
     return result;
 }
@@ -306,19 +306,70 @@ export function graphStatement(g:Digraph, statement:Statement):INode{
     });
 
     let child: INode;
-    //[ ? ]: no entiendo como funciona instanceof y typeof y todas esas mierdas en typescript.
-    //       El mayor problema es que tenemos que interactuar con javascript por jison
-    if(statement.child instanceof Expression){
-        child = graphExpression(g, statement.child as Expression);
-    }else if(statement.child instanceof Declaration){
-        child = graphDeclaration(g, statement.child as Declaration);
-    }else if(statement.child instanceof Assignment){
-        child = graphAssignment(g, statement.child as Assignment);
-    }else{
-        throw new Error(`Assertion Error: Graph statement no implementado para el tipo: ${typeof(statement.child)}`)
+    switch (statement.statementKind) {
+        case StatementKind.ExpressionKind:
+            child = graphExpression(g, statement.child as Expression);
+            break;
+        case StatementKind.DeclarationKind:
+            child = graphDeclaration(g, statement.child as Declaration);
+            break;
+
+        //Flujo de control
+        case StatementKind.WhileKind:
+            child = graphWhileStatement(g, statement.child as WhileStatement);
+            break;
+
+        case StatementKind.BlockKind:
+            child = graphBlock(g, statement.child as Block);
+            break;
+
+        //Jumpers
+        case StatementKind.BreakKind:
+            child = g.createNode(`break${statement.astNode.getId()}`, {
+                [attribute.label]: "break",
+                [attribute.shape]: 'box',
+            });
+            break;
+        case StatementKind.ContinueKind:
+            child = g.createNode(`continue${statement.astNode.getId()}`, {
+                [attribute.label]: "continue",
+                [attribute.shape]: 'box',
+            });
+            break;
+        case StatementKind.ReturnKind:
+            child = g.createNode(`return${statement.astNode.getId()}`, {
+                [attribute.label]: "return",
+                [attribute.shape]: 'box',
+            });
+        case StatementKind.ReturnWithValueKind:
+        {
+            child = g.createNode(`return_with_val${statement.astNode.getId()}`, {
+                [attribute.label]: "return with val",
+                [attribute.shape]: 'box',
+            });
+            let grandChild = graphExpression(g, statement.child as Expression);
+            g.createEdge([child, grandChild]);
+        }break;
+        default:
+            throw new Error(`Assertion Error: Graph statement no implementado para : ${statement.child}`)
     }
 
     g.createEdge([result, child]);
+
+    return result;
+}
+
+function graphBlock(g:Digraph, block:Block):INode{
+
+    const result = g.createNode(`block${AstNode.getNextAstNodeId()}`, {
+        [attribute.label]: "Block",
+        [attribute.shape]: 'box',
+    });
+
+    for (const statement of block.statements) {
+        let child: INode = graphStatement(g, statement);
+        g.createEdge([result, child]);
+    }
 
     return result;
 }
@@ -345,6 +396,22 @@ export function graphDeclaration(g:Digraph, decl:Declaration):INode{
         let exprNode = graphExpression(g, decl.expression);
         g.createEdge([result, exprNode]);
     }
+
+    return result;
+}
+
+function graphWhileStatement(g:Digraph, whileStatement:WhileStatement):INode{
+    
+    const result = g.createNode(`While${AstNode.getNextAstNodeId()}`, {
+        [attribute.label]: "While",
+        [attribute.shape]: 'box',
+    });
+
+    const exprNode = graphExpression(g, whileStatement.expr);
+    g.createEdge([result, exprNode]);
+
+    const blockNode = graphBlock(g, whileStatement.block);
+    g.createEdge([result, blockNode]);
 
     return result;
 }
