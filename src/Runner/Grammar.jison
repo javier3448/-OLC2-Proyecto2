@@ -144,9 +144,9 @@ Statement
     {
         $$ = new Statement(StatementKind.DeclarationKind, new Block($1), @1.first_line, @1.first_column, @2.last_line, @2.last_column);
     }
-    | WHILE '(' Expression ')' Block
+    | WHILE '(' Expression ')' '{' StatementList_ '}'
     {
-        $$ = new Statement(StatementKind.WhileKind, new WhileStatement($3, $5), @1.first_line, @1.first_column, @5.last_line, @5.last_column);
+        $$ = new Statement(StatementKind.WhileKind, new WhileStatement($3, $6), @1.first_line, @1.first_column, @6.last_line, @6.last_column);
     }
     //Jumpers
     | BREAK ';'

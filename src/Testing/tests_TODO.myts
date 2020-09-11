@@ -450,3 +450,42 @@
 
 //TODO: Algo para probar truthiness con operadores
 //TODO: Revisar bien que cosas son las que causan truthiness
+
+
+//TODO: Una declarion que verifique que si se haga bien la compativilidad de tipos entre
+//Customs
+
+//TODO: Una declarion que verifique que si se haga bien la compativilidad de tipos entre
+//Arrays
+
+//Probar que no el simbolo como tal sea capas de mantener su tipo
+{
+    type A = {
+        a: string;
+        b: string;
+    }
+    type B = {
+        a: number;
+        b: number;
+    }
+
+    let a:A;
+    console.log(a);//deberia de imprimir undefined
+    let b:B = { a: 10, b: 10 }
+    a = b;//Esto no deberia dar error
+}
+
+//TODO: [?] los types pueden tener inicializaciones default????????????????????
+
+//Probar que se puedan tener variables y types con el mismo nombre
+{
+    type A = {
+        a: string;
+        b: string;
+    }
+
+    //This is ok acording to typescript
+    let A:A = {a:"", b:""};
+}
+
+//TODO: Algo para probar el const

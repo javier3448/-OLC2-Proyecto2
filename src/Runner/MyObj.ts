@@ -34,6 +34,29 @@ export class MyType
     }
 }
 
+export function compareMyTypes(type1:MyType, type2:MyType):boolean{
+
+    //Caso especial: si es array
+    if(type1.kind == MyTypeKind.ARRAY && type2.kind == MyTypeKind.ARRAY){
+        //TODO
+        throw new Error(`Compare types para dos arrays no implementado todavia`);
+    }
+
+    //Caso especial: si es custom
+    if(type1.kind == MyTypeKind.CUSTOM && type2.kind == MyTypeKind.CUSTOM){
+        //TODO
+        throw new Error(`Compare types para dos arrays no implementado todavia`);
+    }
+
+    if(type1.kind == type2.kind){
+        return true;
+    }
+    else{
+        return false;
+    }
+
+}
+
 // Decision: El typo del objeto se va llevar en el valor del mismo no solo va ser algo que pongamos 
 // en la tabla de simbolos como en c/c++. Lo vamos a guardar en la memoria de runtime, como en java
 // Nota: no estoy seguro si asi es como se llevan los tipos en c/c++ y java, pero asi pareciera.

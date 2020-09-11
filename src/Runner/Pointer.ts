@@ -18,7 +18,7 @@ import { LiteralExpression } from 'src/Ast/Expression';
 export class Pointer{
     public myObj:MyObj;
 
-    constructor(myObj:MyObj){
+    private constructor(myObj:MyObj){
         this.myObj = myObj;
     }
 
@@ -63,5 +63,8 @@ export class Pointer{
     public static makeUndefinedPointer():Pointer{
         return new Pointer(MyObj.undefinedInstance);
     }
-    //the copy methods
+    
+    public static makeMyObjectPointer(myObj:MyObj):Pointer{
+        return new Pointer(myObj);
+    }
 }

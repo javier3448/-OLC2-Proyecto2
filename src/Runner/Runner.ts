@@ -17,6 +17,7 @@ import { Assignment } from '../Ast/Assignment';
 import { AccessKind, AttributeAccess, FunctionAccess } from 'src/Ast/MemberAccess';
 import { Attribute } from '@angular/core';
 import { getLocaleNumberFormat } from '@angular/common';
+import { environment } from 'src/environments/environment';
 
 
 
@@ -73,9 +74,14 @@ export function runStatement(statement:Statement):(Jumper | null){
                 return null;
         
             case StatementKind.DeclarationKind:
-                //Igual a expression
-                throw new Error(`runStatment no implementado para myTypeNode: ${child}`);
-                break;
+            {
+                let declaration = child as Declaration;
+
+                let id = declaration.identifier;
+                let type:(MyType | null) = (declaration.myTypeNode == null ? null : runMyTypeNode(declaration.myTypeNode));
+                let val = runExpression(declaration.expression))
+
+            }break;
 
             case StatementKind.WhileKind:
                 return runWhile(child as WhileStatement);
@@ -413,12 +419,15 @@ export function runExpression(expr:Expression):ReturnValue{
 }
 
 export function runBlock(block:Block):(Jumper | null){
+    Env.pushScope();
     for (const statement of block.statements) {
         let result = runStatement(statement);
         if(result != null){//Then it must be jumper
+            Env.popScope();
             return result;
         }
     }
+    Env.popScope();
     return null;
 }
 
@@ -428,25 +437,39 @@ export function runWhile(whileStatement:WhileStatement):(Jumper | null){
         if(!exprResult.getMyObj().getTruthy()){
             break;
         }
-        let blockResult = runBlock(whileStatement.block);
-        //we do this check here and in runBlock redundantly.
-        //but we would require to restructure a bit to avoid that
-        //so fuck it
-        if(blockResult != null){//then it must be jumper
-            if(blockResult.kind == JumperKind.BREAK){
-                break;
-            }
-            else if(blockResult.kind == JumperKind.CONTINUE){
+
+        Env.pushScope();
+        for (const statement of whileStatement.statements) {
+            let statementsResult = runStatement(statement);
+
+            if(statementsResult == null){
+                // We just go to the next statement because the current statement didnt
+                // return a jumper
                 continue;
             }
-            else if(blockResult.kind == JumperKind.RETURN ||
-                    blockResult.kind == JumperKind.RETURN_VALUE){
-                return blockResult;
+            else if(statementsResult.kind == JumperKind.CONTINUE){
+                // We break out of the foreach statements but not the while(true)
+                // This way we dont run the statements after continue; and we go to the
+                // next iteration of the while
+                Env.popScope();
+                break;
+            }
+            else if(statementsResult.kind == JumperKind.BREAK){
+                // We must exit out of the loop and return no Jumper because we
+                // 'consumed' the break jumper
+                Env.popScope();
+                return null;
+            }
+            else if(statementsResult.kind == JumperKind.RETURN ||
+                    statementsResult.kind == JumperKind.RETURN_VALUE){
+                // We must exit out of the loop and return a Jumper because we
+                // a while cant 'consume' a return jumper
+                Env.popScope();
+                return statementsResult;
             }
             else{//a sneaky assertion just in case
-                throw new Error(`runWhile no implentado para resultado de bloque: ${blockResult.kind}`);
+                throw new Error(`runWhile no implentado para resultado de bloque: ${statementsResult.kind}`);
             }
         }
     }
-    return null;
 }

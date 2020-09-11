@@ -3,7 +3,7 @@
 import { Pointer } from "./Pointer";
 import { Expression } from "../Ast/Expression"
 import { MyFunction, MyFunctionKind, GraficarTs, MyNonNativeFunction } from "./MyFunction";
-import { MyObj, MyType, MyTypeKind, CustomObj, MyConsole } from './MyObj';
+import { MyObj, MyType, MyTypeKind, CustomObj, MyConsole, compareMyTypes } from './MyObj';
 import { MyError } from './MyError';
 import { runExpression } from './Runner';
 import { ReturnValue } from './ReturnValue';
@@ -47,7 +47,7 @@ export module Env{
         global.myVariables
 
         //Inicializamos las variables, funciones y definiciones nativas del scope global
-        global.myVariables["console"] = new Pointer(new MyObj(new MyType(MyTypeKind.MY_CONSOLE, null), new MyConsole()));
+        global.myVariables["console"] = Pointer.makeMyObjectPointer(new MyObj(new MyType(MyTypeKind.MY_CONSOLE, null), new MyConsole()));
         global.myFunctions["graph_ts"] = new MyFunction(MyFunctionKind.GRAFICAR_TS, new GraficarTs());
 
         current = global;
@@ -59,6 +59,29 @@ export module Env{
         throw new Error("graficar_ts no soportado todavia!!!");
     }
     //END: Funciones y variables nativas
+
+    //[throws_MyError]
+    //Atrapa si ya exite el id en el current scope
+    //Atrapa si myType y val no son iguales
+    export function addVariable(id:string, myType:(MyType | null), val:MyObj){
+        //ver si ya existe en el current scope
+
+        if(current.myVariables[id] !== undefined){
+            return new MyError(`No se agregar una variable con el nombre ${id} porque existe un variable con el mismo nomber en el mismo scope`);
+        }
+        if(current.myFunctions[id] !== undefined){
+            return new MyError(`No se agregar una variable con el nombre ${id} porque existe un funcion con el mismo nomber en el mismo scope`);
+        }
+        //BIG TODO: Agregar un chequeo para que no colisione con las definiciones de variables tampoco
+
+        if(myType != null){
+            if(!compareMyTypes(myType, val.myType)){
+                return new MyError(`No se agregar una variable con el nombre ${id} porque existe un funcion con el mismo nomber en el mismo scope`);
+            }
+        }
+
+        current.myVariables[id] = Pointer.makeMyObjectPointer(val);
+    }
 
     //Retorna undefined si no existe el id en niguno de los scopes
     //if ReturnValue is not a pointer then it means the variable doesnt exist
@@ -150,5 +173,13 @@ export module Env{
         // oh... and run the fucking functions too
 
         throw new Error("WITHOUT FUCKING JUMPERS WE CANT RETURN FROM FUNCTIONS YET!!!!!!!!!!!!!!!!!!");
+    }
+
+    export function pushScope(){
+        current = new Scope(current);
+    }
+
+    export function popScope(){
+        current = current.previous;
     }
 }

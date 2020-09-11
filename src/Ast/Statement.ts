@@ -23,7 +23,7 @@ export class Block {
 }
 
 export class WhileStatement {
-    constructor(public expr:Expression, public block:Block){  }
+    constructor(public expr:Expression, public statements:Array<Statement>){  }
 }
 
 export class Statement {
