@@ -2,39 +2,22 @@ import { Pointer } from './Pointer';
 import { MyError } from './MyError';
 import { myPrint } from "./Runner";
 import { ReturnValue } from './ReturnValue';
+import { MyType, MyTypeKind, TypeSignature, TypeSignatureTable } from "./MyType";
 
 
-export enum MyTypeKind {
-    NUMBER = 'NUMBER',
-    STRING = 'STRING',
-    BOOLEAN = 'BOOLEAN',
-    NULL = 'NULL',
-    UNDEFINED = 'UNDEFINED',
-    ARRAY = 'ARRAY',
-    CUSTOM = 'CUSTOM',
-    MY_CONSOLE = 'MY_CONSOLE'//Medio chapuz
-}
-
-export class MyType
-{
-    public kind:MyTypeKind;
-    //Always null unless typekind is an array
-    public name:string;
-    public subType:(MyType | null);
-    //a type siganture
-
-    constructor(kind:MyTypeKind, subType:(MyType | null)) {
-        //assertions:
-        if(kind == MyTypeKind.ARRAY && subType == null){
-            throw new Error("MyType constructor: no se puede crear un MyType con subType null y kind ARRAY");
-        }
-
-        this.kind = kind;
-        this.subType = subType;
-    }
-}
-
+//TODO: retornar mensaje
+//retorna si dos tipos son compatibles
+//RECORDAR: que dos custom/anonymous son compatibles si ambos tienen el mismo numero de attributos
+//          con el mismo tipo
+//RECORDAR: Que null y undefined son compatibles con TODOS los tipos
+//[!!!] Tira exception si cualquierda de los dos tipos es ANONYMOUS
 export function compareMyTypes(type1:MyType, type2:MyType):boolean{
+
+    //Caso especial si cualquiera de los tipos es undefined o null
+    if(type1.kind == MyTypeKind.NULL || type2.kind == MyTypeKind.NULL ||
+        type1.kind == MyTypeKind.UNDEFINED || type2.kind == MyTypeKind.UNDEFINED){
+        return true;
+    }
 
     //Caso especial: si es array
     if(type1.kind == MyTypeKind.ARRAY && type2.kind == MyTypeKind.ARRAY){
@@ -42,10 +25,28 @@ export function compareMyTypes(type1:MyType, type2:MyType):boolean{
         throw new Error(`Compare types para dos arrays no implementado todavia`);
     }
 
-    //Caso especial: si es custom
     if(type1.kind == MyTypeKind.CUSTOM && type2.kind == MyTypeKind.CUSTOM){
-        //TODO
-        throw new Error(`Compare types para dos arrays no implementado todavia`);
+        let typeSignature1 = type1.specification as TypeSignature;
+        let typeSignature2 = type2.specification as TypeSignature;
+
+        //if they neither is anonymous we can compare their entry on the typeTable
+        //(for no just the name because we only have 1 typeTable)
+        if(typeSignature1.name != null && typeSignature2.name != null){
+            return (typeSignature1.name == typeSignature2.name);
+        }
+
+        if(Object.keys(typeSignature1.table).length != Object.keys(typeSignature2.table).length){
+            return false
+        }
+        //Bad performance
+        let types1 = Object.values(typeSignature1.table);
+        let types2 = Object.values(typeSignature2.table);
+        for (let i = 0; i < Object.keys(typeSignature1.table).length; i++) {
+            if(!(compareMyTypes(types1[i], types2[i]))){
+                return false;
+            }
+        }
+        return true;
     }
 
     if(type1.kind == type2.kind){
@@ -54,8 +55,9 @@ export function compareMyTypes(type1:MyType, type2:MyType):boolean{
     else{
         return false;
     }
-
 }
+
+//TODO: write all the makeMethods so we dont have to use the constructor 
 
 // Decision: El typo del objeto se va llevar en el valor del mismo no solo va ser algo que pongamos 
 // en la tabla de simbolos como en c/c++. Lo vamos a guardar en la memoria de runtime, como en java
@@ -97,7 +99,7 @@ export class MyObj {
                 }
                 break;
             case MyTypeKind.CUSTOM:
-                if(!(value instanceof MyObj)){
+                if(!(value instanceof CustomObj)){
                     throw new Error(`Constructor MyObj: el myType: <${myType}> no puede tener el valor: <${value}>`);
                 }
                 break;
@@ -166,21 +168,21 @@ export class MyObj {
 
         switch (this.myType.kind) {
             case MyTypeKind.STRING:
-                return originalPadding + (this.value as String);
+                return (this.value as String).toString();
             case MyTypeKind.NUMBER:
-                return originalPadding + (this.value as Number).toString();
+                return (this.value as Number).toString();
             case MyTypeKind.BOOLEAN:
-                return originalPadding + (this.value as Boolean).toString();
+                return (this.value as Boolean).toString();
             case MyTypeKind.ARRAY :
-                return originalPadding + (this.value as MyArray).toString(originalPadding);
+                return (this.value as MyArray).toString(originalPadding);
             case MyTypeKind.MY_CONSOLE:
                 return "{}";
             case MyTypeKind.CUSTOM:
-                return originalPadding + customObjToString(this.value as CustomObj, originalPadding);
+                return customObjToString(this.value as CustomObj, originalPadding);
             case MyTypeKind.NULL:
-                return originalPadding + "null";
+                return "null";
             case MyTypeKind.UNDEFINED:
-                return originalPadding + "undefined";
+                return "undefined";
 
             default:
                 throw new Error(`Constructor MyObj: no implementado para el tipo: <${this.myType.kind}`);
@@ -305,13 +307,13 @@ export class MyObj {
     //Talvez seria bueno poner privado el constructor para asegurar que no se puedan instanciar mas
     //NullObj
     //por ahora dejarlos public esta bien
-    public static nullInstance = new MyObj(new MyType(MyTypeKind.NULL, null), null);
+    public static nullInstance = new MyObj(MyType.nullTypeInstance, null);
     //public static getNullObject()MyObj{  }
 
     //Para que solo tengamos una instancia de UndefinedObject.
     //Talvez seria bueno poner privado el constructor para asegurar que no se puedan instanciar mas
     //UndefinedObj
-    public static undefinedInstance = new MyObj(new MyType(MyTypeKind.UNDEFINED, null), undefined);
+    public static undefinedInstance = new MyObj(MyType.undefinedTypeInstance, undefined);
     //public static getUndefinedObject():MyObj{   }
 }
 

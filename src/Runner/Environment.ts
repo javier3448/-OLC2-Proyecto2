@@ -3,7 +3,8 @@
 import { Pointer } from "./Pointer";
 import { Expression } from "../Ast/Expression"
 import { MyFunction, MyFunctionKind, GraficarTs, MyNonNativeFunction } from "./MyFunction";
-import { MyObj, MyType, MyTypeKind, CustomObj, MyConsole, compareMyTypes } from './MyObj';
+import { MyType, MyTypeKind } from "./MyType";
+import { MyObj, CustomObj, MyConsole, compareMyTypes } from './MyObj';
 import { MyError } from './MyError';
 import { runExpression } from './Runner';
 import { ReturnValue } from './ReturnValue';
@@ -14,21 +15,26 @@ export class SymbolTableVariables{
 export class SymbolTableFunctions{
     [key: string]: MyFunction;
 }
-// export class SymbolTableTypeDefs{
-//     [key: string]: TypeDef;
-// }
+//BIG TODO: pensar donde poner el string con el nombre del tipo
+//Si symbolTableTypeSignature[key] return undefined it means there is no entry
+//for that key. IF IT RETURNS NULL it means the key is "waiting" (i.e someone 
+//reference that typebut it hasnt been defined yet)
+export class SymbolTableTypeSignatures{
+    [key: string]: MyType;
+}
 
 // The current scope and all previous ones
 export class Scope{
     public myVariables:SymbolTableVariables;
     public myFunctions:SymbolTableFunctions;
-    //myTypeDefinitions:SymbolTableTypeDefs
+    public myTypeSignatures:SymbolTableTypeSignatures;
 
     public previous:(Scope | null);
 
     constructor(previous:(Scope | null)) {
         this.myVariables = new SymbolTableVariables();
         this.myFunctions = new SymbolTableFunctions();
+        this.myTypeSignatures = new SymbolTableTypeSignatures(); 
 
         this.previous = previous;
     }
@@ -36,9 +42,8 @@ export class Scope{
 
 export module Env{
 
-
-    let global:Scope;
-    let current:Scope;
+    export let global:Scope;
+    export let current:Scope;
 
     // clears the Environment and adds the default functions and variables
     export function initEnvironment():void{
@@ -46,9 +51,18 @@ export module Env{
 
         global.myVariables
 
+        //Inicializamos los tipos primitivos y Cosole
+        global.myTypeSignatures["string"] = MyType.stringTypeInstance;
+        global.myTypeSignatures["number"] = MyType.numberTypeInstance;
+        global.myTypeSignatures["boolean"] = MyType.booleanTypeInstance;
+        global.myTypeSignatures["null"] = MyType.nullTypeInstance;
+        global.myTypeSignatures["undefined"] = MyType.undefinedTypeInstance;
+
+        global.myTypeSignatures["Console"] = MyType.consoleTypeInstance;
+
         //Inicializamos las variables, funciones y definiciones nativas del scope global
-        global.myVariables["console"] = Pointer.makeMyObjectPointer(new MyObj(new MyType(MyTypeKind.MY_CONSOLE, null), new MyConsole()));
-        global.myFunctions["graph_ts"] = new MyFunction(MyFunctionKind.GRAFICAR_TS, new GraficarTs());
+        global.myFunctions["graficar_ts"] = new MyFunction(MyFunctionKind.GRAFICAR_TS, new GraficarTs());
+        global.myVariables["console"] = Pointer.makeMyObjectPointer(new MyObj(MyType.consoleTypeInstance, new MyConsole()));
 
         current = global;
     }
@@ -56,7 +70,8 @@ export module Env{
     //REGION: Funciones y variables nativas
     export function graficar_ts():void{
         //TODO:
-        throw new Error("graficar_ts no soportado todavia!!!");
+        console.log(current);
+        console.error(new Error("graficar_ts no soportado todavia!!!"));
     }
     //END: Funciones y variables nativas
 
@@ -67,16 +82,12 @@ export module Env{
         //ver si ya existe en el current scope
 
         if(current.myVariables[id] !== undefined){
-            return new MyError(`No se agregar una variable con el nombre ${id} porque existe un variable con el mismo nomber en el mismo scope`);
+            throw new MyError(`No se agregar una variable con el nombre '${id}' porque existe un variable con el mismo nomber en el mismo scope`);
         }
-        if(current.myFunctions[id] !== undefined){
-            return new MyError(`No se agregar una variable con el nombre ${id} porque existe un funcion con el mismo nomber en el mismo scope`);
-        }
-        //BIG TODO: Agregar un chequeo para que no colisione con las definiciones de variables tampoco
 
         if(myType != null){
             if(!compareMyTypes(myType, val.myType)){
-                return new MyError(`No se agregar una variable con el nombre ${id} porque existe un funcion con el mismo nomber en el mismo scope`);
+                throw new MyError(`Tipos no compatibles: ${myType.myToString()} y ${myType.myToString()}`);
             }
         }
 

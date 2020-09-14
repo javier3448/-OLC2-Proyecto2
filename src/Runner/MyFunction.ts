@@ -1,6 +1,6 @@
 import { Pointer } from "./Pointer";
 import { MyError } from './MyError';
-import { MyType } from './MyObj';
+import { MyType } from './MyType';
 import { Statement } from '../Ast/Statement';
 
 export enum MyFunctionKind{

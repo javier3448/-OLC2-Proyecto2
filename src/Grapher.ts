@@ -1,5 +1,5 @@
 import { digraph, Digraph, ISubgraph, attribute, INode, toDot } from "ts-graphviz";
-import { Expression, ExpressionKind, LiteralExpression, IdentifierExpression, BinaryExpression, UnaryExpression, TernaryExpression, MemberAccessExpression, FunctionCallExpression } from "./Ast/Expression";
+import { Expression, ExpressionKind, LiteralExpression, IdentifierExpression, BinaryExpression, UnaryExpression, TernaryExpression, MemberAccessExpression, FunctionCallExpression, ObjectLiteralExpression, PropertyNode } from "./Ast/Expression";
 import { Statement, WhileStatement, Block, StatementKind } from "./Ast/Statement";
 import { AstNode } from "./Ast/AstNode";
 
@@ -8,19 +8,91 @@ import { Declaration } from './Ast/Declaration';
 import { Assignment } from './Ast/Assignment';
 import { MyTypeNode, MyTypeNodeKind } from './Ast/MyTypeNode';
 import { MemberAccess, AccessKind, FunctionAccess, IndexAccess, AttributeAccess } from './Ast/MemberAccess';
-
+import { GlobalInstructions } from './Ast/GlobalInstructions';
+import { AttributeNode, TypeDef } from './Ast/TypeDef';
+import { FunctionDef } from './Ast/FunctionDef';
 
 export function test(source:String):string{
     let root =  parser.parse(source);
     const g = digraph('G');
 
-    graphStatements(g, root);
+    graphGlobalInstructions(g, root);
 
     let dot = toDot(g);
 
     return dot;
 }
 
+function graphGlobalInstructions(g:Digraph, globalInstructions:GlobalInstructions):INode{
+
+    let result = g.createNode(`globalInstructions${globalInstructions.astNode.getId()}`, {
+        [attribute.label]: 'Global',
+        [attribute.shape]: 'box',
+    });
+
+    const typeDefsNode = graphTypeDefs(g, globalInstructions.typeDefs);
+    //const functionDefsNode = graphFunctionDefs(g, globalInstructions.functionDefs);
+    const stmtsNode = graphStatements(g, globalInstructions.statements);
+
+    g.createEdge([result, typeDefsNode]);
+    //g.createEdge([result, functionDefsNode]);
+    g.createEdge([result, stmtsNode]);
+
+    return result;
+}
+
+function graphTypeDefs(g:Digraph, typeDefs:TypeDef[]):INode{
+
+    const result = g.createNode(`type_defs${AstNode.getNextAstNodeId()}`, {
+        [attribute.label]: "Type defs list",
+        [attribute.shape]: 'box',
+    });
+
+    for (const typeDef of typeDefs) {
+        let child: INode = graphTypeDef(g, typeDef);
+        g.createEdge([result, child]);
+    }
+
+    return result;
+}
+
+function graphTypeDef(g:Digraph, typeDef:TypeDef):INode{
+
+    const result = g.createNode(`type_def${typeDef.astNode.getId()}`, {
+        [attribute.label]: `<<B>TypeDef</B><BR/>${typeDef.name}>`,
+        [attribute.shape]: 'box',
+    });
+
+    for (const attribute of typeDef.attributes) {
+        let child:INode = graphAttribute(g, attribute);
+        g.createEdge([result, child]);
+    }
+
+    return result;
+}
+
+function graphAttribute(g:Digraph, attributeNode:AttributeNode):INode{
+    
+    const result = g.createNode(`attribute${attributeNode.astNode.getId()}`, {
+        [attribute.label]: `Attribute`,
+        [attribute.shape]: 'box',
+    });
+
+    const nameNode = g.createNode(`attribute_name${AstNode.getNextAstNodeId()}`, {
+        [attribute.label]: `${attributeNode.name}`,
+        [attribute.shape]: 'box',
+    });
+    g.createEdge([result, nameNode]);
+
+    const typeNode = graphMyTypeNode(g, attributeNode.myTypeNode);
+    g.createEdge([result, typeNode]);
+
+    return result;
+}
+
+function graphFunctionDefs(g:Digraph, functionDefs:FunctionDef[]):INode{
+
+}
 
 //g: SubGraph donde vamos a ir metiendo todos los nodos
 export function graphExpression(g:Digraph, expr:Expression):INode{
@@ -37,7 +109,7 @@ export function graphExpression(g:Digraph, expr:Expression):INode{
         case ExpressionKind.GREATER:
         case ExpressionKind.LESS_OR_EQUAL:
         case ExpressionKind.GREATER_OR_EQUAL:
-        case ExpressionKind.EQUAL:
+        case ExpressionKind.EQUAL_EQUAL:
         case ExpressionKind.NOT_EQUAL:
         case ExpressionKind.OR:
         case ExpressionKind.AND:
@@ -45,6 +117,7 @@ export function graphExpression(g:Digraph, expr:Expression):INode{
         case ExpressionKind.SUBSTRACTION:
         case ExpressionKind.MULTIPLICATION:
         case ExpressionKind.DIVISION:
+        case ExpressionKind.ASSIGNMENT:
         case ExpressionKind.POWER:
         {
             const binExpr = expr.specification as BinaryExpression;
@@ -91,6 +164,17 @@ export function graphExpression(g:Digraph, expr:Expression):INode{
         }
         break;
 
+        //ObjectLiteral
+        case ExpressionKind.OBJECT_LITERAL:
+        {
+            const objectLiteral = expr.specification as ObjectLiteralExpression;
+            for (const property of objectLiteral.propertyNodes) {
+                let propertyNodeResult = graphProperty(g, property);
+                g.createEdge([result, propertyNodeResult]);
+            }
+        }
+        break;
+
         case ExpressionKind.FUNCTION_CALL:
         {
             const functionCallExpression = expr.specification as FunctionCallExpression;
@@ -114,6 +198,25 @@ export function graphExpression(g:Digraph, expr:Expression):INode{
         default:
             throw new Error(`[!!!] graphExpression: No se ha implementado todavia el expressionKind: ${expr.expressionKind}`);
     }
+
+    return result;
+}
+
+function graphProperty(g:Digraph, property:PropertyNode):INode{
+
+    const result = g.createNode(`property${property.astNode.getId()}`, {
+        [attribute.label]: "Property",
+        [attribute.shape]: 'box',
+    });
+
+    const nameNode = g.createNode(`property_name${property.astNode.getId()}`, {
+        [attribute.label]: `${property.id}`,
+        [attribute.shape]: 'box',
+    });
+    g.createEdge([result, nameNode]);
+
+    let exprNode = graphExpression(g, property.expr);
+    g.createEdge([result, exprNode]);
 
     return result;
 }
@@ -223,7 +326,7 @@ function expressionToLabel(expr:Expression):string{
             return "<<B><=</B>>";
         case ExpressionKind.GREATER_OR_EQUAL:
             return "<<B>>=</B>>";
-        case ExpressionKind.EQUAL:
+        case ExpressionKind.EQUAL_EQUAL:
             return "<<B>==</B>>";
         case ExpressionKind.NOT_EQUAL:
             return "<<B>!=</B>>";
@@ -240,6 +343,8 @@ function expressionToLabel(expr:Expression):string{
             return "<<B>*</B>>";
         case ExpressionKind.DIVISION:
             return "<<B>/</B>>";
+        case ExpressionKind.ASSIGNMENT:
+            return "<Assignment>";
         case ExpressionKind.POWER:
             return "<<B>**</B>>";
 
@@ -268,6 +373,9 @@ function expressionToLabel(expr:Expression):string{
                 return `<<B>String</B><BR/>${litExpr.literal}>`;
             }
         }
+        case ExpressionKind.OBJECT_LITERAL:
+            return `<<B>ObjectLiteral</B>>`;
+
         case ExpressionKind.IDENTIFIER:
             return `<<B>Identifier</B><BR/>${(expr.specification as IdentifierExpression).name}>`;
 
@@ -388,7 +496,7 @@ export function graphDeclaration(g:Digraph, decl:Declaration):INode{
     g.createEdge([result, identifierNode]);
             
     if(decl.myTypeNode){
-        let typeNode = graphMyType(g, decl.myTypeNode);
+        let typeNode = graphMyTypeNode(g, decl.myTypeNode);
         g.createEdge([result, typeNode]);
     }
 
@@ -410,7 +518,7 @@ function graphWhileStatement(g:Digraph, whileStatement:WhileStatement):INode{
     const exprNode = graphExpression(g, whileStatement.expr);
     g.createEdge([result, exprNode]);
 
-    const blockNode = graphBlock(g, whileStatement.block);
+    const blockNode = graphStatements(g, whileStatement.statements);
     g.createEdge([result, blockNode]);
 
     return result;
@@ -434,14 +542,12 @@ function myTypeNodeToLabel(myTypeNode:MyTypeNode){
     }
 }
 
-export function graphMyType(g:Digraph, myType:MyTypeNode):INode{
+export function graphMyTypeNode(g:Digraph, myType:MyTypeNode):INode{
 
     const result = g.createNode(`MyType${AstNode.getNextAstNodeId()}`, {
         [attribute.label]: myTypeNodeToLabel(myType),
         [attribute.shape]: 'box',
     });
-
-
 
     return result;
 }

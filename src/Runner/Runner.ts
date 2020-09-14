@@ -8,16 +8,20 @@ import { Env, Scope } from "./Environment";
 
 import { Statement, StatementKind, WhileStatement, Block} from "../Ast/Statement";
 
-import { MyObj, MyTypeKind, CustomObj, MyType } from "./MyObj";
+import { MyObj, CustomObj, compareMyTypes } from "./MyObj";
+import { MyType, MyTypeKind, TypeSignature } from "./MyType";
 import { MyFunction, MyFunctionKind, GraficarTs, Parameter } from "./MyFunction";
 import { MyError } from './MyError';
-import { Expression, ExpressionKind, FunctionCallExpression, LiteralExpression, IdentifierExpression, MemberAccessExpression, BinaryExpression, UnaryExpression, TernaryExpression } from '../Ast/Expression';
+import { Expression, ExpressionKind, FunctionCallExpression, LiteralExpression, IdentifierExpression, MemberAccessExpression, BinaryExpression, UnaryExpression, TernaryExpression, ObjectLiteralExpression } from '../Ast/Expression';
 import { Declaration } from '../Ast/Declaration';
 import { Assignment } from '../Ast/Assignment';
 import { AccessKind, AttributeAccess, FunctionAccess } from 'src/Ast/MemberAccess';
-import { Attribute } from '@angular/core';
-import { getLocaleNumberFormat } from '@angular/common';
-import { environment } from 'src/environments/environment';
+import { MyTypeNode, MyTypeNodeKind } from 'src/Ast/MyTypeNode';
+
+import { GlobalInstructions } from 'src/Ast/GlobalInstructions';
+import { TypeDef, AttributeNode } from "../Ast/TypeDef";
+import { FunctionDef, ParamNode } from "../Ast/FunctionDef";
+import { Type } from '@angular/core';
 
 
 
@@ -37,6 +41,7 @@ export function resetRuntimeInterface(){
 //NOTE: the name is like that because we cant use here
 export function test(source:string, _runtimeInterface:RuntimeInterface):void{
 
+
     //varciar todas las 'interfaces' necesarias de runtimeInterface
     runtimeInterface = _runtimeInterface;
     resetRuntimeInterface();
@@ -44,19 +49,67 @@ export function test(source:string, _runtimeInterface:RuntimeInterface):void{
     Env.initEnvironment();
 
     // we start walking that damn AST for realz here
-    let root =  parser.parse(source) as Statement[];
+    let root =  parser.parse(source) as GlobalInstructions;
 
-    runGlobalStatements(root);
+    runGlobalInstructions(root);
 }
 
-export function runGlobalStatements(statements:Statement[]):void{
-    for (const statement of statements) {
+export function runGlobalInstructions(globalInstructions:GlobalInstructions):void{
+
+    for (const typeDef of globalInstructions.typeDefs) {
+        runTypeDef(typeDef);
+    }
+    //revisamos si quedo algun tipo sin definir
+    for (const key in Env.global.myTypeSignatures) {
+        let myType = Env.global.myTypeSignatures[key]
+        if(myType.kind == MyTypeKind.WAITING){
+            let myError = new MyError(`No se encontro definicion para el tipo: '${key}'. Se definira con {} para continuar la ejecucion`);
+            console.log(myError);
+            myType.kind = MyTypeKind.CUSTOM;
+            myType.specification = MyType.makeCustomType(new TypeSignature(key));
+        }
+            
+    }
+
+    for (const statement of globalInstructions.statements) {
         let result = runStatement(statement);
         // BIG TODO: Implementar bien los jumpers sin que se truene todo el programa
         // y/o cause comportamiento extranno a travez de funciones
         if(result != null){
             console.log(new MyError(`No se puede usar el jumper: ${result} en ejecucion global`))
         }
+    }
+}
+
+export function runTypeDef(typeDef:TypeDef){
+
+    //Chequeamos si ya existe ese typedef en la tabla
+    //POR AHORA SOLO CHEQUEAMOS EL GLOBAL!!!!!!
+
+    let newTypeSignature = new TypeSignature(typeDef.name);
+
+    for (const attribute of typeDef.attributes) {
+
+        // there should be like a tryAndSet or maybe a way to get the reference
+        // associated with the key but this is piece of shit typescript so who cares
+        if(newTypeSignature.table[attribute.name] != undefined){
+            throw new MyError(`No se pudo definir el tipo: '${typeDef.name}'. atributo duplicado: '${attribute.name}'`)
+            
+        }
+        
+        let attributeType: MyType = runPropertyMyTypeNode(attribute.myTypeNode);
+
+        newTypeSignature.table[attribute.name] = attributeType;
+    }
+
+    let typeInTable = Env.global.myTypeSignatures[typeDef.name];
+    if(typeInTable != undefined){
+        if(typeInTable.kind == MyTypeKind.WAITING){
+            typeInTable.kind = MyTypeKind.CUSTOM;
+            typeInTable.specification = newTypeSignature;
+        }
+    }else{
+        Env.global.myTypeSignatures[typeDef.name] = MyType.makeCustomType(newTypeSignature);
     }
 }
 
@@ -78,9 +131,10 @@ export function runStatement(statement:Statement):(Jumper | null){
                 let declaration = child as Declaration;
 
                 let id = declaration.identifier;
-                let type:(MyType | null) = (declaration.myTypeNode == null ? null : runMyTypeNode(declaration.myTypeNode));
-                let val = runExpression(declaration.expression))
+                let myType:(MyType | null) = (declaration.myTypeNode == null ? null : runNonPropertyMyTypeNode(declaration.myTypeNode));
+                let val = (declaration.expression == null ? MyObj.undefinedInstance : runExpression(declaration.expression).getMyObj());
 
+                Env.addVariable(id, myType, val);
             }break;
 
             case StatementKind.WhileKind:
@@ -126,6 +180,73 @@ export function runStatement(statement:Statement):(Jumper | null){
 
 }
 
+export function runPropertyMyTypeNode(myTypeNode:MyTypeNode):MyType{
+
+    if(myTypeNode.kind == MyTypeNodeKind.CUSTOM){
+        //Chequeamos si ya existe ese typedef en la tabla
+        //POR AHORA SOLO CHEQUEAMOS EL GLOBAL!!!!!!
+        //stupidly bad perf. we visit the map 3 fucking times!
+        if(Env.global.myTypeSignatures[myTypeNode.name] == undefined){
+            Env.global.myTypeSignatures[myTypeNode.name] = MyType.makeWaitingType(); 
+            return Env.global.myTypeSignatures[myTypeNode.name];
+        }else{
+            return Env.global.myTypeSignatures[myTypeNode.name];
+        }
+    }
+    if(myTypeNode.kind == MyTypeNodeKind.ARRAY){
+        throw new Error("runMyTypeNode no implementado para ARRAY todavia");
+    }
+
+    //it must be primitive
+    switch (myTypeNode.kind) {
+        case MyTypeNodeKind.NUMBER:
+            return MyType.numberTypeInstance;
+        case MyTypeNodeKind.STRING:
+            return MyType.stringTypeInstance;
+        case MyTypeNodeKind.BOOLEAN:
+            return MyType.booleanTypeInstance;
+        case MyTypeNodeKind.NULL:
+            return MyType.nullTypeInstance;
+        case MyTypeNodeKind.UNDEFINED:
+            return MyType.undefinedTypeInstance;
+        default:
+            throw new Error(`runMyTypeNode no implementado para ${myTypeNode.kind}`);
+    }
+}
+
+//The 'NonProperty' part means that it wont create a new entry in the 
+//type table if it doesnt find the target
+export function runNonPropertyMyTypeNode(myTypeNode:MyTypeNode):MyType{
+    if(myTypeNode.kind == MyTypeNodeKind.CUSTOM){
+        //Chequeamos si ya existe ese typedef en la tabla
+        //POR AHORA SOLO CHEQUEAMOS EL GLOBAL!!!!!!
+        let myType = Env.global.myTypeSignatures[myTypeNode.name];
+        if(myType == undefined){
+            throw new MyError(`No existe el tipo: '${myTypeNode.name}'.`);
+        }
+        return myType;
+    }
+    if(myTypeNode.kind == MyTypeNodeKind.ARRAY){
+        throw new Error("runMyTypeNode no implementado para ARRAY todavia");
+    }
+
+    //it must be primitive
+    switch (myTypeNode.kind) {
+        case MyTypeNodeKind.NUMBER:
+            return MyType.numberTypeInstance;
+        case MyTypeNodeKind.STRING:
+            return MyType.stringTypeInstance;
+        case MyTypeNodeKind.BOOLEAN:
+            return MyType.booleanTypeInstance;
+        case MyTypeNodeKind.NULL:
+            return MyType.nullTypeInstance;
+        case MyTypeNodeKind.UNDEFINED:
+            return MyType.undefinedTypeInstance;
+        default:
+            throw new Error(`runMyTypeNode no implementado para ${myTypeNode.kind}`);
+    }
+}
+
 // function add
 //[throws_MyError]
 // Atrapa si la operacion no se puede realizar entre por los tipos de los operandos
@@ -151,6 +272,28 @@ export function runExpression(expr:Expression):ReturnValue{
             }
         }
 
+        //Caso es espcial: asignacion porque require que la expresion de la izquierda sea lvalue
+        if(expr.expressionKind == ExpressionKind.ASSIGNMENT){
+            let leftExpressionResult = runExpression(expr.specification.left);
+            if(leftExpressionResult.kind != ReturnKind.POINTER){
+                throw new MyError(`El lado izquierdo de assignacion debe una variable o acceso a propiedad`);
+            }
+            //we can use unsafe here because we know returnKind must be a Pointer
+            let lvalue:Pointer = leftExpressionResult.unsafeGetPointer();
+            let rvalue:MyObj = runExpression(expr.specification.right).getMyObj();
+
+            //we check types
+            if(!compareMyTypes(lvalue.myObj.myType, rvalue.myType)){
+                //TODO: hay casos en los que no se va a poder hacer custom = custom y este mensaje no va ayudar en nada
+                throw new MyError(`No se puede asignar el tipo: '${lvalue.myObj.myType.kind}' un valor de tipo: ${rvalue.myType.kind}`);
+            }
+
+            lvalue.myObj = rvalue;
+
+            //we retunr a new ReturnValue because typescript can never return lvalue after assignment
+            return ReturnValue.makeMyObjReturn(rvalue);
+        }
+
         //los operadores OR y AND tambien son casos especiales porque implementan
         //shorcircuiting como en C. Entonces hay casos en los que no se evaluan ambas 
         //expresiones
@@ -168,11 +311,13 @@ export function runExpression(expr:Expression):ReturnValue{
             );
         }
         
+        //Todos los casos de binaryExpression en los que la expresion izquierda se debe
+        //evaluar anted de la derecha, siempre se evaluan las dos, y se requiere el MyObj
+        //y no el pointer de ambas
         let leftResult = runExpression(expr.specification.left).getMyObj();
         let leftType:MyType = leftResult.myType;
         let rightResult = runExpression(expr.specification.right).getMyObj();
         let rightType:MyType = rightResult.myType;
-
         switch (expr.expressionKind) {
             case ExpressionKind.LESS:
                 if(leftType.kind == MyTypeKind.NUMBER && rightType.kind == MyTypeKind.NUMBER){
@@ -234,7 +379,7 @@ export function runExpression(expr:Expression):ReturnValue{
                     throw new MyError(`Operador '${expr.expressionKind}' no acepta los tipos: '${leftType.kind}' y '${rightType.kind}'`)
                 }
             break;
-            case ExpressionKind.EQUAL:
+            case ExpressionKind.EQUAL_EQUAL:
                 // if(leftType.kind == MyTypeKind.NULL && rightType.kind != MyTypeKind.NULL
                 //     ||
                 //     leftType.kind != MyTypeKind.NULL && rightType.kind == MyTypeKind.NULL
@@ -350,7 +495,7 @@ export function runExpression(expr:Expression):ReturnValue{
             let functionName = functionCall.name;
             let functionArgs = functionCall.functionArgs;
 
-            let computedArgs:Array<ReturnValue>;
+            let computedArgs:Array<ReturnValue> = [];
             for (const arg of functionArgs) {
                 computedArgs.push(runExpression(arg));
             }
@@ -406,6 +551,24 @@ export function runExpression(expr:Expression):ReturnValue{
             let literalExpr = expr.specification as LiteralExpression;
             return ReturnValue.makeLiteralExpressionReturn(literalExpr);
         }break;
+        case ExpressionKind.OBJECT_LITERAL:
+        {
+            let objectLiteral = expr.specification as ObjectLiteralExpression;
+            let anonymousObj = new CustomObj();
+            let anonymousSignature = new TypeSignature(null);
+            for (const propertyNode of objectLiteral.propertyNodes) {
+                //we keep reading the values of the map like 2 extra times everytime
+                //we need to do a check. I cant believe typescript doesnt have a mechanism
+                //to do this better
+                if(anonymousObj[propertyNode.id] != undefined){
+                    throw new MyError(`Un object literal no puede tener dos propieades con el mismo nombre '${propertyNode.id}'`);
+                }
+                let rvalue = runExpression(propertyNode.expr).getMyObj();
+                anonymousSignature.table[propertyNode.id] = rvalue.myType;
+                anonymousObj[propertyNode.id] = Pointer.makeMyObjectPointer(rvalue);
+            }
+            return ReturnValue.makeMyObjReturn(new MyObj(MyType.makeCustomType(anonymousSignature), anonymousObj));
+        }break;
         case ExpressionKind.TERNARY:
         {
             let ternary = expr.specification as TernaryExpression;
@@ -414,7 +577,8 @@ export function runExpression(expr:Expression):ReturnValue{
         }break;
     
         default:
-            throw new Error(`runExpression no implementado para myTypeNode: ${expr}`);
+            console.log(expr);
+            throw new Error(`runExpression no implementado para expressionKind: '${expr.expressionKind}'`);
     }
 }
 

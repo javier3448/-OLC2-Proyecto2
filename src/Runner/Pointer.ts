@@ -1,4 +1,5 @@
-import { MyObj, MyType, MyTypeKind } from "./MyObj";
+import { MyObj} from "./MyObj";
+import { MyType, MyTypeKind } from "./MyType";
 import { LiteralExpression } from 'src/Ast/Expression';
 
 //Hicimos esta clase porque ser requieren dos niveles de punteros para implementar el comportamiento pasar parametros por
@@ -45,15 +46,15 @@ export class Pointer{
     }
 
     public static makeNumberPointer(n:number):Pointer{
-        return new Pointer(new MyObj(new MyType(MyTypeKind.NUMBER, null), new Number(n)));
+        return new Pointer(new MyObj(MyType.numberTypeInstance, new Number(n)));
     }
 
     public static makeStringPointer(s:string):Pointer{
-        return new Pointer(new MyObj(new MyType(MyTypeKind.STRING, null), new String(s)));
+        return new Pointer(new MyObj(MyType.stringTypeInstance, new String(s)));
     }
 
     public static makeBooleanPointer(b:Boolean):Pointer{
-        return new Pointer(new MyObj(new MyType(MyTypeKind.BOOLEAN, null), new Boolean(b)));
+        return new Pointer(new MyObj(MyType.booleanTypeInstance, new Boolean(b)));
     }
 
     public static makeNullPointer():Pointer{

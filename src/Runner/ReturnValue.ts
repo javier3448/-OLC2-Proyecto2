@@ -1,5 +1,6 @@
 import { Pointer } from "./Pointer";
-import { MyObj, MyType, MyTypeKind } from "./MyObj";
+import { MyObj } from "./MyObj";
+import { MyType, MyTypeKind } from "./MyType";
 import { LiteralExpression } from 'src/Ast/Expression';
 export enum ReturnKind{
     POINTER = 'POINTER',
@@ -47,6 +48,10 @@ export class ReturnValue{
         }
     }
 
+    public unsafeGetPointer():Pointer{
+        return this.specification as Pointer;
+    }
+
     public static makeLiteralExpressionReturn(literalExpression:LiteralExpression):ReturnValue{
         let val = literalExpression.literal;
         if(val instanceof String){
@@ -77,15 +82,15 @@ export class ReturnValue{
     }
 
     public static makeNumberReturn(n:number):ReturnValue{
-        return new ReturnValue(ReturnKind.MY_OBJ, new MyObj(new MyType(MyTypeKind.NUMBER, null), new Number(n)));
+        return new ReturnValue(ReturnKind.MY_OBJ, new MyObj(MyType.numberTypeInstance, new Number(n)));
     }
 
     public static makeStringReturn(s:string):ReturnValue{
-        return new ReturnValue(ReturnKind.MY_OBJ, new MyObj(new MyType(MyTypeKind.STRING, null), new String(s)));
+        return new ReturnValue(ReturnKind.MY_OBJ, new MyObj(MyType.stringTypeInstance, new String(s)));
     }
 
     public static makeBooleanReturn(b:Boolean):ReturnValue{
-        return new ReturnValue(ReturnKind.MY_OBJ, new MyObj(new MyType(MyTypeKind.BOOLEAN, null), new Boolean(b)));
+        return new ReturnValue(ReturnKind.MY_OBJ, new MyObj(MyType.booleanTypeInstance, new Boolean(b)));
     }
 
     public static makeNullReturn():ReturnValue{

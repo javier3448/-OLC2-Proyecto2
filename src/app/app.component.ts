@@ -55,11 +55,101 @@ while(true){
 }
 `;
     }
-    let testString = `
-let a = "Javier";
+    {
+      //must print error
+      let testString = `
+let a:string = 10;
 console.log(a);
 `;
+    }
+    {
+    let testString = `
+let a:string = "some string";
+a = "other string";
+console.log(a);
+`;
+    }
+    {
+  //must report a type error
+      let testString = `
+let a:string = "some string";
+a = 10;
+console.log(a);
+      `;
+    }
+    {
+      let testString = `
+type A = {
+  a: number,
+  b: string,
+}
 
+let a:A = { a: 10, b: "s" };
+
+console.log(a);
+      `;
+    }
+    {
+      let testString = `
+type A = {
+    a: string;
+    b: B;
+}
+type B = {
+    a: A;
+    b: number;
+}
+
+let a:A = {
+    a:"a1", 
+    b : { 
+        a: {
+            a:"a1", 
+            b : { 
+                a: {
+                    a:"a2", 
+                    b: null
+                },
+                b: 30
+            }
+        },
+        b: 20
+    }
+};
+
+console.log(a);`
+      ;
+    }
+    //AQUI AQUI AQUI: this kill the entire fucking thing
+    //it probably has to do with how we get the types when 
+    //reading an object literal
+    //Then functions
+    let testString = `
+type A = {
+    a: string;
+    b: B;
+}
+
+let a:A = {
+    a:"a1", 
+    b : { 
+        a: {
+            a:"a1", 
+            b : { 
+                a: {
+                    a:"a2", 
+                    b: null
+                },
+                b: 30
+            }
+        },
+        b: 20
+    }
+};
+
+console.log(a);`
+    ;
+    
     this.sourceString = testString;
     this.runtimeInterface.translation = graphTest(testString);
     runTest(this.sourceString, this.runtimeInterface);

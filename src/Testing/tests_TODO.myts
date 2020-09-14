@@ -489,3 +489,115 @@
 }
 
 //TODO: Algo para probar el const
+
+
+{//no se cual es la respuesta aqui. Depende de lo que digan en el github
+    type A = {
+        a: string;
+        b: string;
+    }
+
+    //Esto NO se puede en TypeScript
+    let a:A = undefined;
+
+    //Ni esto tampoco
+    let b:A = null;
+
+    //Si si se puede en nuestro lenguaje entonces se puede hacer tambien con primitivos
+    let c:number = undefined;
+    let d:number = null;
+    
+    let e:string = undefined;
+    let f:string = null;
+    
+    let g:boolean = undefined;
+    let h:boolean = null;
+}
+
+//TODO: pruebas super anidadas con el member access
+//que hagan el acceso y tambien la asignacion
+
+{
+    function other_nullify(a:number){
+        a = null;
+    }
+
+    let array = [10, 10];
+    other_nullify(array[0]);
+    console.log(array);//Should NOT print null because a[0] is a primitive
+}
+
+//TODO: algo que verifique que la asignacion retorne un valor
+
+
+//No se ni siquiera si esto sirve en typescript. Per
+{
+    type A = {
+        a: string = "Default A";
+        b: string = "Dafault A";
+    }
+
+    {//
+        type A = {
+            a: A;//Este A hace referencia al A en este scope
+        }
+        
+        let a:A;
+        console.log(a);
+    }
+}
+
+{
+    let a = 10;
+    (a = 10) = 20;
+}
+
+{
+    "a" = "a";
+    console.log(a);
+}
+
+{
+    type string = {//we should print a special error message
+        a:number;
+    }
+}
+
+{
+    type A = {
+        a: string;
+        b: B;
+    }
+    type B = {
+        a: A;
+        b: number;
+    }
+
+    let a:A = {
+        a:"a1", 
+        b : { 
+            a: {
+                a:"a1", 
+                b : { 
+                    a: {
+                        a:"a2", 
+                        b: null
+                    },
+                    b: 30
+                }
+            },
+            b: 20
+        }
+    };
+
+    console.log(a);
+
+}
+
+//Que no muera todo si no existe el tipo
+{
+    type A = {
+        a: string;
+        b: B;
+    }
+}

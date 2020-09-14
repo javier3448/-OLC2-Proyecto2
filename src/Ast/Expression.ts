@@ -1,6 +1,5 @@
 import { AstNode } from "./AstNode";
 import { MemberAccess } from './MemberAccess';
-import { FunctionCall } from '@angular/compiler';
 
 // even though we have typeof and instanceof in typescript this is necessary because 
 // jison does some weird js things and sometimes we like 'loose the type and its
@@ -11,7 +10,7 @@ export enum ExpressionKind{
     GREATER = '>',
     LESS_OR_EQUAL = '<=',
     GREATER_OR_EQUAL = '>=',
-    EQUAL = '==',
+    EQUAL_EQUAL = '==',
     NOT_EQUAL = '!=',
     OR = 'OR',
     AND = 'AND',
@@ -37,6 +36,7 @@ export enum ExpressionKind{
     LITERAL = 'LITERAL',
     IDENTIFIER = 'IDENTIFIER',
     FUNCTION_CALL = 'FUNCTION_CALL',
+    OBJECT_LITERAL = 'OBJECT_LITERAL',
 }
 
 export class UnaryExpression{
@@ -67,15 +67,37 @@ export class MemberAccessExpression{
     constructor(public expression:Expression, public memberAccess:MemberAccess){   }
 }
 
+export class ObjectLiteralExpression{
+    constructor(public propertyNodes:PropertyNode[]){   }
+}
+
+export class PropertyNode{
+
+    astNode:AstNode;
+
+    id:string;
+    expr:Expression;
+
+    constructor(id:string, expr:Expression,
+                firstLine:number, firstColumn:number, lastLine:number, lastColumn:number){
+
+        this.astNode = new AstNode(firstLine, firstColumn, lastLine, lastColumn);
+
+        this.id  = id;
+        this.expr = expr;
+    }
+    
+}
+
 export class Expression {
     //Common AST attributes
     public astNode: AstNode;
 
     public expressionKind: ExpressionKind;
     // TODO: Think of a better name, might not be possible
-    public specification: (UnaryExpression | BinaryExpression | TernaryExpression | IdentifierExpression | LiteralExpression | MemberAccessExpression);
+    public specification: (UnaryExpression | BinaryExpression | TernaryExpression | IdentifierExpression | LiteralExpression | MemberAccessExpression | ObjectLiteralExpression);
 
-    constructor(expressionKind:ExpressionKind, specification:(UnaryExpression | BinaryExpression | TernaryExpression | LiteralExpression | MemberAccessExpression),
+    constructor(expressionKind:ExpressionKind, specification:(UnaryExpression | BinaryExpression | TernaryExpression | LiteralExpression | MemberAccessExpression | ObjectLiteralExpression),
                 firstLine:number, firstColumn:number, lastLine:number, lastColumn:number){
 
         this.astNode = new AstNode(firstLine, firstColumn, lastLine, lastColumn);
@@ -88,7 +110,7 @@ export class Expression {
             case ExpressionKind.GREATER:
             case ExpressionKind.LESS_OR_EQUAL:
             case ExpressionKind.GREATER_OR_EQUAL:
-            case ExpressionKind.EQUAL:
+            case ExpressionKind.EQUAL_EQUAL:
             case ExpressionKind.NOT_EQUAL:
             case ExpressionKind.OR:
             case ExpressionKind.AND:
@@ -138,8 +160,14 @@ export class Expression {
                     throw new Error(`Assertion Error: expressionKind ${expressionKind.toString()} must be type MemberAccessExpression instead of ${(specification)}`);
                 }
             break;
+            case ExpressionKind.OBJECT_LITERAL:
+                if(!(specification instanceof ObjectLiteralExpression)){
+                    throw new Error(`Assertion Error: expressionKind ${expressionKind.toString()} must be type MemberAccessExpression instead of ${(specification)}`);
+                }
+            break;
             //Solo para que no se nos olvide incluir todos los operadores posibles en este switch
             default:
+                console.log(this);
                 throw new Error(`[!!!] No se ha implementado todavia el operador ${expressionKind}`);
         }
 

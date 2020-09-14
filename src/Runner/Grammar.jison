@@ -1,10 +1,16 @@
 %{
-    const { Expression, ExpressionKind, UnaryExpression, BinaryExpression, TernaryExpression, LiteralExpression, IdentifierExpression, FunctionCallExpression, MemberAccessExpression} = require('../Ast/Expression');
+    const { Expression, ExpressionKind, 
+    UnaryExpression, BinaryExpression, TernaryExpression, LiteralExpression, 
+    IdentifierExpression, FunctionCallExpression, MemberAccessExpression, 
+    PropertyNode, ObjectLiteralExpression } = require('../Ast/Expression');
     const { MemberAccess, AccessKind, FunctionAccess, IndexAccess, AttributeAccess } = require('../Ast/MemberAccess');
     const { Statement, StatementKind, Block, WhileStatement } = require('../Ast/Statement');
     const { Assignment } = require('../Ast/Assignment');
     const { Declaration } = require('../Ast/Declaration');
     const { MyTypeNode, MyTypeNodeKind } = require('../Ast/MyTypeNode');
+    const { GlobalInstructions } = require('../Ast/GlobalInstructions')
+    const { TypeDef, AttributeNode } = require('../Ast/TypeDef')
+    const { FunctionDef, ParamNode } = require('../Ast/FunctionDef')
     //const {Literal} = require('../Expression/Literal');
 %}
 
@@ -22,6 +28,8 @@
 "false"                       return 'FALSE'
 "undefined"                   return 'UNDEFINED'
 "null"                        return 'NULL'
+
+"type"                        return 'TYPE'
 
 "while"                       return 'WHILE'
 
@@ -102,8 +110,10 @@
 %%
 
 S
-    : StatementList EOF
+    : GlobalInstructions_ EOF
     {
+        $$ = $1;
+        $$.setAstNode(@1.first_line, @1.first_column, @2.last_line, @2.last_column);
         return $1;
     }
 ;
@@ -128,6 +138,95 @@ StatementList
     | Statement
     {
         $$ = new Array($1);
+    }
+;
+
+GlobalInstructions_
+    : GlobalInstructions
+    {
+        $$ = $1;
+    }
+    | /*empty*/
+    {
+        $$ = new Array();
+    }
+;
+
+// Bad name, but it represents all possible 'things' that can go into a
+// our initial production 
+GlobalInstructions
+    : GlobalInstructions Statement
+    {
+        $$.addStatement($2);
+    }
+    | GlobalInstructions TypeDef
+    {
+        $$.addTypeDef($2);
+    }
+    | GlobalInstructions FunctionDef
+    {
+        $$.addFunctionDef($2);
+    }
+    | Statement
+    {
+        $$ = new GlobalInstructions();
+        $$.addStatement($1);
+    }
+    | TypeDef
+    {
+        $$ = new GlobalInstructions();
+        $$.addTypeDef($1);
+    }
+    | FunctionDef
+    {
+        $$ = new GlobalInstructions();
+        $$.addFunctionDef($1);
+    }
+;
+
+TypeDef
+    : TYPE IDENTIFIER "=" "{" AttributeList_ "}"
+    {
+        $$ = new TypeDef($2, $5, @1.first_line, @1.first_column, @2.last_line, @2.last_column);
+    }
+;
+
+AttributeList_
+    : AttributeList
+    {
+        $$ = $1;
+    }
+    | /* empty */
+    {
+        return new Array();
+    }
+;
+
+AttributeList
+    : AttributeList Attribute ','
+    {
+        $$ = $1;
+        $$.push($2);
+    }
+    | AttributeList Attribute ';'
+    {
+        $$ = $1;
+        $$.push($2);
+    }
+    | Attribute ';'
+    {
+        $$ = new Array($1);
+    }
+    | Attribute ','
+    {
+        $$ = new Array($1);
+    }
+;
+
+Attribute
+    : IDENTIFIER ':' Type
+    {
+        $$ = new AttributeNode($1, $3, @1.first_line, @1.first_column, @3.last_line, @3.last_column);
     }
 ;
 
@@ -181,19 +280,23 @@ Declaration
 Type
     : 'NUMBER'
     {
-        $$ = new MyTypeNode (MyTypeNodeKind.NUMBER, null);
+        $$ = MyTypeNode.makeNumberTypeNode(@1.first_line, @1.first_column, @1.last_line, @1.last_column);
     }
     | 'STRING'
     {
-        $$ = new MyTypeNode (MyTypeNodeKind.STRING, null);
+        $$ = MyTypeNode.makeStringTypeNode(@1.first_line, @1.first_column, @1.last_line, @1.last_column);
     }
     | 'BOOLEAN'
     {
-        $$ = new MyTypeNode (MyTypeNodeKind.BOOLEAN, null);
+        $$ = MyTypeNode.makeBooleanTypeNode(@1.first_line, @1.first_column, @1.last_line, @1.last_column);
     }
     | IDENTIFIER
     {
-        $$ = new MyTypeNode (MyTypeNodeKind.CUSTOM, $1);
+        $$ = MyTypeNode.makeCustomTypeNode($1, @1.first_line, @1.first_column, @1.last_line, @1.last_column);
+    }
+    | ARRAY '<' Type '>'
+    {
+        $$ = MyTypeNode.makeArrayTypeNode(MyTypeNodeKind.ARRAY, $3, @1.first_line, @1.first_column, @4.last_line, @4.last_column);
     }
 ;
 
@@ -236,7 +339,7 @@ Expression
     }
     | Expression '==' Expression
     {
-        $$ = new Expression(ExpressionKind.EQUAL, new BinaryExpression($1, $3), @1.first_line, @1.first_column, @3.last_line, @3.last_column);
+        $$ = new Expression(ExpressionKind.EQUAL_EQUAL, new BinaryExpression($1, $3), @1.first_line, @1.first_column, @3.last_line, @3.last_column);
     }
     | Expression '!=' Expression
     {
@@ -272,7 +375,7 @@ Expression
     }
     | Expression '=' Expression
     {
-        $$ = new Expression(ExpressionKind.ASSINGMENT, new BinaryExpression($1, $3), @1.first_line, @1.first_column, @3.last_line, @3.last_column);
+        $$ = new Expression(ExpressionKind.ASSIGNMENT, new BinaryExpression($1, $3), @1.first_line, @1.first_column, @3.last_line, @3.last_column);
     }
     | F
     {
@@ -322,10 +425,53 @@ Expression
     {
         $$ = new Expression(ExpressionKind.FUNCTION_CALL, new FunctionCallExpression(new String($1), $3), @1.first_line, @1.first_column, @1.last_line, @1.last_column);
     }
+    | '{' PropertyList '}'
+    {
+        $$ = new Expression(ExpressionKind.OBJECT_LITERAL, new ObjectLiteralExpression($2), @1.first_line, @1.first_column, @1.last_line, @1.last_column);
+    }
     // | templateString
     // {
 
     // }
+;
+
+PropertyList_
+    : PropertyList
+    {
+        $$ = $1;
+    }
+    | /* empty */
+    {
+        return new Array();
+    }
+;
+
+PropertyList
+    : PropertyList Property ','
+    {
+        $$ = $1;
+        $$.push($2);
+    }
+    | PropertyList Property
+    {
+        $$ = $1;
+        $$.push($2);
+    }
+    | Property ','
+    {
+        $$ = new Array($1);
+    }
+    | Property 
+    {
+        $$ = new Array($1);
+    }
+;
+
+Property
+    : IDENTIFIER ':' Expression
+    {
+        $$ = new PropertyNode($1, $3, @1.first_line, @1.first_column, @3.last_line, @3.last_column);
+    }
 ;
 
 ExpressionList_
