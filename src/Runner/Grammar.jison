@@ -225,6 +225,10 @@ ParamList
     {
         $$ = new Array($1);
     }
+    | Param
+    {
+        $$ = new Array($1);
+    }
 ;
 
 Param
@@ -449,7 +453,7 @@ Expression
     }
     | STRING
     {
-        $$ = new Expression(ExpressionKind.LITERAL, new LiteralExpression(new String($1)), @1.first_line, @1.first_column, @1.last_line, @1.last_column);
+        $$ = new Expression(ExpressionKind.LITERAL, new LiteralExpression(new String($1.slice(1, $1.length - 1))), @1.first_line, @1.first_column, @1.last_line, @1.last_column);
     }
     | TRUE
     {

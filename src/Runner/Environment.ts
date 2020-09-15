@@ -6,8 +6,9 @@ import { MyFunction, MyFunctionKind, GraficarTs, MyNonNativeFunction } from "./M
 import { MyType, MyTypeKind } from "./MyType";
 import { MyObj, CustomObj, MyConsole, compareMyTypes } from './MyObj';
 import { MyError } from './MyError';
-import { runExpression } from './Runner';
-import { ReturnValue } from './ReturnValue';
+import { runExpression, runStatement } from './Runner';
+import { ReturnKind, ReturnValue } from './ReturnValue';
+import { Jumper, JumperKind } from './Jumper';
 
 export class SymbolTableVariables{
     [key: string]: Pointer;
@@ -85,7 +86,7 @@ export module Env{
             throw new MyError(`No se agregar una variable con el nombre '${id}' porque existe un variable con el mismo nomber en el mismo scope`);
         }
 
-        if(myType != null){
+        if(myType !== null){
             if(!compareMyTypes(myType, val.myType)){
                 throw new MyError(`Tipos no compatibles: ${myType.myToString()} y ${val.myType.myToString()}`);
             }
@@ -105,14 +106,14 @@ export module Env{
 
         // we traverse the stack of scopes until we find the first 
         // function to have the same name
-        while(iter != null){
+        while(iter !== null){
             myVariable = iter.myVariables[id];
             if(myVariable !== undefined){
                 return ReturnValue.makePointerReturn(myVariable);
             }
             iter = iter.previous;
         }
-        if(myVariable == undefined){
+        if(myVariable === undefined){
             return ReturnValue.makeUndefinedReturn();
         }
 
@@ -131,23 +132,26 @@ export module Env{
 
         // we traverse the stack of scopes until we find the first 
         // function to have the same name
-        while(iter != null){
+        while(iter !== null){
             myFunctionSignature = iter.myFunctions[id];
             if(myFunctionSignature !== undefined){
+                //this would be a good example of a goto
                 break;
             }
             iter = iter.previous;
         }
-        if(myFunctionSignature == undefined){
+        if(myFunctionSignature === undefined){
             throw new MyError(`No existe una funcion con el nomber <${id}> en el entorno actual`);
         }
 
         // chapuz: revisamos si es una funcion nativa y, de ser asi, la ejecutamos
         // esto funciona por ahora solo porque una funcion nativa no puede tirar 
         // MyErro y porque ninguna func nativa recibe parametros
-        if(myFunctionSignature.kind == MyFunctionKind.GRAFICAR_TS){
+        // POSSIBLE BUG: We dont push the scope and all that when calling this native func, is no necessary for
+        // now but still be mindful of it
+        if(myFunctionSignature.kind === MyFunctionKind.GRAFICAR_TS){
             let graficarTs = myFunctionSignature.specification as GraficarTs;
-            if(myArgs.length != 0){
+            if(myArgs.length !== 0){
                 throw new MyError(`No se puede llamar a la funcion <graficar_ts> con ${myArgs.length} argumentos`)
             }
             graficar_ts();
@@ -156,34 +160,95 @@ export module Env{
         }
 
         let nonNativeFunctionSignature = myFunctionSignature.specification as MyNonNativeFunction;
+        let params = nonNativeFunctionSignature.params;
         
         // we check if they have the same number of params and args
-        if(myArgs.length != nonNativeFunctionSignature.params.length){
+        if(myArgs.length !== params.length){
             throw new MyError(`No se puede llamar a la funcion <${id}> con ${myArgs.length} argumentos`)
         }
 
-        // we check the correctness of the types
+        // At this point or function signature is a non_native kind
+        // [Think]: goto would help avoid missing pops here... just saying
+        Env.pushScope();
+
+        // Should the arrays indices be passed by reference too?? for now they are
+        // We cant make that happen from here, the easiest way would be to have array index
+        // access never return a Pointer REturnType, BUT that would mean that we couldn't
+        // use it to assign stuff: array[0] = someObj; wouldnt be possible
+        // we would have to do some crazy bodging, there is no way around I think
+
+        // We set up the environment for the function call: (i.e. the function arguments)
+        // we check the correctness of the types and assing each pointer to the param name in a new scope
         for (let i = 0; i < myArgs.length; i++) {
             const resultValue = myArgs[i];
 
-            if(resultValue.getMyObj().myType.kind == MyTypeKind.ARRAY ||
-                resultValue.getMyObj().myType.kind == MyTypeKind.CUSTOM)
+            if(resultValue.getMyObj().myType.kind === MyTypeKind.ARRAY ||
+                resultValue.getMyObj().myType.kind === MyTypeKind.CUSTOM)
             {
+                Env.popScope();
                 throw new Error("Env.callFunction no chequea con tipos Array ni Custom TODAVIA");
             }
-            //POSIBLE BUG: no se como se manejan las comparaciones en TypeScript!
-            let typeArg = resultValue.getMyObj().myType.kind;
-            let typeParam = nonNativeFunctionSignature.params[i].myType.kind;
-            if(typeArg !== typeParam){
+            let typeArg = resultValue.getMyObj().myType;
+            let typeParam =params[i].myType;
+            if(!compareMyTypes(typeArg, typeParam)){
+                Env.popScope();
                 throw new MyError(`Types no compatibles en el argumento: ${i}. Se tiene: ${typeArg.toString()} se esperaba: ${typeParam.toString()}`)
             }
+            //If resultValue is of type (CUSTOM or ARRAY) And it is a pointer we pass the param by pointer, if not we copy the MyObj
+            if((typeArg.kind === MyTypeKind.CUSTOM || typeArg.kind === MyTypeKind.ARRAY) &&
+                resultValue.kind === ReturnKind.POINTER)
+            {
+                //unsafe but its ok because we added a brand new scope
+                Env.current.myVariables[params[i].paramName] = resultValue.unsafeGetPointer();
+            }
+            else{
+                Env.current.myVariables[params[i].paramName] = Pointer.makeMyObjectPointer(resultValue.getMyObj());
+            }
+            
         }
 
 
-        // TODO: We set up the environment for the function call:
-        // oh... and run the fucking functions too
 
-        throw new Error("WITHOUT FUCKING JUMPERS WE CANT RETURN FROM FUNCTIONS YET!!!!!!!!!!!!!!!!!!");
+        // TODO: 
+
+        let returnType =  (myFunctionSignature.specification as MyNonNativeFunction).returnType;//Can be null (represents void)
+        let statements = (myFunctionSignature.specification as MyNonNativeFunction).statements;
+        for (const stmt of statements) {
+            //Recordar que las exceptions se atrapan en runStatement
+            let stmtResult = runStatement(stmt);
+            if(stmtResult === null){
+                continue;
+            }
+            //Be mindful that if we throw and exception we dont have to return anything
+            switch(stmtResult.kind){
+                case JumperKind.BREAK:
+                case JumperKind.CONTINUE:
+                    Env.popScope();
+                    throw new MyError(`Fallo la llamada a funcion '${id}': ${stmtResult.kind} a traves del limete de funcion`)
+                case JumperKind.RETURN:
+                    Env.popScope();
+                    if(returnType === null){
+                        return MyObj.undefinedInstance;//Return without errors :D
+                    }else{
+                        throw new MyError(`No se puede retornar un valor en una fucion tipo :void`)
+                    }
+                case JumperKind.RETURN_VALUE:
+                    //by this point stmtReslt.value cannot be null
+                    Env.popScope();
+                    if(compareMyTypes(returnType, stmtResult.value.myType)){
+                        return stmtResult.value;//Return without errors :D
+                    }else{
+                        throw new MyError(`No se puede retornar un tipo en una fucion tipo :void`)
+                    }
+
+            }
+        }
+        Env.popScope();
+        if(returnType === null){
+            return MyObj.undefinedInstance;//Return without errors :D
+        }else{
+            throw new MyError(`La funcion '${id}:' debe retornar un valor de tipo: '${returnType.myToString()}`)
+        }
     }
 
     export function pushScope(){

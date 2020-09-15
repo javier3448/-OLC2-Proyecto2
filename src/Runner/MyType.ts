@@ -65,7 +65,7 @@ export class MyType
             case MyTypeKind.UNDEFINED:
             case MyTypeKind.MY_CONSOLE:
             case MyTypeKind.WAITING:
-                if(specification != null){
+                if(specification !== null){
                     throw new Error(`No se puede construir un MyType ${kind} con tipo no null`)
                 }
                 break;
@@ -109,7 +109,7 @@ export class MyType
             case MyTypeKind.CUSTOM:
             {
                 let signature = this.specification as TypeSignature;
-                if(signature.name == null){
+                if(signature.name === null){
                     //TODO: imprimir bien el tipo anonimo o buscar en la tabla de simbolos un tipo compatible e imprimir ese tipo
                     return "anonymous";
                 }

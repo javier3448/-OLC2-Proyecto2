@@ -601,3 +601,109 @@
         b: B;
     }
 }
+
+//Que los break error get propagated thru function calls
+{
+    function a_bad_break():void{
+        break;
+    }
+
+    while(true){
+        console.log("Solo esto se deberia de imprimir");
+        a_bad_break();
+        console.log("Si esto se imprime algo anda mal");
+        break;
+    }
+}
+
+//NO SE COMO NI PORQUE PASO ESTA PRUEBA
+{
+    let a:number = 10;
+    let b:number = a;
+
+    b = 20;
+
+    console.log(a);//print 10
+    console.log(b);//print 20
+}
+
+//TODO: Test assignment and declaration with undefined
+
+//TODO: algo que pruebe si no se acepta diferente numero de args a params
+//      algo que pruebe si se revisa que los tipos de args sean igual a los de params
+
+
+//TODO: a good unit test candidate would be compareTypes and those types of functions.
+//      it would have to be very thorough to be of any use. And to making it thorough
+//      would take time
+
+
+{
+    let a:number = 10;
+    let b:number = a;
+
+    b = 20;
+
+    console.log(a);//ambos deberia de imprimir { a: 20 }
+    console.log(b);
+}
+
+
+//TODO: prueba que typedef dentro de scope den error 
+
+//BUG!!
+{
+    type A = {
+        a: number,
+    }
+    let a:A = {a:10};
+    let b:A = a;
+
+    a.a = 20;
+	a = null;
+
+    console.log(a);//IMPRIME UNDEFINED CUANDO DEBERIA DE IMPRIMIR null
+    console.log(b);
+}
+
+{
+    function hello(a:number):void{
+        console.log("Hello " + a);//should print "Hello 10"
+        a = null;
+    }
+
+    let a = 10;
+    hello(a);
+    console.log(a);//should print 10
+}
+
+{
+    type A = {
+        a: number,
+    }
+    function nullifyA(a:A){
+
+    }
+    //this function shouldn't have any effects on the argument that
+    //was passed to it
+    function nullifyNumber(a:number){
+        a = null;
+    }
+
+    a.a = 20;
+	a = null;
+
+    console.log(a);//IMPRIME UNDEFINED CUANDO DEBERIA DE IMPRIMIR null
+    console.log(b);
+}
+
+//old bug:
+//failing test for null bug
+{
+    console.log(null);//BUG prints undef
+    console.log(undefined);
+    let a = null;
+    let b = undefined;
+    console.log(a);//BUG prints undef
+    console.log(b);
+}

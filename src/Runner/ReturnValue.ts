@@ -48,6 +48,17 @@ export class ReturnValue{
         }
     }
 
+    public getMyType():MyType{
+        switch (this.kind) {
+            case ReturnKind.MY_OBJ:
+                return (this.specification as MyObj).myType;
+            case ReturnKind.POINTER:
+                return (this.specification as Pointer).myObj.myType;
+            default:
+                throw new Error(`getMyObj no implementado para kind ${this.kind}`)
+        }
+    }
+
     public unsafeGetPointer():Pointer{
         return this.specification as Pointer;
     }
@@ -63,10 +74,10 @@ export class ReturnValue{
         else if(val instanceof Boolean){
             return ReturnValue.makeBooleanReturn(val as Boolean);
         }
-        else if(val == undefined){
+        else if(val === undefined){
             return ReturnValue.makeUndefinedReturn();
         }
-        else if(val == null){
+        else if(val === null){
             return ReturnValue.makeNullReturn();
         }else{
             throw new Error(`makePrimitivePointer no soportado todavia para: ${val}`)

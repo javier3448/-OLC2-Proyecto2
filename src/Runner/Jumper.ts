@@ -14,10 +14,10 @@ export class Jumper{
 
     constructor(kind:JumperKind, value:(MyObj | null)) {
         //Assertions
-        if(kind == JumperKind.RETURN_VALUE && value == null){
+        if(kind === JumperKind.RETURN_VALUE && value === null){
             throw new Error("constructor de jumper no valido para RETURN_VALUE y valu = null");
         }
-        if(kind != JumperKind.RETURN_VALUE && value != null){
+        if(kind !== JumperKind.RETURN_VALUE && value !== null){
             throw new Error(`constructor de jumper no valido para ${kind} y value = null`);
         }
 

@@ -4,11 +4,10 @@ import { MyType } from './MyType';
 import { Statement } from '../Ast/Statement';
 
 export enum MyFunctionKind{
-    NATIVE = 'NATIVE',
+    NON_NATIVE = 'NON_NATIVE',
     GRAFICAR_TS = 'GRAFICAR_TS',
 }
 
-// just a function pointer
 export class GraficarTs{
     // empty. and unnecessary, it is just so a MyFunction with kind GRAFICAR_TS
     // has something in its specification
@@ -19,7 +18,8 @@ export class Parameter{
 }
 
 export class MyNonNativeFunction{
-    constructor(public params: Array<Parameter>, public statements: Array<Statement>){   }
+    //if return type is null it means it return void
+    constructor(public params: Array<Parameter>, public returnType:(MyType | null), public statements: Array<Statement>){   }
 }
 
 export class MyFunction{

@@ -152,13 +152,25 @@ let a:A = {
 console.log(a);`
     ;
     }
+    {
     let testString = `
-function hello():void{
-  console.log("Hello");
+function hello(a:number):void{
+  console.log("Hello " + a);
 }
 
-//hello();
+hello(10);
 `
+    }
+
+    let testString = `
+//failing test for null bug
+console.log(null);//BUG prints undef
+console.log(undefined);
+let a = null;
+let b = undefined;
+console.log(a);//BUG prints undef
+console.log(b);
+    `;
     
     this.sourceString = testString;
     this.runtimeInterface.translation = graphTest(testString);

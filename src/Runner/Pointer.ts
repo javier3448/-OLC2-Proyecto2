@@ -35,10 +35,10 @@ export class Pointer{
         else if(val instanceof Boolean){
             return Pointer.makeBooleanPointer(val as Boolean);
         }
-        else if(val == undefined){
+        else if(val === undefined){
             return Pointer.makeUndefinedPointer();
         }
-        else if(val == null){
+        else if(val === null){
             return Pointer.makeNullPointer();
         }else{
             throw new Error(`makePrimitivePointer no soportado todavia para: ${val}`)

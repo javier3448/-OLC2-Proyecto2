@@ -14,28 +14,28 @@ import { MyType, MyTypeKind, TypeSignature, TypeSignatureTable } from "./MyType"
 export function compareMyTypes(type1:MyType, type2:MyType):boolean{
 
     //Caso especial si cualquiera de los tipos es undefined o null
-    if(type1.kind == MyTypeKind.NULL || type2.kind == MyTypeKind.NULL ||
-        type1.kind == MyTypeKind.UNDEFINED || type2.kind == MyTypeKind.UNDEFINED){
+    if(type1.kind === MyTypeKind.NULL || type2.kind === MyTypeKind.NULL ||
+        type1.kind === MyTypeKind.UNDEFINED || type2.kind === MyTypeKind.UNDEFINED){
         return true;
     }
 
     //Caso especial: si es array
-    if(type1.kind == MyTypeKind.ARRAY && type2.kind == MyTypeKind.ARRAY){
+    if(type1.kind === MyTypeKind.ARRAY && type2.kind === MyTypeKind.ARRAY){
         //TODO
         throw new Error(`Compare types para dos arrays no implementado todavia`);
     }
 
-    if(type1.kind == MyTypeKind.CUSTOM && type2.kind == MyTypeKind.CUSTOM){
+    if(type1.kind === MyTypeKind.CUSTOM && type2.kind === MyTypeKind.CUSTOM){
         let typeSignature1 = type1.specification as TypeSignature;
         let typeSignature2 = type2.specification as TypeSignature;
 
         //if they neither is anonymous we can compare their entry on the typeTable
         //(for no just the name because we only have 1 typeTable)
-        if(typeSignature1.name != null && typeSignature2.name != null){
-            return (typeSignature1.name == typeSignature2.name);
+        if(typeSignature1.name !== null && typeSignature2.name !== null){
+            return (typeSignature1.name === typeSignature2.name);
         }
 
-        if(Object.keys(typeSignature1.table).length != Object.keys(typeSignature2.table).length){
+        if(Object.keys(typeSignature1.table).length !== Object.keys(typeSignature2.table).length){
             return false;
         }
         //Bad performance
@@ -49,7 +49,7 @@ export function compareMyTypes(type1:MyType, type2:MyType):boolean{
         return true;
     }
 
-    if(type1.kind == type2.kind){
+    if(type1.kind === type2.kind){
         return true;
     }
     else{
@@ -104,12 +104,12 @@ export class MyObj {
                 }
                 break;
             case MyTypeKind.NULL:
-                if(value != null){
+                if(value !== null){
                     throw new Error(`Constructor MyObj: el myType: <${myType}> no puede tener el valor: <${value}>`);
                 }
                 break;
             case MyTypeKind.UNDEFINED:
-                if(value != undefined){
+                if(value !== undefined){
                     throw new Error(`Constructor MyObj: el myType: <${myType}> no puede tener el valor: <${value}>`);
                 }
                 break;
@@ -168,7 +168,7 @@ export class MyObj {
 
         switch (this.myType.kind) {
             case MyTypeKind.STRING:
-                return (this.value as String).toString();
+                return '"' + (this.value as String).toString() + '"';
             case MyTypeKind.NUMBER:
                 return (this.value as Number).toString();
             case MyTypeKind.BOOLEAN:
@@ -209,7 +209,7 @@ export class MyObj {
             case MyTypeKind.ARRAY :
                 // later we could put all the valid ids in a table or something, but for now
                 // this is fine
-                if(id == "length"){
+                if(id === "length"){
                     let myArray = this.value as MyArray;
                     //just return the length of the array array of 
                     //POTENCIAL BUG!!!!
@@ -244,7 +244,7 @@ export class MyObj {
         
         switch (this.myType.kind) {
             case MyTypeKind.MY_CONSOLE:
-                if(id == "log"){
+                if(id === "log"){
                     for (const functionArgument of functionArguments) {
                         myPrint(functionArgument.getMyObj());
                     }
@@ -264,7 +264,6 @@ export class MyObj {
             case MyTypeKind.NULL:
                 throw new MyError(`No se puede llamar la funcion <${id}> de null`);
             case MyTypeKind.UNDEFINED:
-                throw new Error();
                 throw new MyError(`No se puede llamar la funcion <${id}> de undefined`);
 
             default:

@@ -69,7 +69,7 @@ export class Statement {
             case StatementKind.BreakKind:
             case StatementKind.ContinueKind:
             case StatementKind.ReturnKind:
-                if(child != null){
+                if(child !== null){
                     throw new Error(`constructor de statement no valido para ${statementKind} y ${child}`);
                 }
                 break;

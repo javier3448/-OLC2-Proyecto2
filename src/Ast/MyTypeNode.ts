@@ -26,13 +26,13 @@ export class MyTypeNode{
         
         //make this assertions easier to understand for fucks sake
         //assertions
-        if(kind != MyTypeNodeKind.CUSTOM && name != null){
+        if(kind !== MyTypeNodeKind.CUSTOM && name !== null){
             throw new Error(`name: '${name}' debe ser null si kind no es CUSTOM`);
         }
-        if(kind == MyTypeNodeKind.ARRAY && subNode == null){
+        if(kind === MyTypeNodeKind.ARRAY && subNode === null){
             throw new Error(`MyTypeNode con kind array debe de tener un subNode no null`);
         }
-        if(kind != MyTypeNodeKind.ARRAY && subNode != null){
+        if(kind !== MyTypeNodeKind.ARRAY && subNode !== null){
             throw new Error(`MyTypeNode con kind array debe de tener un subNode no null`);
         }
 
