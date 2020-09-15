@@ -1,5 +1,6 @@
 import { AstNode } from "./AstNode"; 
 import { MyTypeNode } from "./MyTypeNode"; 
+import { Statement } from './Statement';
 export class ParamNode{
     public astNode:AstNode;
 
@@ -23,11 +24,19 @@ export class FunctionDef {
 
     name:string;
     params:ParamNode[];
-    returnType:MyTypeNode;
+    //IF NULL IT MEANS IT RETURN VOID
+    returnType:(MyTypeNode | null);
+    statements:Statement[];
 
-    constructor(name:string, params:ParamNode[]){
+    constructor(name:string, params:ParamNode[], returnType:MyTypeNode, statements:Statement[],
+                firstLine:number, firstColumn:number, lastLine:number, lastColumn:number){
+
+        this.astNode = new AstNode(firstLine, firstColumn, lastLine, lastColumn);
+
         this.name = name;
         this.params = params;
+        this.returnType = returnType;
+        this.statements = statements;
     }
 
 }

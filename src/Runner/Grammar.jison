@@ -30,6 +30,7 @@
 "null"                        return 'NULL'
 
 "type"                        return 'TYPE'
+"function"                    return 'FUNCTION'
 
 "while"                       return 'WHILE'
 
@@ -63,6 +64,7 @@
 "number"                      return 'NUMBER'
 "string"                      return 'STRING'
 "boolean"                     return 'BOOLEAN'
+"void"                        return 'VOID'
 
 ","                           return ','
 ";"                           return ';'
@@ -110,34 +112,11 @@
 %%
 
 S
-    : GlobalInstructions_ EOF
+    : GlobalInstructions_ EOF 
     {
         $$ = $1;
         $$.setAstNode(@1.first_line, @1.first_column, @2.last_line, @2.last_column);
-        return $1;
-    }
-;
-
-StatementList_
-    : StatementList
-    {
-        $$ = $1;
-    }
-    | /*empty*/
-    {
-        $$ = new Array();
-    }
-;
-
-StatementList
-    : StatementList Statement
-    {
-        $$ = $1;
-        $$.push($2);
-    }
-    | Statement
-    {
-        $$ = new Array($1);
+        return $$;
     }
 ;
 
@@ -148,7 +127,7 @@ GlobalInstructions_
     }
     | /*empty*/
     {
-        $$ = new Array();
+        $$ = new GlobalInstructions();
     }
 ;
 
@@ -184,6 +163,77 @@ GlobalInstructions
     }
 ;
 
+StatementList_
+    : StatementList
+    {
+        $$ = $1;
+    }
+    | /*empty*/
+    {
+        $$ = new Array();
+    }
+;
+
+StatementList
+    : StatementList Statement
+    {
+        $$ = $1;
+        $$.push($2);
+    }
+    | Statement
+    {
+        $$ = new Array($1);
+    }
+;
+
+FunctionDef
+    : FUNCTION IDENTIFIER "(" ParamList_ ")" ":" MyTypeNode "{" StatementList_ "}"
+    {
+        $$ = new FunctionDef($2, $4, $7, $9, @1.first_line, @1.first_column, @2.last_line, @2.last_column);
+    }
+    | FUNCTION IDENTIFIER "(" ParamList_ ")" ":" VOID "{" StatementList_ "}"
+    {
+        $$ = new FunctionDef($2, $4, null, $9, @1.first_line, @1.first_column, @2.last_line, @2.last_column);
+    }
+;
+
+ParamList_
+    : ParamList
+    {
+        $$ = $1;
+    }
+    | /* empty */
+    {
+        $$ = new Array();
+    }
+;
+
+//Param and Attribute are pretty much the same
+//it might be better to find a way to only use one
+ParamList
+    : ParamList Param ','
+    {
+        $$ = $1;
+        $$.push($2);
+    }
+    | ParamList Param
+    {
+        $$ = $1;
+        $$.push($2);
+    }
+    | Param ','
+    {
+        $$ = new Array($1);
+    }
+;
+
+Param
+    : IDENTIFIER ':' Type
+    {
+        $$ = new ParamNode($1, $3, @1.first_line, @1.first_column, @3.last_line, @3.last_column);
+    }
+;
+
 TypeDef
     : TYPE IDENTIFIER "=" "{" AttributeList_ "}"
     {
@@ -198,7 +248,7 @@ AttributeList_
     }
     | /* empty */
     {
-        return new Array();
+        new Array();
     }
 ;
 
@@ -442,7 +492,7 @@ PropertyList_
     }
     | /* empty */
     {
-        return new Array();
+        $$ = new Array();
     }
 ;
 

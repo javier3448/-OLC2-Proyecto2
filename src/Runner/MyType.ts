@@ -107,7 +107,14 @@ export class MyType
             }break;
 
             case MyTypeKind.CUSTOM:
-                return (this.specification as TypeSignature).name;
+            {
+                let signature = this.specification as TypeSignature;
+                if(signature.name == null){
+                    //TODO: imprimir bien el tipo anonimo o buscar en la tabla de simbolos un tipo compatible e imprimir ese tipo
+                    return "anonymous";
+                }
+                return signature.name;
+            }break;
 
             case MyTypeKind.WAITING:
                 throw new Error("kind: WAITING NO TIENE METODO TO STRING!!!");

@@ -124,6 +124,7 @@ console.log(a);`
     //it probably has to do with how we get the types when 
     //reading an object literal
     //Then functions
+    {
     let testString = `
 type A = {
     a: string;
@@ -147,8 +148,17 @@ let a:A = {
     }
 };
 
+    }
 console.log(a);`
     ;
+    }
+    let testString = `
+function hello():void{
+  console.log("Hello");
+}
+
+//hello();
+`
     
     this.sourceString = testString;
     this.runtimeInterface.translation = graphTest(testString);

@@ -87,7 +87,7 @@ export module Env{
 
         if(myType != null){
             if(!compareMyTypes(myType, val.myType)){
-                throw new MyError(`Tipos no compatibles: ${myType.myToString()} y ${myType.myToString()}`);
+                throw new MyError(`Tipos no compatibles: ${myType.myToString()} y ${val.myType.myToString()}`);
             }
         }
 

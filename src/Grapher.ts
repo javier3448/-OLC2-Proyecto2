@@ -10,10 +10,11 @@ import { MyTypeNode, MyTypeNodeKind } from './Ast/MyTypeNode';
 import { MemberAccess, AccessKind, FunctionAccess, IndexAccess, AttributeAccess } from './Ast/MemberAccess';
 import { GlobalInstructions } from './Ast/GlobalInstructions';
 import { AttributeNode, TypeDef } from './Ast/TypeDef';
-import { FunctionDef } from './Ast/FunctionDef';
+import { FunctionDef, ParamNode } from './Ast/FunctionDef';
 
 export function test(source:String):string{
     let root =  parser.parse(source);
+    console.log("lol");
     const g = digraph('G');
 
     graphGlobalInstructions(g, root);
@@ -31,11 +32,11 @@ function graphGlobalInstructions(g:Digraph, globalInstructions:GlobalInstruction
     });
 
     const typeDefsNode = graphTypeDefs(g, globalInstructions.typeDefs);
-    //const functionDefsNode = graphFunctionDefs(g, globalInstructions.functionDefs);
+    const functionDefsNode = graphFunctionDefs(g, globalInstructions.functionDefs);
     const stmtsNode = graphStatements(g, globalInstructions.statements);
 
     g.createEdge([result, typeDefsNode]);
-    //g.createEdge([result, functionDefsNode]);
+    g.createEdge([result, functionDefsNode]);
     g.createEdge([result, stmtsNode]);
 
     return result;
@@ -90,8 +91,93 @@ function graphAttribute(g:Digraph, attributeNode:AttributeNode):INode{
     return result;
 }
 
-function graphFunctionDefs(g:Digraph, functionDefs:FunctionDef[]):INode{
+export function graphFunctionDefs(g:Digraph, functionDefs:FunctionDef[]):INode{
+    
+    let result = g.createNode(`function_defs${AstNode.getNextAstNodeId()}`, {
+        // BAD PERFORMANCE: we do this switch two times because of binExpressionToLable
+        [attribute.label]: 'Function defs',
+        [attribute.shape]: 'box',
+    });
 
+    for (const functionDef of functionDefs) {
+        let child = graphFunctionDef(g, functionDef);
+        g.createEdge([result, child]);
+    }
+
+    return result;
+}
+
+export function graphFunctionDef(g:Digraph, functionDef:FunctionDef):INode{
+
+    let result = g.createNode(`function_def${functionDef.astNode.getId()}`, {
+        // BAD PERFORMANCE: we do this switch two times because of binExpressionToLable
+        [attribute.label]: 'Function Def',
+        [attribute.shape]: 'box',
+    });
+
+    let nameNode = g.createNode(`function_def_name${AstNode.getNextAstNodeId()}`, {
+        // BAD PERFORMANCE: we do this switch two times because of binExpressionToLable
+        [attribute.label]: `${functionDef.name}`,
+        [attribute.shape]: 'box',
+    });
+    g.createEdge([result, nameNode]);
+
+
+    let paramListNode = graphParams(g, functionDef.params);
+    g.createEdge([result, paramListNode]);
+
+    if(functionDef.returnType == null){
+        let nameNode = g.createNode(`ret_type${AstNode.getNextAstNodeId()}`, {
+            // BAD PERFORMANCE: we do this switch two times because of binExpressionToLable
+            [attribute.label]: `void`,
+            [attribute.shape]: 'box',
+        });
+        g.createEdge([result, nameNode]);
+    }else{
+        let retTypeNode = graphMyTypeNode(g, functionDef.returnType);
+        g.createEdge([result, retTypeNode]);
+    }
+
+    let statementsNode = graphStatements(g, functionDef.statements);
+    g.createEdge([result, statementsNode]);
+
+    return result;
+}
+
+function graphParams(g:Digraph, params:ParamNode[]):INode{
+
+    const result = g.createNode(`param_list${AstNode.getNextAstNodeId()}`, {
+        [attribute.label]: "param list",
+        [attribute.shape]: 'box',
+    });
+
+    for (const param of params) {
+        let child: INode = graphParam(g, param);
+        g.createEdge([result, child]);
+    }
+
+    return result;
+}
+
+export function graphParam(g:Digraph, param:ParamNode):INode{
+
+    let result = g.createNode(`param_node${param.astNode.getId()}`, {
+        // BAD PERFORMANCE: we do this switch two times because of binExpressionToLable
+        [attribute.label]: 'paramNode',
+        [attribute.shape]: 'box',
+    });
+
+    let nameNode = g.createNode(`param_def_name${AstNode.getNextAstNodeId()}`, {
+        // BAD PERFORMANCE: we do this switch two times because of binExpressionToLable
+        [attribute.label]: `${param.name}`,
+        [attribute.shape]: 'box',
+    });
+    g.createEdge([result, nameNode]);
+
+    let retTypeNode = graphMyTypeNode(g, param.myTypeNode);
+    g.createEdge([result, retTypeNode]);
+
+    return result;
 }
 
 //g: SubGraph donde vamos a ir metiendo todos los nodos

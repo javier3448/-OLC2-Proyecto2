@@ -36,7 +36,7 @@ export function compareMyTypes(type1:MyType, type2:MyType):boolean{
         }
 
         if(Object.keys(typeSignature1.table).length != Object.keys(typeSignature2.table).length){
-            return false
+            return false;
         }
         //Bad performance
         let types1 = Object.values(typeSignature1.table);

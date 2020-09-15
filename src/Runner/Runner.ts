@@ -66,10 +66,13 @@ export function runGlobalInstructions(globalInstructions:GlobalInstructions):voi
             let myError = new MyError(`No se encontro definicion para el tipo: '${key}'. Se definira con {} para continuar la ejecucion`);
             console.log(myError);
             myType.kind = MyTypeKind.CUSTOM;
-            myType.specification = MyType.makeCustomType(new TypeSignature(key));
+            myType.specification = new TypeSignature(key);
         }
             
     }
+
+    //AQUI AQUI AQUI, RECORRER LAS FUNCIONES!
+    for ... .. 
 
     for (const statement of globalInstructions.statements) {
         let result = runStatement(statement);
