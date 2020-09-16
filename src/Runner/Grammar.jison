@@ -269,11 +269,20 @@ AttributeList
         $$ = $1;
         $$.push($2);
     }
+    | AttributeList Attribute
+    {
+        $$ = $1;
+        $$.push($2);
+    }
     | Attribute ';'
     {
         $$ = new Array($1);
     }
     | Attribute ','
+    {
+        $$ = new Array($1);
+    }
+    | Attribute
     {
         $$ = new Array($1);
     }

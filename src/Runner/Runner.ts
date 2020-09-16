@@ -3,7 +3,7 @@ import { ReturnValue, ReturnKind } from "./ReturnValue";
 import { Jumper, JumperKind } from "./Jumper";
        
 import { parser } from "./RunnerParser.js";
-import { RuntimeInterface } from "../app/app.component";
+import { RuntimeInterface, TsEntry } from "../app/app.component";
 import { Env, Scope } from "./Environment";
 
 import { Statement, StatementKind, WhileStatement, Block} from "../Ast/Statement";
@@ -20,6 +20,7 @@ import { MyTypeNode, MyTypeNodeKind } from 'src/Ast/MyTypeNode';
 import { GlobalInstructions } from 'src/Ast/GlobalInstructions';
 import { TypeDef, AttributeNode } from "../Ast/TypeDef";
 import { FunctionDef, ParamNode } from "../Ast/FunctionDef";
+import { stringify } from '@angular/compiler/src/util';
 
 
 
@@ -28,6 +29,57 @@ let runtimeInterface:RuntimeInterface;
 
 export function myPrint(/* pointer to static console instance, */ myObj:MyObj){
     runtimeInterface.myConsole += myObj.toPrintableString() + "\n";
+}
+
+export function graficar_ts(){
+    //TODO:
+    console.log(Env.current);
+    console.error(new Error("graficar_ts no soportado todavia!!!"));
+     [
+        new TsEntry("global", "a1", "A", "a:asdf"),
+        new TsEntry("tope-2","a1", "A", "a:asdf"),
+        new TsEntry("tope-1","a1", "A", "a:asdf"),
+        new TsEntry("tope","a1", "A", "a:asdf"),
+        new TsEntry("global", "a1", "A", "a:asdf"),
+        new TsEntry("tope-2","a1", "A", "a:asdf"),
+        new TsEntry("tope-1","a1", "A", "a:asdf"),
+        new TsEntry("tope","a1", "A", "a:asdf"),
+        new TsEntry("global", "a1", "A", "a:asdf"),
+        new TsEntry("tope-2","a1", "A", "a:asdf"),
+        new TsEntry("tope-1","a1", "A", "a:asdf"),
+        new TsEntry("tope","a1", "A", "a:asdf"),
+        new TsEntry("global", "a1", "A", "a:asdf"),
+        new TsEntry("tope-2","a1", "A", "a:asdf"),
+        new TsEntry("tope-1","a1", "A", "a:asdf"),
+        new TsEntry("tope","a1", "A", "a:asdf"),
+        new TsEntry("global", "a1", "A", "a:asdf"),
+        new TsEntry("tope-2","a1", "A", "a:asdf"),
+        new TsEntry("tope-1","a1", "A", "a:asdf"),
+        new TsEntry("tope","a1", "A", "a:asdf"),
+    ];
+
+    let iter = Env.current;
+    let count = 0;
+    
+    while(iter != null){
+        //type signatures
+        for (const key in iter.myTypeSignatures) {
+            let typeSignature = iter.myTypeSignatures[key];
+            runtimeInterface.tsDataSet.push(new TsEntry("top-"+count.toString(), key, "-", typeSignature.myToString()));
+        }
+        //Function signatures
+        for (const key in iter.myFunctions) {
+            let funcSignature = iter.myFunctions[key];
+            runtimeInterface.tsDataSet.push(new TsEntry("top-"+count.toString(), key, funcSignature.getTypeString(), "-"));
+        }
+        //Variables:
+        for (const key in iter.myVariables) {
+            let variable = iter.myVariables[key];
+            runtimeInterface.tsDataSet.push(new TsEntry("top-"+count.toString(), key, variable.myObj.myType.myToString(), variable.myObj.myToString()));
+        }
+        iter = iter.previous;
+    }
+    console.log(runtimeInterface.tsDataSet);
 }
 
 export function resetRuntimeInterface(){

@@ -7,6 +7,7 @@ import { AppComponent } from './app.component';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatTableModule } from '@angular/material/table';
+import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
 
 @NgModule({
   declarations: [
@@ -19,6 +20,7 @@ import { MatTableModule } from '@angular/material/table';
     BrowserAnimationsModule,
     MatTabsModule,
     MatTableModule,
+    NgbModule,
   ],
   providers: [],
   bootstrap: [AppComponent]

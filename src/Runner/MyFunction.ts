@@ -31,4 +31,29 @@ export class MyFunction{
         this.specification = specification;
     }
 
+    getTypeString():string{
+        switch(this.kind){
+            case MyFunctionKind.GRAFICAR_TS:
+                return "() => void"
+            case MyFunctionKind.NON_NATIVE:
+            {
+                let func = this.specification as MyNonNativeFunction;
+                let resultString = "(";
+                for (const param of func.params) {
+                    resultString = param.myType.myToString() + ", ";
+                }
+                if(resultString.length > 2){
+                    resultString = resultString.slice(0, resultString.length - 2);
+                }
+                resultString = resultString + ") => ";
+                if(func.returnType === null){
+                    resultString = resultString + "void"
+                }else{
+                    resultString = resultString + func.returnType.myToString();
+                }
+            }break;
+            default:
+                throw new Error(`MyFunction.getTypeStirng no implementado para ${this.kind}`);
+        }
+    }
 }

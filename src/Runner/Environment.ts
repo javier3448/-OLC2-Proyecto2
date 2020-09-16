@@ -6,7 +6,7 @@ import { MyFunction, MyFunctionKind, GraficarTs, MyNonNativeFunction } from "./M
 import { MyType, MyTypeKind } from "./MyType";
 import { MyObj, CustomObj, MyConsole, compareMyTypes } from './MyObj';
 import { MyError } from './MyError';
-import { runExpression, runStatement } from './Runner';
+import { runExpression, runStatement, graficar_ts } from './Runner';
 import { ReturnKind, ReturnValue } from './ReturnValue';
 import { Jumper, JumperKind } from './Jumper';
 
@@ -69,11 +69,6 @@ export module Env{
     }
 
     //REGION: Funciones y variables nativas
-    export function graficar_ts():void{
-        //TODO:
-        console.log(current);
-        console.error(new Error("graficar_ts no soportado todavia!!!"));
-    }
     //END: Funciones y variables nativas
 
     //[throws_MyError]

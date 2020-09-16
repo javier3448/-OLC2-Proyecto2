@@ -4,13 +4,29 @@ import { parser } from "../Translator/TranslatorParser.js";
 import { graphExpression, test as graphTest } from "../Grapher";
 import { test as runTest } from "../Runner/Runner"
 
+//Representacion de una entrada a un scope del Environment
+export class TsEntry{
+  constructor(
+    public scope:string,
+    public name:string,
+    public myType:string,
+    public value:string,
+  ){   }
+
+}
+
 //Si ts fuera un lenguaje de verdad esta clase no seria necesaria
 //solo mandariamos un puntero al string donde esta la consola al runner :(
 export class RuntimeInterface {
   myConsole:string = "";
   translation:string = "";
-  //TODO: donde poner el AST, talvez
-  //TODO: para errores.
+  
+  //might not exist at some point might just be a svg or something
+  astDot:string = "";
+  //The tsDataSetHeaders are static in the simbol table
+  //Si tiene menos columnas de las esperadas ()
+  tsDataSet:TsEntry[] = [];
+  //TODO: Tabla de errores
 }
 
 @Component({
@@ -225,6 +241,8 @@ let a1:A = { a: "hello" };
 let a2:A = a1;
 let a3:B = a2;
 graficar_ts();
+//TODO!!!!!: correr pruebas de pasar ref de MyObj y de primitive de nuevo!!!
+//           estan por el nullify +/-
     `
 
     this.sourceString = testString;
