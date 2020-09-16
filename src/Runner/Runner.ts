@@ -196,6 +196,8 @@ export function runStatement(statement:Statement):(Jumper | null){
                 let val = (declaration.expression === null ? MyObj.undefinedInstance : runExpression(declaration.expression).getMyObj());
 
                 Env.addVariable(id, myType, val);
+
+                return null;
             }break;
 
             case StatementKind.WhileKind:
@@ -211,23 +213,26 @@ export function runStatement(statement:Statement):(Jumper | null){
                 break;
 
             case StatementKind.ContinueKind:
-                throw new Error(`runStatment no implementado para myTypeNode: ${child}`);
+                return new Jumper(JumperKind.CONTINUE, null);
                 break;
 
             case StatementKind.ReturnKind:
-                throw new Error(`runStatment no implementado para myTypeNode: ${child}`);
+                return new Jumper(JumperKind.RETURN, null);
                 break;
 
             case StatementKind.ReturnWithValueKind:
-                throw new Error(`runStatment no implementado para myTypeNode: ${child}`);
-                break;
+            {
+                let returnExpression = statement.child as Expression;
+                let expressionResult = runExpression(returnExpression)
+                return new Jumper(JumperKind.RETURN_VALUE, expressionResult.getMyObj());
+            }break;
 
             case StatementKind.ExpressionKind:
-                throw new Error(`runStatment no implementado para myTypeNode: ${child}`);
+                throw new Error(`runStatment no implementado para myTypeNode: ${statement.statementKind}`);
                 break;
 
             default:
-                throw new Error(`runStatment no implementado para myTypeNode: ${child}`);
+                throw new Error(`runStatment no implementado para myTypeNode: ${statement.statementKind}`);
         }
     } catch (myError) {
         if(myError instanceof MyError){
@@ -698,4 +703,5 @@ export function runWhile(whileStatement:WhileStatement):(Jumper | null){
             }
         }
     }
+    return null;
 }

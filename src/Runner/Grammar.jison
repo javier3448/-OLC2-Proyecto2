@@ -35,6 +35,8 @@
 "while"                       return 'WHILE'
 
 "break"                       return 'BREAK'
+"continue"                    return 'CONTINUE'
+"return"                      return 'RETURN'
 
 "OR"                          return 'OR'
 "AND"                         return 'AND'
@@ -305,6 +307,18 @@ Statement
     | BREAK ';'
     {
         $$ = new Statement(StatementKind.BreakKind, null, @1.first_line, @1.first_column, @2.last_line, @2.last_column);
+    }
+    | CONTINUE ';'
+    {
+        $$ = new Statement(StatementKind.ContinueKind, null, @1.first_line, @1.first_column, @2.last_line, @2.last_column);
+    }
+    | RETURN ';'
+    {
+        $$ = new Statement(StatementKind.ReturnKind, null, @1.first_line, @1.first_column, @2.last_line, @2.last_column);
+    }
+    | RETURN Expresssion ';'
+    {
+        $$ = new Statement(StatementKind.ReturnWithExpression, $2, @1.first_line, @1.first_column, @3.last_line, @3.last_column);
     }
 ;
 

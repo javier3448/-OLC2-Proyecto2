@@ -93,37 +93,16 @@ console.log(a);
       let testString = `
 type A = {
     a: string;
-    b: B;
-}
-type B = {
-    a: A;
-    b: number;
 }
 
 let a:A = {
     a:"a1", 
-    b : { 
-        a: {
-            a:"a1", 
-            b : { 
-                a: {
-                    a:"a2", 
-                    b: null
-                },
-                b: 30
-            }
-        },
-        b: 20
-    }
 };
 
 console.log(a);`
       ;
     }
-    //AQUI AQUI AQUI: this kill the entire fucking thing
-    //it probably has to do with how we get the types when 
-    //reading an object literal
-    //Then functions
+
     {
     let testString = `
 type A = {
@@ -148,10 +127,10 @@ let a:A = {
     }
 };
 
-    }
 console.log(a);`
     ;
     }
+    
     {
     let testString = `
 function hello(a:number):void{
@@ -162,6 +141,7 @@ hello(10);
 `
     }
 
+    {
     let testString = `
 //failing test for null bug
 console.log(null);//BUG prints undef
@@ -171,7 +151,82 @@ let b = undefined;
 console.log(a);//BUG prints undef
 console.log(b);
     `;
+    }
+
+    {
+    let testString = `
+let n:number = 0;
+
+while(n < 10){
+  n = n + 1;
+  console.log(n);
+  continue;
+  console.log("FAIL");
+}
+    `;
+    }
+
+    //Test graficar_ts()
+    {
+    let testString = `
+let a = "hello";
+function foo():void{
+  console.log("foo");
+}
+type A = {
+  a:string,
+}
+
+graficar_ts();
+    `
+    }
     
+    //UNSOLVED BUG!:
+    {
+      let testString = `
+      // bug: a should have type A not Anonymous
+type A = {
+    a: string;
+    b: B;
+}
+type B = {
+    a: A;
+    b: number;
+}
+let a:A = {
+    a:"a1", 
+    b : { 
+        a: {
+            a:"a1", 
+            b : { 
+                a: {
+                    a:"a2", 
+                    b: null
+                },
+                b: 30
+            }
+        },
+        b: 20
+    }
+};
+graficar_ts();
+console.log(a);`
+      ;
+    }
+    
+    let testString = `
+type A = {
+  a:string
+}
+type B = {
+  a:string
+}
+let a1:A = { a: "hello" };
+let a2:A = a1;
+let a3:B = a2;
+graficar_ts();
+    `
+
     this.sourceString = testString;
     this.runtimeInterface.translation = graphTest(testString);
     runTest(this.sourceString, this.runtimeInterface);

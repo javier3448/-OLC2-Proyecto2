@@ -33,7 +33,8 @@ export class Statement {
     public statementKind:StatementKind;
     //We need a better name
     //In Rust this would be an enum Statement, with: if, ifelse, block, assignment ... and other variants
-    //child null para todos jumpers que no cargan un valor
+    //child expression para ReturnWithValueKind
+    //child null para todos los otros jumpers 
     public child:(Expression | Declaration | Block | WhileStatement | null/* | if | ifelse | ... */);
 
     constructor(statementKind:StatementKind, child:(Expression | Declaration | Block | WhileStatement | null ),

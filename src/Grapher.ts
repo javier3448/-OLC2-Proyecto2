@@ -1,4 +1,4 @@
-import { digraph, Digraph, ISubgraph, attribute, INode, toDot } from "ts-graphviz";
+import { digraph, Digraph, attribute, INode, toDot } from "ts-graphviz";
 import { Expression, ExpressionKind, LiteralExpression, IdentifierExpression, BinaryExpression, UnaryExpression, TernaryExpression, MemberAccessExpression, FunctionCallExpression, ObjectLiteralExpression, PropertyNode } from "./Ast/Expression";
 import { Statement, WhileStatement, Block, StatementKind } from "./Ast/Statement";
 import { AstNode } from "./Ast/AstNode";
@@ -14,7 +14,6 @@ import { FunctionDef, ParamNode } from './Ast/FunctionDef';
 
 export function test(source:String):string{
     let root =  parser.parse(source);
-    console.log("lol");
     const g = digraph('G');
 
     graphGlobalInstructions(g, root);

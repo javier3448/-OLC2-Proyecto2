@@ -707,3 +707,18 @@
     console.log(a);//BUG prints undef
     console.log(b);
 }
+
+//TODO: algo que pruebe si corremos los typedefs antes de las funciones
+
+{
+    let n:number = 0;
+
+    while(n < 10){
+    n = n + 1;
+    console.log(n);
+    continue;
+    console.log("FAIL");
+    }
+}
+
+//TODO: test return jumpers, empty, not empty, correct, with incorrect type, with incorrect void/not_void
