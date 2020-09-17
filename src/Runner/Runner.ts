@@ -34,29 +34,6 @@ export function myPrint(/* pointer to static console instance, */ myObj:MyObj){
 export function graficar_ts(){
     //TODO:
     console.log(Env.current);
-    console.error(new Error("graficar_ts no soportado todavia!!!"));
-     [
-        new TsEntry("global", "a1", "A", "a:asdf"),
-        new TsEntry("tope-2","a1", "A", "a:asdf"),
-        new TsEntry("tope-1","a1", "A", "a:asdf"),
-        new TsEntry("tope","a1", "A", "a:asdf"),
-        new TsEntry("global", "a1", "A", "a:asdf"),
-        new TsEntry("tope-2","a1", "A", "a:asdf"),
-        new TsEntry("tope-1","a1", "A", "a:asdf"),
-        new TsEntry("tope","a1", "A", "a:asdf"),
-        new TsEntry("global", "a1", "A", "a:asdf"),
-        new TsEntry("tope-2","a1", "A", "a:asdf"),
-        new TsEntry("tope-1","a1", "A", "a:asdf"),
-        new TsEntry("tope","a1", "A", "a:asdf"),
-        new TsEntry("global", "a1", "A", "a:asdf"),
-        new TsEntry("tope-2","a1", "A", "a:asdf"),
-        new TsEntry("tope-1","a1", "A", "a:asdf"),
-        new TsEntry("tope","a1", "A", "a:asdf"),
-        new TsEntry("global", "a1", "A", "a:asdf"),
-        new TsEntry("tope-2","a1", "A", "a:asdf"),
-        new TsEntry("tope-1","a1", "A", "a:asdf"),
-        new TsEntry("tope","a1", "A", "a:asdf"),
-    ];
 
     let iter = Env.current;
     let count = 0;
@@ -75,7 +52,7 @@ export function graficar_ts(){
         //Variables:
         for (const key in iter.myVariables) {
             let variable = iter.myVariables[key];
-            runtimeInterface.tsDataSet.push(new TsEntry("top-"+count.toString(), key, variable.myObj.myType.myToString(), variable.myObj.myToString()));
+            runtimeInterface.tsDataSet.push(new TsEntry("top-"+count.toString(), key, variable.myObj.myType.myToString(), variable.myObj.toPrintableString()));
         }
         iter = iter.previous;
     }
@@ -143,7 +120,8 @@ export function runGlobalInstructions(globalInstructions:GlobalInstructions):voi
         let result = runStatement(statement);
         // BIG TODO: Implementar bien los jumpers sin que se truene todo el programa
         // y/o cause comportamiento extranno a travez de funciones
-        if(result !== null){
+        //We must check for undef too because if we throw an Exception we return undef... This will cause more bugs in other places. Fuck you typescript
+        if(result !== null && result !== undefined){
             console.log(new MyError(`No se puede usar el jumper: ${result} en ejecucion global`))
         }
     }
@@ -244,10 +222,34 @@ export function runStatement(statement:Statement):(Jumper | null){
                 let declaration = child as Declaration;
 
                 let id = declaration.identifier;
-                let myType:(MyType | null) = (declaration.myTypeNode === null ? null : runNonPropertyMyTypeNode(declaration.myTypeNode));
+                let myType:(MyType | null);
+                if(declaration.myTypeNode === null){
+                    myType = null;
+                }else{
+                    myType = runNonPropertyMyTypeNode(declaration.myTypeNode);
+                }
                 let val = (declaration.expression === null ? MyObj.undefinedInstance : runExpression(declaration.expression).getMyObj());
 
-                Env.addVariable(id, myType, val);
+                //we check types
+                if(myType !== null && 
+                    !compareMyTypes(myType, val.myType)){
+                    //TODO: hay casos en los que no se va a poder hacer custom = custom y este mensaje no va ayudar en nada
+                    throw new MyError(`No se puede asignar el tipo: '${myType.kind}' un valor de tipo: ${val.myType.kind}`);
+                }
+
+                //this is baaaaaaaaaaaaad :((((
+                //All this awfulness because we put the type inside MyObj and not inside pointer :(
+                //Special case. Arbitrary awful patch so everything doesnt end up as anon type all the time
+                if(myType.kind === MyTypeKind.CUSTOM && val.myType.kind === MyTypeKind.CUSTOM){
+                    //Si ambos son custom y se paso la prueba de compare types entonces puede darse el caso 
+                    //en el que lvalue force su tipo sobre rvalue
+                    let lvalueTypeSignature = myType.specification as TypeSignature;
+                    if(lvalueTypeSignature.name != null ){
+                        (val.myType.specification as TypeSignature).name = lvalueTypeSignature.name;
+                    }
+                }
+                
+                Env.addVariable(id, val);
 
                 return null;
             }break;
@@ -405,6 +407,18 @@ export function runExpression(expr:Expression):ReturnValue{
             if(!compareMyTypes(lvalue.myObj.myType, rvalue.myType)){
                 //TODO: hay casos en los que no se va a poder hacer custom = custom y este mensaje no va ayudar en nada
                 throw new MyError(`No se puede asignar el tipo: '${lvalue.myObj.myType.kind}' un valor de tipo: ${rvalue.myType.kind}`);
+            }
+
+            //this is baaaaaaaaaaaaad :((((
+            //All this awfulness because we put the type inside MyObj and not inside pointer :(
+            //Special case. Arbitrary awful patch so everything doesnt end up as anon type all the time
+            if(lvalue.myObj.myType.kind === MyTypeKind.CUSTOM && rvalue.myType.kind === MyTypeKind.CUSTOM){
+                //Si ambos son custom y se paso la prueba de compare types entonces puede darse el caso 
+                //en el que lvalue force su tipo sobre rvalue
+                let lvalueTypeSignature = lvalue.myObj.myType.specification as TypeSignature;
+                if(lvalueTypeSignature.name != null ){
+                    (rvalue.myType.specification as TypeSignature).name = lvalueTypeSignature.name;
+                }
             }
 
             lvalue.myObj = rvalue;

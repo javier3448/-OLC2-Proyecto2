@@ -722,3 +722,24 @@
 }
 
 //TODO: test return jumpers, empty, not empty, correct, with incorrect type, with incorrect void/not_void
+
+//TODO: mas de estas:
+//Para verificar que regresemos al scope global antes de llamar a las funciones
+{
+    let b = "PASS";
+    function lol():void{
+        console.log(a);
+        console.log(b);
+    }
+
+    {
+        let a = "FAIL";
+        lol();
+    }
+}
+
+//TODO: finish this test
+//Possible bug we caught
+{
+    //we didnt check for type correctness in assignment
+}

@@ -3,7 +3,7 @@
 import { Pointer } from "./Pointer";
 import { Expression } from "../Ast/Expression"
 import { MyFunction, MyFunctionKind, GraficarTs, MyNonNativeFunction } from "./MyFunction";
-import { MyType, MyTypeKind } from "./MyType";
+import { MyType, MyTypeKind, TypeSignature } from "./MyType";
 import { MyObj, CustomObj, MyConsole, compareMyTypes } from './MyObj';
 import { MyError } from './MyError';
 import { runExpression, runStatement, graficar_ts } from './Runner';
@@ -53,13 +53,16 @@ export module Env{
         global.myVariables
 
         //Inicializamos los tipos primitivos y Cosole
-        global.myTypeSignatures["string"] = MyType.stringTypeInstance;
-        global.myTypeSignatures["number"] = MyType.numberTypeInstance;
-        global.myTypeSignatures["boolean"] = MyType.booleanTypeInstance;
-        global.myTypeSignatures["null"] = MyType.nullTypeInstance;
-        global.myTypeSignatures["undefined"] = MyType.undefinedTypeInstance;
+        //FOR DEBUG ONLY:
+        //FIXME
+        //TODO TODO TODO TODO: Uncomment it!
+        // global.myTypeSignatures["string"] = MyType.stringTypeInstance;
+        // global.myTypeSignatures["number"] = MyType.numberTypeInstance;
+        // global.myTypeSignatures["boolean"] = MyType.booleanTypeInstance;
+        // global.myTypeSignatures["null"] = MyType.nullTypeInstance;
+        // global.myTypeSignatures["undefined"] = MyType.undefinedTypeInstance;
 
-        global.myTypeSignatures["Console"] = MyType.consoleTypeInstance;
+        // global.myTypeSignatures["Console"] = MyType.consoleTypeInstance;
 
         //Inicializamos las variables, funciones y definiciones nativas del scope global
         global.myFunctions["graficar_ts"] = new MyFunction(MyFunctionKind.GRAFICAR_TS, new GraficarTs());
@@ -73,22 +76,17 @@ export module Env{
 
     //[throws_MyError]
     //Atrapa si ya exite el id en el current scope
-    //Atrapa si myType y val no son iguales
-    export function addVariable(id:string, myType:(MyType | null), val:MyObj){
+    export function addVariable(id:string, val:MyObj){
         //ver si ya existe en el current scope
 
         if(current.myVariables[id] !== undefined){
             throw new MyError(`No se agregar una variable con el nombre '${id}' porque existe un variable con el mismo nomber en el mismo scope`);
         }
 
-        if(myType !== null){
-            if(!compareMyTypes(myType, val.myType)){
-                throw new MyError(`Tipos no compatibles: ${myType.myToString()} y ${val.myType.myToString()}`);
-            }
-        }
-
         current.myVariables[id] = Pointer.makeMyObjectPointer(val);
     }
+
+    //[?] do we need a assignVariable to go with the addVariable?
 
     //Retorna undefined si no existe el id en niguno de los scopes
     //if ReturnValue is not a pointer then it means the variable doesnt exist
@@ -164,6 +162,8 @@ export module Env{
 
         // At this point or function signature is a non_native kind
         // [Think]: goto would help avoid missing pops here... just saying
+        let oldCurrent = Env.current;
+        Env.current = global;
         Env.pushScope();
 
         // Should the arrays indices be passed by reference too?? for now they are
@@ -181,12 +181,14 @@ export module Env{
                 resultValue.getMyObj().myType.kind === MyTypeKind.CUSTOM)
             {
                 Env.popScope();
+                Env.current = oldCurrent;
                 throw new Error("Env.callFunction no chequea con tipos Array ni Custom TODAVIA");
             }
             let typeArg = resultValue.getMyObj().myType;
             let typeParam =params[i].myType;
             if(!compareMyTypes(typeArg, typeParam)){
                 Env.popScope();
+                Env.current = oldCurrent;
                 throw new MyError(`Types no compatibles en el argumento: ${i}. Se tiene: ${typeArg.toString()} se esperaba: ${typeParam.toString()}`)
             }
             //If resultValue is of type (CUSTOM or ARRAY) And it is a pointer we pass the param by pointer, if not we copy the MyObj
@@ -219,9 +221,11 @@ export module Env{
                 case JumperKind.BREAK:
                 case JumperKind.CONTINUE:
                     Env.popScope();
+                    Env.current = oldCurrent;
                     throw new MyError(`Fallo la llamada a funcion '${id}': ${stmtResult.kind} a traves del limete de funcion`)
                 case JumperKind.RETURN:
                     Env.popScope();
+                    Env.current = oldCurrent;
                     if(returnType === null){
                         return MyObj.undefinedInstance;//Return without errors :D
                     }else{
@@ -230,6 +234,7 @@ export module Env{
                 case JumperKind.RETURN_VALUE:
                     //by this point stmtReslt.value cannot be null
                     Env.popScope();
+                    Env.current = oldCurrent;
                     if(compareMyTypes(returnType, stmtResult.value.myType)){
                         return stmtResult.value;//Return without errors :D
                     }else{
@@ -239,6 +244,7 @@ export module Env{
             }
         }
         Env.popScope();
+        Env.current = oldCurrent;
         if(returnType === null){
             return MyObj.undefinedInstance;//Return without errors :D
         }else{

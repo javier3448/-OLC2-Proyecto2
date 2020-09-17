@@ -197,8 +197,9 @@ graficar_ts();
     `
     }
     
-    //UNSOLVED BUG!:
+    //old bug: Every variable would be anonymous before the bug fix
     {
+
       let testString = `
       // bug: a should have type A not Anonymous
 type A = {
@@ -225,11 +226,26 @@ let a:A = {
         b: 20
     }
 };
+let b:B = { 
+        a: {
+            a:"a1", 
+            b : { 
+                a: {
+                    a:"a2", 
+                    b: null
+                },
+                b: 30
+            }
+        },
+        b: 20
+      };
+let c = b;
 graficar_ts();
 console.log(a);`
       ;
     }
     
+    {
     let testString = `
 type A = {
   a:string
@@ -241,10 +257,27 @@ let a1:A = { a: "hello" };
 let a2:A = a1;
 let a3:B = a2;
 graficar_ts();
+//Somewhat buggy and stupid behaviour :(
+//We end up printing in graficar_ts():
+//a1	B	{ a:"hello" }
+//a2	B	{ a:"hello" }
+//a3	B	{ a:"hello" }
 //TODO!!!!!: correr pruebas de pasar ref de MyObj y de primitive de nuevo!!!
 //           estan por el nullify +/-
-    `
+    `;
+    }
 
+    let testString = `
+let array1:number[] = [1, 2, 3, 4];
+let array2 = array1;
+
+console.log(array1);
+console.log(array1.length);
+array1.push(20);
+console.log(array2);
+console.log(array2.pop());
+console.log(array1);
+    `;
     this.sourceString = testString;
     this.runtimeInterface.translation = graphTest(testString);
     runTest(this.sourceString, this.runtimeInterface);

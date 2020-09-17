@@ -30,10 +30,11 @@ export function compareMyTypes(type1:MyType, type2:MyType):boolean{
         let typeSignature2 = type2.specification as TypeSignature;
 
         //if they neither is anonymous we can compare their entry on the typeTable
-        //(for no just the name because we only have 1 typeTable)
-        if(typeSignature1.name !== null && typeSignature2.name !== null){
-            return (typeSignature1.name === typeSignature2.name);
-        }
+        //I dont know if I want to check if they have the the same 'instance' of type def
+        //typescript doesnt check that, so for now we wont either
+        // if(typeSignature1.name !== null && typeSignature2.name !== null){
+        //     return (typeSignature1.name === typeSignature2.name);
+        // }
 
         if(Object.keys(typeSignature1.table).length !== Object.keys(typeSignature2.table).length){
             return false;
@@ -244,6 +245,7 @@ export class MyObj {
         
         switch (this.myType.kind) {
             case MyTypeKind.MY_CONSOLE:
+                //No need to setup the Environment for this call. 
                 if(id === "log"){
                     for (const functionArgument of functionArguments) {
                         myPrint(functionArgument.getMyObj());
