@@ -1,6 +1,6 @@
 import { digraph, Digraph, attribute, INode, toDot } from "ts-graphviz";
 import { Expression, ExpressionKind, LiteralExpression, IdentifierExpression, BinaryExpression, UnaryExpression, TernaryExpression, MemberAccessExpression, FunctionCallExpression, ObjectLiteralExpression, PropertyNode, ArrayLiteralExpression } from "./Ast/Expression";
-import { Statement, WhileStatement, Block, StatementKind } from "./Ast/Statement";
+import { Statement, WhileStatement, Block, StatementKind, IfStatement } from "./Ast/Statement";
 import { AstNode } from "./Ast/AstNode";
 
 import { parser } from "./Runner/RunnerParser.js";
@@ -414,13 +414,14 @@ function graphExpressionList(g:Digraph, expressions:Expression[]):INode{
 function expressionToLabel(expr:Expression):string{
     switch(expr.expressionKind){
         case ExpressionKind.LESS:
-            return "<<B>-</B>>";
+            return "<";
         case ExpressionKind.GREATER:
-            return "<<B><</B>>";
+            //no usamos html graphviz aqui porque graphviz y html son un mierda y no podemos usar '<' o '>' sin cagar todo el parser
+            return ">";
         case ExpressionKind.LESS_OR_EQUAL:
-            return "<<B><=</B>>";
+            return "<=";
         case ExpressionKind.GREATER_OR_EQUAL:
-            return "<<B>>=</B>>";
+            return ">=";
         case ExpressionKind.EQUAL_EQUAL:
             return "<<B>==</B>>";
         case ExpressionKind.NOT_EQUAL:
@@ -523,6 +524,9 @@ export function graphStatement(g:Digraph, statement:Statement):INode{
         case StatementKind.WhileKind:
             child = graphWhileStatement(g, statement.child as WhileStatement);
             break;
+        case StatementKind.IfKind:
+            child = graphIfStatement(g, statement.child as IfStatement);
+            break;
 
         case StatementKind.BlockKind:
             child = graphBlock(g, statement.child as Block);
@@ -617,6 +621,33 @@ function graphWhileStatement(g:Digraph, whileStatement:WhileStatement):INode{
 
     const blockNode = graphStatements(g, whileStatement.statements);
     g.createEdge([result, blockNode]);
+
+    return result;
+}
+
+function graphIfStatement(g:Digraph, ifStatement:IfStatement):INode{
+    
+    const result = g.createNode(`IfStatement${AstNode.getNextAstNodeId()}`, {
+        [attribute.label]: "If",
+        [attribute.shape]: 'box',
+    });
+
+    const exprNode = graphExpression(g, ifStatement.expr);
+    g.createEdge([result, exprNode]);
+
+    const blockNode = graphStatements(g, ifStatement.statements);
+    g.createEdge([result, blockNode]);
+
+
+    if(ifStatement.elseStatment !== null){
+        const elseNode = g.createNode(`Else${AstNode.getNextAstNodeId()}`, {
+            [attribute.label]: "else",
+            [attribute.shape]: 'box',
+        });
+        g.createEdge([result, elseNode]);
+        let elseSubNode = graphStatement(g, ifStatement.elseStatment);
+        g.createEdge([elseNode, elseSubNode]);
+    }
 
     return result;
 }

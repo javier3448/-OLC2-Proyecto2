@@ -296,6 +296,7 @@ console.log(a);
     `;
     }
 
+    {
     let testString = `
 function nullifyA(a:A):void{
   a = null;
@@ -313,6 +314,23 @@ let b = [10,20,30];
 nullifyNum(b[0]);
 console.log(b);//[10,20,30]
     `;
+    }
+
+    let testString = `
+let a = 20;
+if(a <= 20){
+  console.log("1er if");
+}
+else if(a <= 40){
+  console.log("2do if");
+}
+else if(a <= 60){
+  console.log("3er if");
+}
+else{
+  console.log("else");
+}
+    `
 
     this.sourceString = testString;
     this.runtimeInterface.translation = graphTest(testString);

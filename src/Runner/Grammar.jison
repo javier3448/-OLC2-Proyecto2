@@ -4,7 +4,8 @@
     IdentifierExpression, FunctionCallExpression, MemberAccessExpression, 
     PropertyNode, ObjectLiteralExpression, ArrayLiteralExpression } = require('../Ast/Expression');
     const { MemberAccess, AccessKind, FunctionAccess, IndexAccess, AttributeAccess } = require('../Ast/MemberAccess');
-    const { Statement, StatementKind, Block, WhileStatement } = require('../Ast/Statement');
+    const { Statement, StatementKind, Block, 
+            WhileStatement, IfStatement} = require('../Ast/Statement');
     const { Assignment } = require('../Ast/Assignment');
     const { Declaration } = require('../Ast/Declaration');
     const { MyTypeNode, MyTypeNodeKind } = require('../Ast/MyTypeNode');
@@ -34,6 +35,14 @@
 "function"                    return 'FUNCTION'
 
 "while"                       return 'WHILE'
+"do"                          return 'DO'
+"if"                          return 'IF'
+"else"                        return 'ELSE'
+"switch"                      return 'SWITCH'
+"case"                        return 'CASE'
+"for"                         return 'FOR'
+"forin"                       return 'FORIN'
+"forof"                       return 'FOROF'
 
 "break"                       return 'BREAK'
 "continue"                    return 'CONTINUE'
@@ -296,6 +305,23 @@ Attribute
     }
 ;
 
+//Unlinke block, this rule actually returns its own stament with AstNode and all
+IfStatement
+    : IF '(' Expression ')' '{' StatementList_ '}'
+    {
+        $$ = new Statement(StatementKind.IfKind, new IfStatement($3, $6, null), @1.first_line, @1.first_column, @6.last_line, @6.last_column);
+    }
+    | IF '(' Expression ')' '{' StatementList_ '}' ELSE Block
+    {
+        let blockStatement =  new Statement(StatementKind.BlockKind, $9, @9.first_line, @9.first_column, @9.last_line, @9.last_column);
+        $$ = new Statement(StatementKind.IfKind, new IfStatement($3, $6, blockStatement), @1.first_line, @1.first_column, @6.last_line, @6.last_column);
+    }
+    | IF '(' Expression ')' '{' StatementList_ '}' ELSE IfStatement
+    {
+        $$ = new Statement(StatementKind.IfKind, new IfStatement($3, $6, $9), @1.first_line, @1.first_column, @9.last_line, @9.last_column);
+    }
+;
+
 Statement
     : Expression ';'
     {
@@ -307,11 +333,15 @@ Statement
     }
     | Block
     {
-        $$ = new Statement(StatementKind.DeclarationKind, new Block($1), @1.first_line, @1.first_column, @2.last_line, @2.last_column);
+        $$ = new Statement(StatementKind.Block, $1, @1.first_line, @1.first_column, @1.last_line, @1.last_column);
     }
     | WHILE '(' Expression ')' '{' StatementList_ '}'
     {
         $$ = new Statement(StatementKind.WhileKind, new WhileStatement($3, $6), @1.first_line, @1.first_column, @6.last_line, @6.last_column);
+    }
+    | IfStatement
+    {
+        $$ = $1;
     }
     //Jumpers
     | BREAK ';'

@@ -6,7 +6,7 @@ import { parser } from "./RunnerParser.js";
 import { RuntimeInterface, TsEntry } from "../app/app.component";
 import { Env, Scope } from "./Environment";
 
-import { Statement, StatementKind, WhileStatement, Block} from "../Ast/Statement";
+import { Statement, StatementKind, WhileStatement, Block, IfStatement} from "../Ast/Statement";
 
 import { MyObj, CustomObj, compareMyTypes, MyArray } from "./MyObj";
 import { MyType, MyTypeKind, TypeSignature } from "./MyType";
@@ -282,8 +282,8 @@ export function runStatement(statement:Statement):(Jumper | null){
                 return new Jumper(JumperKind.RETURN_VALUE, expressionResult.getMyObj());
             }break;
 
-            case StatementKind.ExpressionKind:
-                throw new Error(`runStatment no implementado para myTypeNode: ${statement.statementKind}`);
+            case StatementKind.IfKind:
+                return runIfStatment(child as IfStatement);
                 break;
 
             default:
@@ -777,37 +777,59 @@ export function runWhile(whileStatement:WhileStatement):(Jumper | null){
 
         Env.pushScope();
         for (const statement of whileStatement.statements) {
-            let statementsResult = runStatement(statement);
+            let statementResult = runStatement(statement);
 
-            if(statementsResult === null){
+            if(statementResult === null){
                 // We just go to the next statement because the current statement didnt
                 // return a jumper
                 continue;
             }
-            else if(statementsResult.kind === JumperKind.CONTINUE){
+            else if(statementResult.kind === JumperKind.CONTINUE){
                 // We break out of the foreach statements but not the while(true)
                 // This way we dont run the statements after continue; and we go to the
                 // next iteration of the while
-                Env.popScope();
                 break;
             }
-            else if(statementsResult.kind === JumperKind.BREAK){
+            else if(statementResult.kind === JumperKind.BREAK){
                 // We must exit out of the loop and return no Jumper because we
                 // 'consumed' the break jumper
                 Env.popScope();
                 return null;
             }
-            else if(statementsResult.kind === JumperKind.RETURN ||
-                    statementsResult.kind === JumperKind.RETURN_VALUE){
+            else if(statementResult.kind === JumperKind.RETURN ||
+                    statementResult.kind === JumperKind.RETURN_VALUE){
                 // We must exit out of the loop and return a Jumper because we
                 // a while cant 'consume' a return jumper
                 Env.popScope();
-                return statementsResult;
+                return statementResult;
             }
             else{//a sneaky assertion just in case
-                throw new Error(`runWhile no implentado para resultado de bloque: ${statementsResult.kind}`);
+                throw new Error(`runWhile no implentado para resultado de bloque: ${statementResult.kind}`);
             }
         }
+        Env.popScope();
     }
+}
+
+export function runIfStatment(ifStatement:IfStatement):(Jumper | null){
+    let exprResult = runExpression(ifStatement.expr);
+    if(!exprResult.getMyObj().getTruthy()){
+        if(ifStatement.elseStatment !== null){
+            return runStatement(ifStatement.elseStatment);
+        }
+        else{
+            return null;
+        }
+    }
+
+    Env.pushScope();
+    for (const statement of ifStatement.statements) {
+        let result = runStatement(statement);
+        if(result !== null){//Then it must be jumper
+            Env.popScope();
+            return result;
+        }
+    }
+    Env.popScope();
     return null;
 }

@@ -160,13 +160,14 @@ export module Env{
             throw new MyError(`No se puede llamar a la funcion <${id}> con ${myArgs.length} argumentos`)
         }
 
-        // At this point or function signature is a non_native kind
+        // At this point our function signature is a non_native kind
         // [Think]: goto would help avoid missing pops here... just saying
         let oldCurrent = Env.current;
         Env.current = global;
         Env.pushScope();
 
         // Should the arrays indices be passed by reference too?? for now they are
+        // if we wanted them to not be passed by reference:
         // We cant make that happen from here, the easiest way would be to have array index
         // access never return a Pointer REturnType, BUT that would mean that we couldn't
         // use it to assign stuff: array[0] = someObj; wouldnt be possible
@@ -197,10 +198,7 @@ export module Env{
             
         }
 
-
-
-        // TODO: 
-
+        //We run the function's code
         let returnType =  (myFunctionSignature.specification as MyNonNativeFunction).returnType;//Can be null (represents void)
         let statements = (myFunctionSignature.specification as MyNonNativeFunction).statements;
         for (const stmt of statements) {

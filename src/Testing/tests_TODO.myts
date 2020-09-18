@@ -788,3 +788,6 @@
 //TODO: probar que con push se pasen las mierdas por referencia tambien. como cualquier otra funcion
 
 //TODO: push return the length of the array
+
+
+//TODO: Test block. The grammar was full of bugs!

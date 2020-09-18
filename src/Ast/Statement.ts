@@ -8,6 +8,7 @@ export enum StatementKind{
     DeclarationKind = 'Declaration',
 
     WhileKind = 'WhileKind',
+    IfKind = 'IfKind',
 
     BlockKind = 'BlockKind',
 
@@ -24,6 +25,11 @@ export class Block {
 
 export class WhileStatement {
     constructor(public expr:Expression, public statements:Array<Statement>){  }
+}
+
+
+export class IfStatement {
+    constructor(public expr:Expression, public statements:Array<Statement>, public elseStatment:(null | Statement)){  }
 }
 
 export class Statement {
@@ -62,6 +68,11 @@ export class Statement {
                 break;
             case StatementKind.WhileKind:
                 if(!(child instanceof WhileStatement)){
+                    throw new Error(`constructor de statement no valido para ${statementKind} y ${child}`);
+                }
+                break;
+            case StatementKind.IfKind:
+                if(!(child instanceof IfStatement)){
                     throw new Error(`constructor de statement no valido para ${statementKind} y ${child}`);
                 }
                 break;

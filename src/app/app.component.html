@@ -346,6 +346,15 @@
   <tr style>
     <td colspan="4">
         <mat-tab-group>
+          <mat-tab label="AST">
+            <ngx-codemirror #textBoxJs [(ngModel)]="runtimeInterface.translation"
+                [options]="{
+                    lineNumbers: true,
+                    theme: 'material',
+                    mode: 'javascript'
+                }"
+            ></ngx-codemirror>
+          </mat-tab>
           <mat-tab label="Second">
             <table class="table">
                 <thead>
@@ -365,15 +374,6 @@
                     </tr>
                 </tbody>
             </table>
-        </mat-tab>
-        <mat-tab label="AST">
-          <ngx-codemirror #textBoxJs [(ngModel)]="runtimeInterface.translation"
-              [options]="{
-                  lineNumbers: true,
-                  theme: 'material',
-                  mode: 'javascript'
-              }"
-          ></ngx-codemirror>
         </mat-tab>
         <mat-tab label="Third"> Content 3 </mat-tab>
       </mat-tab-group>
