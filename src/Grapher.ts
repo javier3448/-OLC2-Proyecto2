@@ -1,12 +1,12 @@
 import { digraph, Digraph, attribute, INode, toDot } from "ts-graphviz";
-import { Expression, ExpressionKind, LiteralExpression, IdentifierExpression, BinaryExpression, UnaryExpression, TernaryExpression, MemberAccessExpression, FunctionCallExpression, ObjectLiteralExpression, PropertyNode } from "./Ast/Expression";
+import { Expression, ExpressionKind, LiteralExpression, IdentifierExpression, BinaryExpression, UnaryExpression, TernaryExpression, MemberAccessExpression, FunctionCallExpression, ObjectLiteralExpression, PropertyNode, ArrayLiteralExpression } from "./Ast/Expression";
 import { Statement, WhileStatement, Block, StatementKind } from "./Ast/Statement";
 import { AstNode } from "./Ast/AstNode";
 
 import { parser } from "./Runner/RunnerParser.js";
 import { Declaration } from './Ast/Declaration';
 import { Assignment } from './Ast/Assignment';
-import { MyTypeNode, MyTypeNodeKind } from './Ast/MyTypeNode';
+import { ArrayTypeNode, CustomTypeNode, MyTypeNode, MyTypeNodeKind } from './Ast/MyTypeNode';
 import { MemberAccess, AccessKind, FunctionAccess, IndexAccess, AttributeAccess } from './Ast/MemberAccess';
 import { GlobalInstructions } from './Ast/GlobalInstructions';
 import { AttributeNode, TypeDef } from './Ast/TypeDef';
@@ -259,6 +259,16 @@ export function graphExpression(g:Digraph, expr:Expression):INode{
             }
         }
         break;
+        //Array literal
+        case ExpressionKind.ARRAY_LITERAL:
+        {
+            const arrayLiteral = expr.specification as ArrayLiteralExpression;
+
+            for (const expression of arrayLiteral.expressions) {
+                let child: INode = graphExpression(g, expression);
+                g.createEdge([result, child]);
+            }
+        }break;
 
         case ExpressionKind.FUNCTION_CALL:
         {
@@ -460,6 +470,8 @@ function expressionToLabel(expr:Expression):string{
         }
         case ExpressionKind.OBJECT_LITERAL:
             return `<<B>ObjectLiteral</B>>`;
+        case ExpressionKind.ARRAY_LITERAL:
+            return `<<B>ArrayLiteral</B>>`;
 
         case ExpressionKind.IDENTIFIER:
             return `<<B>Identifier</B><BR/>${(expr.specification as IdentifierExpression).name}>`;
@@ -619,20 +631,52 @@ function myTypeNodeToLabel(myTypeNode:MyTypeNode){
             return "<<B>Type</B><BR/>String>"
 
         case MyTypeNodeKind.CUSTOM:
-            return `<<B>Type</B><BR/>${myTypeNode.name}>`
+            return `<<B>Type</B><BR/>${(myTypeNode.spec as CustomTypeNode).name}>`
+
+        case MyTypeNodeKind.BOXY_ARRAY:
+            return `<<B>Type</B><BR/>Boxy Array>`;
+        case MyTypeNodeKind.GENERIC_ARRAY:
+            return `<<B>Type</B><BR/>Generic Array>`;
 
         default:
-            throw new Error(`myTypeNodeToLabel no implementado para myTypeNode: ${myTypeNode}`);
+            throw new Error(`myTypeNodeToLabel no implementado para myTypeNode: ${myTypeNode.kind}`);
             break;
     }
 }
 
 export function graphMyTypeNode(g:Digraph, myType:MyTypeNode):INode{
 
-    const result = g.createNode(`MyType${AstNode.getNextAstNodeId()}`, {
+    const result = g.createNode(`MyType${myType.astNode.getId()}`, {
         [attribute.label]: myTypeNodeToLabel(myType),
         [attribute.shape]: 'box',
     });
+
+    //Casos especiales: Si es ARRAY
+    switch (myType.kind) {
+        case MyTypeNodeKind.GENERIC_ARRAY:
+        {
+            const leftChild = g.createNode(`array${AstNode.getNextAstNodeId()}`, {
+                [attribute.label]: 'Array',
+                [attribute.shape]: 'box',
+            });
+            g.createEdge([result, leftChild]);
+
+            const rightChild = graphMyTypeNode(g, (myType.spec as ArrayTypeNode).subType);
+            g.createEdge([result, rightChild]);
+        }break;
+    
+        case MyTypeNodeKind.BOXY_ARRAY:
+        {
+            const leftChild = graphMyTypeNode(g, (myType.spec as ArrayTypeNode).subType);
+            g.createEdge([result, leftChild]);
+
+            const rightChild = g.createNode(`array${AstNode.getNextAstNodeId()}`, {
+                [attribute.label]: '[]',
+                [attribute.shape]: 'box',
+            });
+            g.createEdge([result, rightChild]);
+        }break;
+    }
 
     return result;
 }

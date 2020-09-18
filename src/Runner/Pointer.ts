@@ -2,7 +2,7 @@ import { MyObj} from "./MyObj";
 import { MyType, MyTypeKind } from "./MyType";
 import { LiteralExpression } from 'src/Ast/Expression';
 
-//Hicimos esta clase porque ser requieren dos niveles de punteros para implementar el comportamiento pasar parametros por
+//Hicimos esta clase porque se requieren dos niveles de punteros para implementar el comportamiento pasar parametros por
 //ref y setear dos simbolos al mismo objeto
 //        |Symbol|*|---->|Pointer|*|----->|MyObj|
 //                        ^                   ^
@@ -10,7 +10,7 @@ import { LiteralExpression } from 'src/Ast/Expression';
 //        |Symbol|*|------+                   | 
 //        //Si queremos que un                |
 //        //simbolo sea referencia de otro    |
-//        //(ejmplo: al llamar un metodo)     |
+//        //(ejemplo: al llamar un metodo)    |
 //                                            |
 //        |Symbol|*|---->|Pointer|*|----------+//Si queremos que dos simbolos apunten al mismo objeto
 //                                             //como al hacer asignaciones

@@ -2,7 +2,7 @@
     const { Expression, ExpressionKind, 
     UnaryExpression, BinaryExpression, TernaryExpression, LiteralExpression, 
     IdentifierExpression, FunctionCallExpression, MemberAccessExpression, 
-    PropertyNode, ObjectLiteralExpression } = require('../Ast/Expression');
+    PropertyNode, ObjectLiteralExpression, ArrayLiteralExpression } = require('../Ast/Expression');
     const { MemberAccess, AccessKind, FunctionAccess, IndexAccess, AttributeAccess } = require('../Ast/MemberAccess');
     const { Statement, StatementKind, Block, WhileStatement } = require('../Ast/Statement');
     const { Assignment } = require('../Ast/Assignment');
@@ -30,6 +30,7 @@
 "null"                        return 'NULL'
 
 "type"                        return 'TYPE'
+"Array"                       return 'ARRAY'
 "function"                    return 'FUNCTION'
 
 "while"                       return 'WHILE'
@@ -371,9 +372,13 @@ Type
     {
         $$ = MyTypeNode.makeCustomTypeNode($1, @1.first_line, @1.first_column, @1.last_line, @1.last_column);
     }
-    | ARRAY '<' Type '>'
+    | 'ARRAY' '<' Type '>'
     {
-        $$ = MyTypeNode.makeArrayTypeNode(MyTypeNodeKind.ARRAY, $3, @1.first_line, @1.first_column, @4.last_line, @4.last_column);
+        $$ = MyTypeNode.makeGenericArrayTypeNode($3, @1.first_line, @1.first_column, @4.last_line, @4.last_column);
+    }
+    | Type '[' ']'
+    {
+        $$ = MyTypeNode.makeBoxyArrayTypeNode($1, @1.first_line, @1.first_column, @3.last_line, @3.last_column);
     }
 ;
 
@@ -500,11 +505,15 @@ Expression
     }
     | IDENTIFIER '(' ExpressionList_ ')'
     {
-        $$ = new Expression(ExpressionKind.FUNCTION_CALL, new FunctionCallExpression(new String($1), $3), @1.first_line, @1.first_column, @1.last_line, @1.last_column);
+        $$ = new Expression(ExpressionKind.FUNCTION_CALL, new FunctionCallExpression(new String($1), $3), @1.first_line, @1.first_column, @4.last_line, @4.last_column);
     }
     | '{' PropertyList '}'
     {
-        $$ = new Expression(ExpressionKind.OBJECT_LITERAL, new ObjectLiteralExpression($2), @1.first_line, @1.first_column, @1.last_line, @1.last_column);
+        $$ = new Expression(ExpressionKind.OBJECT_LITERAL, new ObjectLiteralExpression($2), @1.first_line, @1.first_column, @3.last_line, @3.last_column);
+    }
+    | '[' ExpressionList_ ']'
+    {
+        $$ = new Expression(ExpressionKind.ARRAY_LITERAL, new ArrayLiteralExpression($2), @1.first_line, @1.first_column, @3.last_line, @3.last_column);
     }
     // | templateString
     // {

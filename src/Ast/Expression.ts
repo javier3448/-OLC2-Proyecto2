@@ -37,6 +37,7 @@ export enum ExpressionKind{
     IDENTIFIER = 'IDENTIFIER',
     FUNCTION_CALL = 'FUNCTION_CALL',
     OBJECT_LITERAL = 'OBJECT_LITERAL',
+    ARRAY_LITERAL = 'ARRAY_LITERAL',
 }
 
 export class UnaryExpression{
@@ -71,6 +72,10 @@ export class ObjectLiteralExpression{
     constructor(public propertyNodes:PropertyNode[]){   }
 }
 
+export class ArrayLiteralExpression{
+    constructor(public expressions:Expression[]){   }
+}
+
 export class PropertyNode{
 
     astNode:AstNode;
@@ -95,9 +100,11 @@ export class Expression {
 
     public expressionKind: ExpressionKind;
     // TODO: Think of a better name, might not be possible
-    public specification: (UnaryExpression | BinaryExpression | TernaryExpression | IdentifierExpression | LiteralExpression | MemberAccessExpression | ObjectLiteralExpression);
+    public specification: (UnaryExpression | BinaryExpression | TernaryExpression | 
+                           IdentifierExpression | LiteralExpression | MemberAccessExpression | 
+                           ObjectLiteralExpression | ArrayLiteralExpression);
 
-    constructor(expressionKind:ExpressionKind, specification:(UnaryExpression | BinaryExpression | TernaryExpression | LiteralExpression | MemberAccessExpression | ObjectLiteralExpression),
+    constructor(expressionKind:ExpressionKind, specification:(UnaryExpression | BinaryExpression | TernaryExpression | IdentifierExpression | LiteralExpression | MemberAccessExpression | ObjectLiteralExpression | ArrayLiteralExpression),
                 firstLine:number, firstColumn:number, lastLine:number, lastColumn:number){
 
         this.astNode = new AstNode(firstLine, firstColumn, lastLine, lastColumn);
@@ -162,6 +169,11 @@ export class Expression {
             break;
             case ExpressionKind.OBJECT_LITERAL:
                 if(!(specification instanceof ObjectLiteralExpression)){
+                    throw new Error(`Assertion Error: expressionKind ${expressionKind.toString()} must be type MemberAccessExpression instead of ${(specification)}`);
+                }
+            break;
+            case ExpressionKind.ARRAY_LITERAL:
+                if(!(specification instanceof ArrayLiteralExpression)){
                     throw new Error(`Assertion Error: expressionKind ${expressionKind.toString()} must be type MemberAccessExpression instead of ${(specification)}`);
                 }
             break;

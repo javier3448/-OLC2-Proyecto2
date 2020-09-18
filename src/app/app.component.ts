@@ -267,17 +267,53 @@ graficar_ts();
     `;
     }
 
+    {
     let testString = `
-let array1:number[] = [1, 2, 3, 4];
-let array2 = array1;
-
-console.log(array1);
-console.log(array1.length);
-array1.push(20);
-console.log(array2);
-console.log(array2.pop());
-console.log(array1);
+let array1:number[] = [10, 20, 30, 40];
+let array2:Array<number> = array1;
+//ni siquiera se bien que deberia de pasar aqui con las referencia y todoeso
+let array3:number[][] = [array1, array1, array1, array1];
+let array4:Array<Array<number>> = [array1, array1, array1, array1];
+console.log(array1);//[ 10, 20, 30, 40 ] 
+console.log(array1.length);//4 
+array1.push(200);
+console.log(array2);//[ 10, 20, 30, 40, 200 ] 
+console.log(array2.pop());//200
+console.log(array1); //[ 10, 20, 30, 40 ]
+console.log(array1.push(500));//5
+console.log(array3); //[ [ 10, 20, 30, 40, 500 ], [ 10, 20, 30, 40, 500 ], [ 10, 20, 30, 40, 500 ], [ 10, 20, 30, 40, 500 ] ] 
     `;
+    }
+
+    {
+    let testString = `
+function nullify(a:Array<number>):void{
+  a = null;
+}
+let a = [1,2,3];
+nullify(a);
+console.log(a);
+    `;
+    }
+
+    let testString = `
+function nullifyA(a:A):void{
+  a = null;
+}
+function nullifyNum(a:number):void{
+  a = null;
+}
+type A = {
+  a:string;
+}
+let a = [{a:"hello"},{a:"world!"},{a:":D"}];
+nullifyA(a[0]);
+console.log(a);//[0:null, 1:{a:"world!"}, 2:{a:":D"}]
+let b = [10,20,30];
+nullifyNum(b[0]);
+console.log(b);//[10,20,30]
+    `;
+
     this.sourceString = testString;
     this.runtimeInterface.translation = graphTest(testString);
     runTest(this.sourceString, this.runtimeInterface);

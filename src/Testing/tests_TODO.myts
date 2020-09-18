@@ -743,3 +743,48 @@
 {
     //we didnt check for type correctness in assignment
 }
+
+{
+    let a:Array<number>[];  
+    let b:Array<number[]>;
+}
+
+{
+    type A = {
+        a:C[]
+    }
+    type B = {
+        b:Array<Array<Array<Array<C>>>>;
+    }
+    type C = {
+        c:number;
+    }
+}
+
+{
+    let a:Array<Array<Array<Array<C>>>>;//we should get an error here!
+    let b:Array<C>;//we should get an error here!
+    let c:C[];//we should get an error here!
+    let d:C[][][][];//we should get an error here!
+}
+
+//TODO tests for ternary!
+
+{
+    console.log([1,2,3,4]);
+    console.log([1,2,3,"4"]);//Esto deberia dar error
+}
+
+{
+    console.log([1,2,3,4]);
+    console.log([1,2,3,"4"]);//Esto deberia dar error
+}
+
+//TODO: more tests for typechecking arrays
+{
+    let a:number[] = [1,2,3,"4"];//Esto deberia dar error
+}
+
+//TODO: probar que con push se pasen las mierdas por referencia tambien. como cualquier otra funcion
+
+//TODO: push return the length of the array

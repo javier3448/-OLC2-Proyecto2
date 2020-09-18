@@ -177,13 +177,6 @@ export module Env{
         for (let i = 0; i < myArgs.length; i++) {
             const resultValue = myArgs[i];
 
-            if(resultValue.getMyObj().myType.kind === MyTypeKind.ARRAY ||
-                resultValue.getMyObj().myType.kind === MyTypeKind.CUSTOM)
-            {
-                Env.popScope();
-                Env.current = oldCurrent;
-                throw new Error("Env.callFunction no chequea con tipos Array ni Custom TODAVIA");
-            }
             let typeArg = resultValue.getMyObj().myType;
             let typeParam =params[i].myType;
             if(!compareMyTypes(typeArg, typeParam)){

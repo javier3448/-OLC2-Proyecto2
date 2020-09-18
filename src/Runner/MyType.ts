@@ -44,6 +44,8 @@ export class TypeSignature
 }
 
 
+//TODO: write a MyArrayType similar to TypeSignature.
+//      it would only have a member subType:MyType
 export class MyType
 {
     public kind:MyTypeKind;
@@ -139,5 +141,9 @@ export class MyType
 
     public static makeWaitingType():MyType{
         return new MyType(MyTypeKind.WAITING, null);
+    }
+
+    public static makeArrayType(subType:MyType):MyType{
+        return new MyType(MyTypeKind.ARRAY, subType);
     }
 }

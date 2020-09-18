@@ -8,15 +8,15 @@ import { Env, Scope } from "./Environment";
 
 import { Statement, StatementKind, WhileStatement, Block} from "../Ast/Statement";
 
-import { MyObj, CustomObj, compareMyTypes } from "./MyObj";
+import { MyObj, CustomObj, compareMyTypes, MyArray } from "./MyObj";
 import { MyType, MyTypeKind, TypeSignature } from "./MyType";
 import { MyFunction, MyFunctionKind, GraficarTs, Parameter, MyNonNativeFunction } from "./MyFunction";
 import { MyError } from './MyError';
 
-import { Expression, ExpressionKind, FunctionCallExpression, LiteralExpression, IdentifierExpression, MemberAccessExpression, BinaryExpression, UnaryExpression, TernaryExpression, ObjectLiteralExpression } from '../Ast/Expression';
+import { Expression, ExpressionKind, FunctionCallExpression, LiteralExpression, IdentifierExpression, MemberAccessExpression, BinaryExpression, UnaryExpression, TernaryExpression, ObjectLiteralExpression, ArrayLiteralExpression } from '../Ast/Expression';
 import { Declaration } from '../Ast/Declaration';
-import { AccessKind, AttributeAccess, FunctionAccess } from 'src/Ast/MemberAccess';
-import { MyTypeNode, MyTypeNodeKind } from 'src/Ast/MyTypeNode';
+import { AccessKind, AttributeAccess, FunctionAccess, IndexAccess } from 'src/Ast/MemberAccess';
+import { ArrayTypeNode, CustomTypeNode, MyTypeNode, MyTypeNodeKind } from 'src/Ast/MyTypeNode';
 import { GlobalInstructions } from 'src/Ast/GlobalInstructions';
 import { TypeDef, AttributeNode } from "../Ast/TypeDef";
 import { FunctionDef, ParamNode } from "../Ast/FunctionDef";
@@ -231,24 +231,25 @@ export function runStatement(statement:Statement):(Jumper | null){
                 let val = (declaration.expression === null ? MyObj.undefinedInstance : runExpression(declaration.expression).getMyObj());
 
                 //we check types
-                if(myType !== null && 
-                    !compareMyTypes(myType, val.myType)){
+                if(myType !== null){
                     //TODO: hay casos en los que no se va a poder hacer custom = custom y este mensaje no va ayudar en nada
-                    throw new MyError(`No se puede asignar el tipo: '${myType.kind}' un valor de tipo: ${val.myType.kind}`);
-                }
+                    if(!compareMyTypes(myType, val.myType)){
+                        throw new MyError(`No se puede asignar el tipo: '${myType.kind}' un valor de tipo: ${val.myType.kind}`);
+                    }
 
-                //this is baaaaaaaaaaaaad :((((
-                //All this awfulness because we put the type inside MyObj and not inside pointer :(
-                //Special case. Arbitrary awful patch so everything doesnt end up as anon type all the time
-                if(myType.kind === MyTypeKind.CUSTOM && val.myType.kind === MyTypeKind.CUSTOM){
-                    //Si ambos son custom y se paso la prueba de compare types entonces puede darse el caso 
-                    //en el que lvalue force su tipo sobre rvalue
-                    let lvalueTypeSignature = myType.specification as TypeSignature;
-                    if(lvalueTypeSignature.name != null ){
-                        (val.myType.specification as TypeSignature).name = lvalueTypeSignature.name;
+                    //this is baaaaaaaaaaaaad :((((
+                    //All this awfulness because we put the type inside MyObj and not inside pointer :(
+                    //Special case. Arbitrary awful patch so everything doesnt end up as anon type all the time
+                    if(myType.kind === MyTypeKind.CUSTOM && val.myType.kind === MyTypeKind.CUSTOM){
+                        //Si ambos son custom y se paso la prueba de compare types entonces puede darse el caso 
+                        //en el que lvalue force su tipo sobre rvalue
+                        let lvalueTypeSignature = myType.specification as TypeSignature;
+                        if(lvalueTypeSignature.name != null ){
+                            (val.myType.specification as TypeSignature).name = lvalueTypeSignature.name;
+                        }
                     }
                 }
-                
+
                 Env.addVariable(id, val);
 
                 return null;
@@ -306,23 +307,26 @@ export function runPropertyMyTypeNode(myTypeNode:MyTypeNode):MyType{
         //Chequeamos si ya existe ese typedef en la tabla
         //POR AHORA SOLO CHEQUEAMOS EL GLOBAL!!!!!!
         //stupidly bad perf. we visit the map 3 fucking times!
-        if(Env.global.myTypeSignatures[myTypeNode.name] === undefined){
-            Env.global.myTypeSignatures[myTypeNode.name] = MyType.makeWaitingType(); 
-            return Env.global.myTypeSignatures[myTypeNode.name];
+        let customTypeNode = myTypeNode.spec as CustomTypeNode;
+        if(Env.global.myTypeSignatures[customTypeNode.name] === undefined){
+            Env.global.myTypeSignatures[customTypeNode.name] = MyType.makeWaitingType(); 
+            return Env.global.myTypeSignatures[customTypeNode.name];
         }else{
-            return Env.global.myTypeSignatures[myTypeNode.name];
+            return Env.global.myTypeSignatures[customTypeNode.name]; 
         }
     }
-    if(myTypeNode.kind === MyTypeNodeKind.ARRAY){
-        throw new Error("runMyTypeNode no implementado para ARRAY todavia");
+    if(myTypeNode.kind === MyTypeNodeKind.GENERIC_ARRAY || myTypeNode.kind === MyTypeNodeKind.BOXY_ARRAY){
+        let arrayTypeNode = myTypeNode.spec as ArrayTypeNode;
+        //It is very important that we dont call runNonPropertyMyTypeNode. Here. If we do we will get a pretty nasty bug
+        return MyType.makeArrayType(runPropertyMyTypeNode(arrayTypeNode.subType));
     }
 
     //it must be primitive
     switch (myTypeNode.kind) {
         case MyTypeNodeKind.NUMBER:
-            return MyType.numberTypeInstance;
-        case MyTypeNodeKind.STRING:
-            return MyType.stringTypeInstance;
+            return MyType.numberTypeInstance; 
+        case MyTypeNodeKind.STRING: 
+            return MyType.stringTypeInstance; 
         case MyTypeNodeKind.BOOLEAN:
             return MyType.booleanTypeInstance;
         case MyTypeNodeKind.NULL:
@@ -341,14 +345,17 @@ export function runNonPropertyMyTypeNode(myTypeNode:MyTypeNode):MyType{
     if(myTypeNode.kind === MyTypeNodeKind.CUSTOM){
         //Chequeamos si ya existe ese typedef en la tabla
         //POR AHORA SOLO CHEQUEAMOS EL GLOBAL!!!!!!
-        let myType = Env.global.myTypeSignatures[myTypeNode.name];
+        let customTypeNode = myTypeNode.spec as CustomTypeNode;
+        let myType = Env.global.myTypeSignatures[customTypeNode.name];
         if(myType === undefined){
-            throw new MyError(`No existe el tipo: '${myTypeNode.name}'.`);
+            throw new MyError(`No existe el tipo: '${customTypeNode.name}'.`);
         }
         return myType;
     }
-    if(myTypeNode.kind === MyTypeNodeKind.ARRAY){
-        throw new Error("runMyTypeNode no implementado para ARRAY todavia");
+    if(myTypeNode.kind === MyTypeNodeKind.GENERIC_ARRAY || myTypeNode.kind === MyTypeNodeKind.BOXY_ARRAY){
+        let arrayTypeNode = myTypeNode.spec as ArrayTypeNode;
+        //It is very important that we dont call runPropertyMyTypeNode. Here. If we do we will get a pretty nasty bug
+        return MyType.makeArrayType(runNonPropertyMyTypeNode(arrayTypeNode.subType));
     }
 
     //it must be primitive
@@ -412,6 +419,8 @@ export function runExpression(expr:Expression):ReturnValue{
             //this is baaaaaaaaaaaaad :((((
             //All this awfulness because we put the type inside MyObj and not inside pointer :(
             //Special case. Arbitrary awful patch so everything doesnt end up as anon type all the time
+            //BUG: ? if the custom type is nested inside an array we dont get the 'lvalue has the "dominant"
+            //       over rvalue'
             if(lvalue.myObj.myType.kind === MyTypeKind.CUSTOM && rvalue.myType.kind === MyTypeKind.CUSTOM){
                 //Si ambos son custom y se paso la prueba de compare types entonces puede darse el caso 
                 //en el que lvalue force su tipo sobre rvalue
@@ -656,7 +665,8 @@ export function runExpression(expr:Expression):ReturnValue{
                 {
                     let attributeAccess = memberAccessExpression.memberAccess.access as AttributeAccess;
                     
-                    return result.getMyObj().getAttribute(attributeAccess.name.toString());
+                    let attributeAccessResult = result.getMyObj().getAttribute(attributeAccess.name.toString());
+                    return attributeAccessResult;
                 }break;
 
                 case AccessKind.FunctionAccess:
@@ -667,12 +677,21 @@ export function runExpression(expr:Expression):ReturnValue{
                     for (const arg of functionAccess.functionArguments) {
                         computedArgs.push(runExpression(arg));
                     }
-                    return ReturnValue.makeMyObjReturn(result.getMyObj().callFunction(functionAccess.functionName.toString(), computedArgs));
+
+                    let functionCallResult = result.getMyObj().callFunction(functionAccess.functionName.toString(), computedArgs);
+                    return ReturnValue.makeMyObjReturn(functionCallResult);
                 }break;
 
                 case AccessKind.IndexAccess:
                 {
-                    throw new Error(`IndexAccess no implementado todavia!!!`);
+                    let indexAcces = memberAccessExpression.memberAccess.access as IndexAccess;
+                    
+                    let computedIndex = runExpression(indexAcces.index);
+                    
+                    let indexAccessResult = result.getMyObj().getIndex(computedIndex.getMyObj());
+
+                    return ReturnValue.makePointerReturn(indexAccessResult);
+                    
                 }break;
 
                 default:
@@ -701,6 +720,27 @@ export function runExpression(expr:Expression):ReturnValue{
                 anonymousObj[propertyNode.id] = Pointer.makeMyObjectPointer(rvalue);
             }
             return ReturnValue.makeMyObjReturn(new MyObj(MyType.makeCustomType(anonymousSignature), anonymousObj));
+        }break;
+        case ExpressionKind.ARRAY_LITERAL:
+        {
+            let expressionList = (expr.specification as ArrayLiteralExpression).expressions;
+
+            if(expressionList.length < 1){
+                return ReturnValue.makeMyObjReturn(MyObj.makeEmptyArray());
+            }
+            let resultingArray:MyArray = new MyArray([]);//We should do a reserve to this guy, but its typescript who the fuck cares... >:/
+            let firstElement = runExpression(expressionList[0]).getMyObj();
+            let typeOfElements = firstElement.myType;
+            resultingArray.array.push(Pointer.makeMyObjectPointer(firstElement));
+            for (let i = 1; i < expressionList.length; i++) {
+                let element = runExpression(expressionList[i]).getMyObj();
+                if(!compareMyTypes(typeOfElements, element.myType)){
+                    throw new MyError(`No se puede agregar un tipo: ${element.myType.myToString()} a un arreglo de typo: ${typeOfElements.myToString()}`);
+                }
+                resultingArray.array.push(Pointer.makeMyObjectPointer(element));
+            }
+
+            return ReturnValue.makeMyObjReturn(MyObj.makeArray(typeOfElements, resultingArray));
         }break;
         case ExpressionKind.TERNARY:
         {

@@ -1,8 +1,9 @@
 import { Pointer } from './Pointer';
 import { MyError } from './MyError';
 import { myPrint } from "./Runner";
-import { ReturnValue } from './ReturnValue';
+import { ReturnKind, ReturnValue } from './ReturnValue';
 import { MyType, MyTypeKind, TypeSignature, TypeSignatureTable } from "./MyType";
+import { CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
 
 
 //TODO: retornar mensaje
@@ -21,8 +22,9 @@ export function compareMyTypes(type1:MyType, type2:MyType):boolean{
 
     //Caso especial: si es array
     if(type1.kind === MyTypeKind.ARRAY && type2.kind === MyTypeKind.ARRAY){
-        //TODO
-        throw new Error(`Compare types para dos arrays no implementado todavia`);
+        let subType1 = type1.specification as MyType;
+        let subType2 = type1.specification as MyType;
+        return compareMyTypes(subType1, subType2);
     }
 
     if(type1.kind === MyTypeKind.CUSTOM && type2.kind === MyTypeKind.CUSTOM){
@@ -175,11 +177,11 @@ export class MyObj {
             case MyTypeKind.BOOLEAN:
                 return (this.value as Boolean).toString();
             case MyTypeKind.ARRAY :
-                return (this.value as MyArray).toString(originalPadding);
+                return myArrayToPrintableString(this.value as MyArray, originalPadding);
             case MyTypeKind.MY_CONSOLE:
                 return "{}";
             case MyTypeKind.CUSTOM:
-                return customObjToString(this.value as CustomObj, originalPadding);
+                return customObjToPrintableString(this.value as CustomObj, originalPadding);
             case MyTypeKind.NULL:
                 return "null";
             case MyTypeKind.UNDEFINED:
@@ -213,8 +215,8 @@ export class MyObj {
                 if(id === "length"){
                     let myArray = this.value as MyArray;
                     //just return the length of the array array of 
-                    //POTENCIAL BUG!!!!
-                    return ReturnValue.makePointerReturn(Pointer.makeNumberPointer(myArray.array.length));
+                    //we dont return a pointer here becuase we dont want the programmer to change its value
+                    return ReturnValue.makeMyObjReturn(new MyObj(MyType.numberTypeInstance, new Number (myArray.array.length)));
                 }
             case MyTypeKind.CUSTOM:
             {
@@ -238,11 +240,37 @@ export class MyObj {
         throw new Error(`Constructor MyObj: no implementado para el tipo: <${this.myType.kind}`);
     }
 
+
+    //[throws_MyError]
+    //Atrapa si index no es de tipo number
+    //Atrapa si this no es un array
+    //Atrapa outofbounds
+    public getIndex(index:MyObj):Pointer{
+        let indexType = index.myType;
+        if(indexType.kind !== MyTypeKind.NUMBER){
+            throw new MyError(`No se puede usar el tipo: ${indexType.myToString()} como un index access`);
+        }
+
+        if(this.myType.kind !== MyTypeKind.ARRAY){
+            throw new MyError(`No se puede usar index access sobre el tipo: ${this.myType.kind}`);
+        }
+
+        let arrayVal = (this.value as MyArray);
+        let numberIndex = (index.value as Number).valueOf();
+        if(numberIndex >= arrayVal.array.length){
+            throw new MyError(`Indice: '${numberIndex}' fuera de limites: '[0, ${arrayVal.array.length})'`);
+        }
+
+        return arrayVal.array[numberIndex];
+    }
+
     //[throws_MyError]
     //TODO: Poner que atrapa y que no
     //TODO: consider if functionArguments should be pointers or... something else i dont fucking now
     public callFunction(id:string, functionArguments:ReturnValue[]):MyObj{
         
+        //WE dont create a new scope for this function calls. or set current to global
+        //because all these funcs are native and it is not necessary for now
         switch (this.myType.kind) {
             case MyTypeKind.MY_CONSOLE:
                 //No need to setup the Environment for this call. 
@@ -258,10 +286,48 @@ export class MyObj {
             case MyTypeKind.STRING:
             case MyTypeKind.NUMBER:
             case MyTypeKind.BOOLEAN:
-            case MyTypeKind.ARRAY :
             case MyTypeKind.CUSTOM:
-                throw new Error(`GetAttribute: no implementado para el tipo: <${this.myType.kind}`);
+                throw new MyError(`No se puede llamar a un metodo de un tipo: ${this.myType.myToString()}`);
             break;
+            case MyTypeKind.ARRAY :
+                //No need to setup the Environment for this call. 
+                if(id === "push"){
+                    //takes 1 argument.
+                    //must have same type as this.myType
+                    //return undef (void)
+                    if(functionArguments.length != 1) {
+                        throw new MyError(`Numero de parametros (${functionArguments.length}) no valido para array.push`);
+                    }
+                    let element = functionArguments[0];
+                    let elementType = element.getMyObj().myType;
+                    let expectedType = (this.myType.specification as MyType);
+                    if(!compareMyTypes(expectedType, element.getMyObj().myType)){
+                        throw new MyError(`Array.push: se esperaba tipo: '${expectedType.myToString()}' y se recibio: ${element.getMyObj}`);
+                    }
+
+                    //FOR NOW WE PUSH IT AS REFERENCE
+                    if((elementType.kind === MyTypeKind.CUSTOM || elementType.kind === MyTypeKind.ARRAY) &&
+                        element.kind === ReturnKind.POINTER)
+                    {
+                        (this.value as MyArray).array.push(element.unsafeGetPointer());
+                    }
+                    else{
+                        (this.value as MyArray).array.push(Pointer.makeMyObjectPointer(element.getMyObj()));
+                    }
+
+                    return new MyObj(MyType.numberTypeInstance, new Number((this.value as MyArray).array.length));
+                }
+                else if(id === "pop"){
+                    if(functionArguments.length != 0) {
+                        throw new MyError(`Numero de parametros (${functionArguments.length}) no valido para array.pop`);
+                    }
+
+                    let arrayValue = this.value as MyArray;
+                    return arrayValue.array.pop().myObj;
+                }
+                else{
+                    throw new MyError(`'${id}' no es una funcion de '${this.myType.myToString()}'`);
+                }
 
             case MyTypeKind.NULL:
                 throw new MyError(`No se puede llamar la funcion <${id}> de null`);
@@ -316,6 +382,14 @@ export class MyObj {
     //UndefinedObj
     public static undefinedInstance = new MyObj(MyType.undefinedTypeInstance, undefined);
     //public static getUndefinedObject():MyObj{   }
+
+    public static makeEmptyArray(){
+        return new MyObj(MyType.makeArrayType(MyType.undefinedTypeInstance), new MyArray([]));
+    }
+
+    public static makeArray(subType:MyType, myArray:MyArray){
+        return new MyObj(MyType.makeArrayType(subType), myArray);
+    }
 }
 
 export class CustomObj {
@@ -338,7 +412,7 @@ export class MyConsole {
 //    3
 //  ],
 // porque CustomObj es [key:string]:Pointer no podemos tener funciones miembro
-export function customObjToString(customObj:CustomObj, originalPadding:string):string{
+export function customObjToPrintableString(customObj:CustomObj, originalPadding:string):string{
 
     let nextPadding = ' '.repeat(2) + originalPadding;
 
@@ -361,8 +435,30 @@ export function customObjToString(customObj:CustomObj, originalPadding:string):s
     return result;
 }
 
+export function myArrayToPrintableString(myArray:MyArray, originalPadding:string):string{
+    let nextPadding = ' '.repeat(2) + originalPadding;
+
+    if(myArray.array.length < 1){
+        return "[]";
+    }
+
+    let result = "[";
+    for (let i = 0; i < myArray.array.length; i++) {
+        result += "\n" + nextPadding + "[" + i.toString() + "]:" + myArray.array[i].myObj.toPrintableString(nextPadding) + ","
+    }
+
+    result = result.slice(0, -1);
+    result += "\n" + originalPadding + "]";
+    
+    return result;
+}
+
 export class MyArray {
     array: Array<Pointer>;
+
+    constructor(array: Array<Pointer>) {
+        this.array = array;
+    }
 
     //we dont have to do the switch for every single element. If one element has a type,
     //then all other elments must have the same type AND we can pass the subtype from
