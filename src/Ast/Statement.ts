@@ -9,7 +9,10 @@ export enum StatementKind{
 
     WhileKind = 'WhileKind',
     IfKind = 'IfKind',
+    SwitchKind = 'SwitchKind',
     ForKind = 'ForKind',
+    ForOfKind = 'ForOfKind',
+    ForInKind = 'ForInKind',
 
     BlockKind = 'BlockKind',
 
@@ -28,6 +31,10 @@ export class IfStatement {
     constructor(public expr:Expression, public statements:Array<Statement>, public elseStatment:(null | Statement)){  }
 }
 
+export class SwitchStatement {
+    constructor(){  }
+}
+
 export class WhileStatement {
     constructor(public expr:Expression, public statements:Array<Statement>){  }
 }
@@ -39,6 +46,22 @@ export class ForStatement {
         public condicion:(Expression | null), 
         public finalExpression:(Expression | null), 
         public statements:Array<Statement>
+    ){  }
+}
+
+export class ForInStatement {
+    constructor(
+        public variableId:string,
+        public enumerable:Expression, 
+        public statements:Statement[],
+    ){  }
+}
+
+export class ForOfStatement {
+    constructor(
+        public variableId:string,
+        public iterable:Expression, 
+        public statements:Statement[],
     ){  }
 }
 
@@ -88,6 +111,21 @@ export class Statement {
                 break;
             case StatementKind.ForKind:
                 if(!(child instanceof ForStatement)){
+                    throw new Error(`constructor de statement no valido para ${statementKind} y ${child}`);
+                }
+                break;
+            case StatementKind.ForOfKind:
+                if(!(child instanceof ForOfStatement)){
+                    throw new Error(`constructor de statement no valido para ${statementKind} y ${child}`);
+                }
+                break;
+            case StatementKind.ForInKind:
+                if(!(child instanceof ForInStatement)){
+                    throw new Error(`constructor de statement no valido para ${statementKind} y ${child}`);
+                }
+                break;
+            case StatementKind.SwitchKind:
+                if(!(child instanceof ForInStatement)){
                     throw new Error(`constructor de statement no valido para ${statementKind} y ${child}`);
                 }
                 break;

@@ -335,8 +335,28 @@ else{
     }
 
     let testString = `
-for(let i = 0; i < 10; i++){
-  console.log(i);
+let array = [1,2,4,5];
+for(let a of array){
+  console.log(a);
+}
+for(let a of [1,2,4,5]){
+  console.log(a);
+}
+type A = {
+  a:string,
+  b:number,
+  c:boolean
+}
+let a:A = {
+  a:"Javier",
+  b:10,
+  c:true
+};
+for(let prop in a){
+  console.log(prop);
+}
+for(let prop in { a:"Javier", b:10, c:true }){
+  console.log(prop);
 }
     `;
     this.sourceString = testString;

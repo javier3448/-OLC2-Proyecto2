@@ -1,6 +1,6 @@
 import { digraph, Digraph, attribute, INode, toDot } from "ts-graphviz";
 import { Expression, ExpressionKind, LiteralExpression, IdentifierExpression, BinaryExpression, UnaryExpression, TernaryExpression, MemberAccessExpression, FunctionCallExpression, ObjectLiteralExpression, PropertyNode, ArrayLiteralExpression } from "./Ast/Expression";
-import { Statement, WhileStatement, Block, StatementKind, IfStatement, ForStatement } from "./Ast/Statement";
+import { Statement, WhileStatement, Block, StatementKind, IfStatement, ForStatement, ForInStatement, ForOfStatement  } from "./Ast/Statement";
 import { AstNode } from "./Ast/AstNode";
 
 import { parser } from "./Runner/RunnerParser.js";
@@ -598,6 +598,9 @@ function graphStatements(g:Digraph, stmts:Statement[]):INode{
         [attribute.shape]: 'box',
     });
 
+    if(stmts === undefined){
+        console.log("lol");
+    }
     for (const statement of stmts) {
         let child: INode = graphStatement(g, statement);
         g.createEdge([result, child]);
@@ -634,6 +637,13 @@ export function graphStatement(g:Digraph, statement:Statement):INode{
         case StatementKind.ForKind:
             result = graphForStatement(g, statement.child as ForStatement);
             break;
+        case StatementKind.ForInKind:
+            result = graphForInStatement
+            (g, statement.child as ForInStatement);
+            break;
+        case StatementKind.ForOfKind:
+            result = graphForOfStatement(g, statement.child as ForOfStatement);
+            break;
 
         case StatementKind.BlockKind:
             result = graphBlock(g, statement.child as Block);
@@ -667,7 +677,7 @@ export function graphStatement(g:Digraph, statement:Statement):INode{
             g.createEdge([result, child]);
         }break;
         default:
-            throw new Error(`Assertion Error: Graph statement no implementado para : ${statement.child}`)
+            throw new Error(`Assertion Error: Graph statement no implementado para : ${statement.statementKind}`)
     }
 
     return result;
@@ -776,6 +786,70 @@ function graphForStatement(g:Digraph, forStatement:ForStatement):INode{
     }
 
     const blockNode = graphStatements(g, forStatement.statements);
+    g.createEdge([result, blockNode]);
+
+    return result;
+}
+
+function graphForInStatement(g:Digraph, forInStatement:ForInStatement):INode{
+
+    const result = g.createNode(`ForInStatement${AstNode.getNextAstNodeId()}`, {
+        [attribute.label]: "For...in",
+        [attribute.shape]: 'box',
+    });
+
+    let variableNode = g.createNode(`for_in_var_node${AstNode.getNextAstNodeId()}`, {
+        [attribute.label]: "Variable",
+        [attribute.shape]: 'box',
+    });
+    g.createEdge([result, variableNode]);
+    let varName = g.createNode(`for_in_var_name${AstNode.getNextAstNodeId()}`, {
+        [attribute.label]: `<<B>Identifier</B><BR/>${forInStatement.variableId}>`,
+        [attribute.shape]: 'box',
+    });
+    g.createEdge([variableNode, varName]);
+
+    let enumerableNode = g.createNode(`for_in_enumerable${AstNode.getNextAstNodeId()}`, {
+        [attribute.label]: "Enumerable",
+        [attribute.shape]: 'box',
+    });
+    g.createEdge([result, enumerableNode]);
+    let enumerableExpr = graphExpression(g, forInStatement.enumerable);
+    g.createEdge([enumerableNode, enumerableExpr]);
+
+    const blockNode = graphStatements(g, forInStatement.statements);
+    g.createEdge([result, blockNode]);
+
+    return result;
+}
+
+function graphForOfStatement(g:Digraph, forOfStatement:ForOfStatement):INode{
+    
+    const result = g.createNode(`ForOfStatement${AstNode.getNextAstNodeId()}`, {
+        [attribute.label]: "For...of",
+        [attribute.shape]: 'box',
+    });
+
+    let variableNode = g.createNode(`for_of_var_node${AstNode.getNextAstNodeId()}`, {
+        [attribute.label]: "Variable",
+        [attribute.shape]: 'box',
+    });
+    g.createEdge([result, variableNode]);
+    let varName = g.createNode(`for_of_var_name${AstNode.getNextAstNodeId()}`, {
+        [attribute.label]: `<<B>Identifier</B><BR/>${forOfStatement.variableId}>`,
+        [attribute.shape]: 'box',
+    });
+    g.createEdge([variableNode, varName]);
+
+    let iterableNode = g.createNode(`for_of_iteralbe${AstNode.getNextAstNodeId()}`, {
+        [attribute.label]: "Iterable",
+        [attribute.shape]: 'box',
+    });
+    g.createEdge([result, iterableNode]);
+    let iterableExpr = graphExpression(g, forOfStatement.iterable);
+    g.createEdge([iterableNode, iterableExpr]);
+
+    const blockNode = graphStatements(g, forOfStatement.statements);
     g.createEdge([result, blockNode]);
 
     return result;

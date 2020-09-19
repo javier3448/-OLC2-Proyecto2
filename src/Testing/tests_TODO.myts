@@ -1,7 +1,6 @@
 //TODO EN GENERAL: que las pruebas impriman un mensaje facil de leer
 //cuando pasan y cuando no
 
-
 {
     console = null;//Deberia de tronarse la consola :s
     console.log("a");//no deberia de funcionar
@@ -808,3 +807,77 @@
 
 
 //TODO: something that test if the finalExpression runs outside of the scope of for's block
+
+//this is one of the biggest bugs. second only to the 'symbols dont carry their type bug!'
+//BUG: I think... this should be an error but its not
+{
+    let i = 0;
+    for(let i = i; i < 10; i++){//Variable i used before its declaration
+        
+    }
+}
+{
+    let a = [1,2,3,4];
+    for(let a of a){//this is an error
+        a = 0;
+    }
+}
+
+
+//TODO: very rigorous testing with jumpers. pls
+
+//BUG: this should be an error in TS. But i dont think it is in C. idk
+{
+    let a =10;
+    {
+        console.log(a);
+        let a = 10;
+    }
+}
+
+{
+    {//(solo funciona en myTs)
+        let array = [0,1,2,3,4];
+        for(let item of array){
+            array = null;
+            console.log(item);
+        }
+        //0 1 2 3 4
+    }
+
+    console.log("--------------------");
+
+    {
+        let array = [0,1,2,3,4];
+        for(let item of array){
+            array = [];
+            console.log(item);
+        }
+        //0 1 2 3 4
+    }
+
+    console.log("--------------------");
+
+    {
+        let array = [0,1,2,3,4];
+        for(let item of array){
+            console.log(item);
+            if(array.length < 10){
+                array.push(-1);
+            }
+        }
+        //0 1 2 3 4 -1 -1 -1 -1 -1
+    }
+
+    console.log("--------------------");
+
+    {
+        let array = [0,1,2,3,4];
+        let arrayCopy = array;
+        for(let item of array){
+            console.log(item);
+            arrayCopy.pop();
+        }
+        //0 1 2
+    }
+}

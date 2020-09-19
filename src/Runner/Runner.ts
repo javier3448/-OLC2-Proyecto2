@@ -6,7 +6,7 @@ import { parser } from "./RunnerParser.js";
 import { RuntimeInterface, TsEntry } from "../app/app.component";
 import { Env, Scope } from "./Environment";
 
-import { Statement, StatementKind, WhileStatement, Block, IfStatement, ForStatement} from "../Ast/Statement";
+import { Statement, StatementKind, WhileStatement, Block, IfStatement, ForStatement, ForInStatement, ForOfStatement } from "../Ast/Statement";
 
 import { MyObj, CustomObj, compareMyTypes, MyArray } from "./MyObj";
 import { MyType, MyTypeKind, TypeSignature } from "./MyType";
@@ -258,6 +258,14 @@ export function runStatement(statement:Statement):(Jumper | null){
 
             case StatementKind.ForKind:
                 return runFor(child as ForStatement);
+                break;
+
+            case StatementKind.ForInKind:
+                return runForIn(child as ForInStatement);
+                break;
+
+            case StatementKind.ForOfKind:
+                return runForOf(child as ForOfStatement);
                 break;
 
             default:
@@ -975,7 +983,7 @@ export function runFor(forStatement:ForStatement):(Jumper | null){
             else if(statementResult.kind === JumperKind.CONTINUE){
                 // We break out of the foreach statements but not the while(true)
                 // This way we dont run the statements after continue; and we go to the
-                // next iteration of the while
+                // next iteration of the for
                 break;
             }
             else if(statementResult.kind === JumperKind.BREAK){
@@ -989,7 +997,7 @@ export function runFor(forStatement:ForStatement):(Jumper | null){
             else if(statementResult.kind === JumperKind.RETURN ||
                     statementResult.kind === JumperKind.RETURN_VALUE){
                 // We must exit out of the loop and return a Jumper because we
-                // a while cant 'consume' a return jumper
+                // a for cant 'consume' a return jumper
                 // we pop two times because of the scope we pushed for the initialExpression
                 Env.popScope();
                 Env.popScope();
@@ -1013,5 +1021,137 @@ export function runFor(forStatement:ForStatement):(Jumper | null){
             }
             throw error;
         }
+    }
+}
+
+export function runForIn(forInStatement:ForInStatement):(Jumper | null){
+
+    let exprResult = runExpression(forInStatement.enumerable).getMyObj();
+    //Lo agregamos a la tabal de simbolos
+    //Lo podemos hacer unsafe porque acabamos de pushear un scope
+
+    //Revisamos si enumerableObj es CUSTOM (el unico enumerable en myTs es CUSTOM)
+    if(exprResult.myType.kind !== MyTypeKind.CUSTOM){
+        throw new MyError(`Solo se puede utilizar for...in con tipos CUSTOM, se tiene: '${exprResult.myType.kind}'`);
+    }
+
+    let enumerableObj = exprResult.value as CustomObj;
+
+    for (const key in enumerableObj) {
+        // Creamos un nuevo scope intermedio para el forInStatment.variable
+        Env.pushScope();
+        // Agregamos la variable al entorno intermedio. esto es seguro porque es un scope nuevo y vacio
+        Env.current.myVariables[forInStatement.variableId] = Pointer.makeStringPointer(key);
+
+        // Creamos un scope para los statement del forInStatement. 
+        // OJO: si tenemos que salir de la ejecucion debemos hacer pop dos veces
+        Env.pushScope();
+        for (const statement of forInStatement.statements) {
+            let statementResult = runStatement(statement);
+
+            if(statementResult === null){
+                // We just go to the next statement because the current statement didnt
+                // return a jumper
+                continue;
+            }
+            else if(statementResult.kind === JumperKind.CONTINUE){
+                // We break out of the foreach statements but not the while(true)
+                // This way we dont run the statements after continue; and we go to the
+                // next iteration of the forin
+                break;
+            }
+            else if(statementResult.kind === JumperKind.BREAK){
+                // We must exit out of the loop and return no Jumper because we
+                // 'consumed' the break jumper
+                // we pop two times because of the scope we pushed for the varialbe
+                Env.popScope();
+                Env.popScope();
+                return null;
+            }
+            else if(statementResult.kind === JumperKind.RETURN ||
+                    statementResult.kind === JumperKind.RETURN_VALUE){
+                // We must exit out of the loop and return a Jumper because we
+                // a forin cant 'consume' a return jumper
+                // we pop two times because of the scope we pushed for the initialExpression
+                Env.popScope();
+                Env.popScope();
+                return statementResult;
+            }
+            else{//a sneaky assertion just in case
+                throw new Error(`runFor no implentado para resultado de bloque: ${statementResult.kind}`);
+            }
+        }
+        //Unlike the normal for we pop 2 times here because every iteration we create the 
+        //intermediate scope for the 'variable' part of the forin
+        Env.popScope();
+        Env.popScope();
+    }
+}
+
+export function runForOf(forOfStatement:ForOfStatement):(Jumper | null){
+
+    let exprResult = runExpression(forOfStatement.iterable).getMyObj();
+    //Lo agregamos a la tabal de simbolos
+    //Lo podemos hacer unsafe porque acabamos de pushear un scope
+
+    //Revisamos si enumerableObj es CUSTOM (el unico enumerable en myTs es CUSTOM)
+    let iterableObj:Array<Pointer>;
+    if(exprResult.myType.kind === MyTypeKind.ARRAY){
+        iterableObj = (exprResult.value as MyArray).array;
+    }else if(exprResult.myType.kind === MyTypeKind.STRING){
+        throw new Error(`forof con string no implementado todavia`);
+    }else{
+        throw new MyError(`Solo se puede utilizar for...of con tipos ARRAY o STRING, se tiene: '${exprResult.myType.kind}'`);
+    }
+
+
+    for (const element of iterableObj) {
+        // Creamos un nuevo scope intermedio para el forOfStatment.variable
+        Env.pushScope();
+        // Agregamos la variable al entorno intermedio. esto es seguro porque es un scope nuevo y vacio
+        Env.current.myVariables[forOfStatement.variableId] = Pointer.makeMyObjectPointer(element.myObj);
+
+        // Creamos un scope para los statement del forOfStatement. 
+        // OJO: si tenemos que salir de la ejecucion debemos hacer pop dos veces
+        Env.pushScope();
+        for (const statement of forOfStatement.statements) {
+            let statementResult = runStatement(statement);
+
+            if(statementResult === null){
+                // We just go to the next statement because the current statement didnt
+                // return a jumper
+                continue;
+            }
+            else if(statementResult.kind === JumperKind.CONTINUE){
+                // We break out of the foreach statements but not the while(true)
+                // This way we dont run the statements after continue; and we go to the
+                // next iteration of the forof
+                break;
+            }
+            else if(statementResult.kind === JumperKind.BREAK){
+                // We must exit out of the loop and return no Jumper because we
+                // 'consumed' the break jumper
+                // we pop two times because of the scope we pushed for the varialbe
+                Env.popScope();
+                Env.popScope();
+                return null;
+            }
+            else if(statementResult.kind === JumperKind.RETURN ||
+                    statementResult.kind === JumperKind.RETURN_VALUE){
+                // We must exit out of the loop and return a Jumper because we
+                // a forof cant 'consume' a return jumper
+                // we pop two times because of the scope we pushed for the initialExpression
+                Env.popScope();
+                Env.popScope();
+                return statementResult;
+            }
+            else{//a sneaky assertion just in case
+                throw new Error(`runFor no implentado para resultado de bloque: ${statementResult.kind}`);
+            }
+        }
+        //Unlike the normal for we pop 2 times here because every iteration we create the 
+        //intermediate scope for the 'variable' part of the forof
+        Env.popScope();
+        Env.popScope();
     }
 }

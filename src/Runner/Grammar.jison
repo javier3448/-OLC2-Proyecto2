@@ -5,7 +5,8 @@
     PropertyNode, ObjectLiteralExpression, ArrayLiteralExpression } = require('../Ast/Expression');
     const { MemberAccess, AccessKind, FunctionAccess, IndexAccess, AttributeAccess } = require('../Ast/MemberAccess');
     const { Statement, StatementKind, Block, 
-            WhileStatement, IfStatement, ForStatement} = require('../Ast/Statement');
+            WhileStatement, IfStatement, ForStatement, 
+            ForOfStatement, ForInStatement, SwitchStatement } = require('../Ast/Statement');
     const { Assignment } = require('../Ast/Assignment');
     const { Declaration } = require('../Ast/Declaration');
     const { MyTypeNode, MyTypeNodeKind } = require('../Ast/MyTypeNode');
@@ -42,7 +43,8 @@
 "case"                        return 'CASE'
 "for"                         return 'FOR'
 "forin"                       return 'FORIN'
-"forof"                       return 'FOROF'
+"in"                          return 'IN'
+"of"                          return 'OF'
 
 "break"                       return 'BREAK'
 "continue"                    return 'CONTINUE'
@@ -305,23 +307,6 @@ Attribute
     }
 ;
 
-//Unlinke block, this rule actually returns its own stament with AstNode and all
-IfStatement
-    : IF '(' Expression ')' '{' StatementList_ '}'
-    {
-        $$ = new Statement(StatementKind.IfKind, new IfStatement($3, $6, null), @1.first_line, @1.first_column, @6.last_line, @6.last_column);
-    }
-    | IF '(' Expression ')' '{' StatementList_ '}' ELSE Block
-    {
-        let blockStatement =  new Statement(StatementKind.BlockKind, $9, @9.first_line, @9.first_column, @9.last_line, @9.last_column);
-        $$ = new Statement(StatementKind.IfKind, new IfStatement($3, $6, blockStatement), @1.first_line, @1.first_column, @6.last_line, @6.last_column);
-    }
-    | IF '(' Expression ')' '{' StatementList_ '}' ELSE IfStatement
-    {
-        $$ = new Statement(StatementKind.IfKind, new IfStatement($3, $6, $9), @1.first_line, @1.first_column, @9.last_line, @9.last_column);
-    }
-;
-
 Statement
     : Expression ';'
     {
@@ -347,6 +332,14 @@ Statement
     {
         $$ = new Statement(StatementKind.ForKind, new ForStatement($3, $5, $7, $10), @1.first_line, @1.first_column, @7.last_line, @7.last_column);
     }
+    | ForOfStatement
+    {
+        $$ = $1;
+    }
+    | ForInStatement
+    {
+        $$ = $1;
+    }
     //Jumpers
     | BREAK ';'
     {
@@ -363,6 +356,37 @@ Statement
     | RETURN Expresssion ';'
     {
         $$ = new Statement(StatementKind.ReturnWithExpression, $2, @1.first_line, @1.first_column, @3.last_line, @3.last_column);
+    }
+;
+
+//Unlike block, this rule actually returns its own stament with AstNode and all
+IfStatement
+    : IF '(' Expression ')' '{' StatementList_ '}'
+    {
+        $$ = new Statement(StatementKind.IfKind, new IfStatement($3, $6, null), @1.first_line, @1.first_column, @6.last_line, @6.last_column);
+    }
+    | IF '(' Expression ')' '{' StatementList_ '}' ELSE Block
+    {
+        let blockStatement =  new Statement(StatementKind.BlockKind, $9, @9.first_line, @9.first_column, @9.last_line, @9.last_column);
+        $$ = new Statement(StatementKind.IfKind, new IfStatement($3, $6, blockStatement), @1.first_line, @1.first_column, @6.last_line, @6.last_column);
+    }
+    | IF '(' Expression ')' '{' StatementList_ '}' ELSE IfStatement
+    {
+        $$ = new Statement(StatementKind.IfKind, new IfStatement($3, $6, $9), @1.first_line, @1.first_column, @9.last_line, @9.last_column);
+    }
+;
+
+ForOfStatement
+    : FOR '(' 'LET' IDENTIFIER 'OF' Expression ')' '{' StatementList_ '}'
+    {
+        $$ = new Statement(StatementKind.ForOfKind, new ForOfStatement($4, $6, $9), @1.first_line, @1.first_column, @10.last_line, @10.last_column);
+    }
+;
+
+ForInStatement
+    : FOR '(' 'LET' IDENTIFIER 'IN' Expression ')' '{' StatementList_ '}'
+    {
+        $$ = new Statement(StatementKind.ForInKind, new ForInStatement($4, $6, $9), @1.first_line, @1.first_column, @10.last_line, @10.last_column);
     }
 ;
 
