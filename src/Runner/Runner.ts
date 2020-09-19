@@ -6,7 +6,7 @@ import { parser } from "./RunnerParser.js";
 import { RuntimeInterface, TsEntry } from "../app/app.component";
 import { Env, Scope } from "./Environment";
 
-import { Statement, StatementKind, WhileStatement, Block, IfStatement} from "../Ast/Statement";
+import { Statement, StatementKind, WhileStatement, Block, IfStatement, ForStatement} from "../Ast/Statement";
 
 import { MyObj, CustomObj, compareMyTypes, MyArray } from "./MyObj";
 import { MyType, MyTypeKind, TypeSignature } from "./MyType";
@@ -21,6 +21,7 @@ import { GlobalInstructions } from 'src/Ast/GlobalInstructions';
 import { TypeDef, AttributeNode } from "../Ast/TypeDef";
 import { FunctionDef, ParamNode } from "../Ast/FunctionDef";
 import { stringify } from '@angular/compiler/src/util';
+import { enableDebugTools } from '@angular/platform-browser';
 
 
 
@@ -221,43 +222,8 @@ export function runStatement(statement:Statement):(Jumper | null){
             {
                 let declaration = child as Declaration;
 
-                let id = declaration.identifier;
-                let myType:(MyType | null);
-                if(declaration.myTypeNode === null){
-                    myType = null;
-                }else{
-                    myType = runNonPropertyMyTypeNode(declaration.myTypeNode);
-                }
-                let val = (declaration.expression === null ? MyObj.undefinedInstance : runExpression(declaration.expression).getMyObj());
-
-                //we check types
-                if(myType !== null){
-                    //TODO: hay casos en los que no se va a poder hacer custom = custom y este mensaje no va ayudar en nada
-                    if(!compareMyTypes(myType, val.myType)){
-                        throw new MyError(`No se puede asignar el tipo: '${myType.kind}' un valor de tipo: ${val.myType.kind}`);
-                    }
-
-                    //this is baaaaaaaaaaaaad :((((
-                    //All this awfulness because we put the type inside MyObj and not inside pointer :(
-                    //Special case. Arbitrary awful patch so everything doesnt end up as anon type all the time
-                    if(myType.kind === MyTypeKind.CUSTOM && val.myType.kind === MyTypeKind.CUSTOM){
-                        //Si ambos son custom y se paso la prueba de compare types entonces puede darse el caso 
-                        //en el que lvalue force su tipo sobre rvalue
-                        let lvalueTypeSignature = myType.specification as TypeSignature;
-                        if(lvalueTypeSignature.name != null ){
-                            (val.myType.specification as TypeSignature).name = lvalueTypeSignature.name;
-                        }
-                    }
-                }
-
-                Env.addVariable(id, val);
-
-                return null;
+                return runDeclaration(declaration);
             }break;
-
-            case StatementKind.WhileKind:
-                return runWhile(child as WhileStatement);
-                break;
 
             case StatementKind.BlockKind:
                 return runBlock(child as Block);
@@ -284,6 +250,14 @@ export function runStatement(statement:Statement):(Jumper | null){
 
             case StatementKind.IfKind:
                 return runIfStatment(child as IfStatement);
+                break;
+
+            case StatementKind.WhileKind:
+                return runWhile(child as WhileStatement);
+                break;
+
+            case StatementKind.ForKind:
+                return runFor(child as ForStatement);
                 break;
 
             default:
@@ -624,7 +598,74 @@ export function runExpression(expr:Expression):ReturnValue{
         }
     }
     else if(expr.specification instanceof UnaryExpression){
-        throw new Error(`runExpression no implementado para ninguna UnaryExpression todavia`);
+        let unaryExpr = expr.specification as UnaryExpression;
+        //El valor a aplicar la operacion unaria
+        let operand = runExpression(unaryExpr.expr);//we dont do the .getObj() because we might need the pointer for some operations
+        let operandType = operand.getMyObj().myType;
+
+        //At this point we know that expr.kind must be UNARY_MINUS, NEGATION, POSTFIX_INC, POSTFIX_DEC
+        switch(expr.expressionKind){
+            case ExpressionKind.UNARY_MINUS:
+            {
+                if(operandType.kind === MyTypeKind.NUMBER){
+                    let val:number = (operand.getMyObj().value as Number).valueOf();
+                    return ReturnValue.makeNumberReturn(-val);
+                }
+                else{
+                    throw new MyError(`Operador '${expr.expressionKind}' no acepta los tipos: '${operandType.kind}'`);
+                }
+            }break;
+            case ExpressionKind.NEGATION:
+                return ReturnValue.makeBooleanReturn(!operand.getMyObj().getTruthy());
+                break;
+            case ExpressionKind.POSTFIX_INC:
+                if(operandType.kind !== MyTypeKind.NUMBER){//first possible error
+                    throw new MyError(`Operador '${expr.expressionKind}' no acepta los tipos: '${operandType.kind}'`);
+                }
+                else if(operand.kind !== ReturnKind.POINTER){//second possible error
+                    throw new MyError(`El operando de '${expr.expressionKind}' debe ser una variable o property access`);
+                }
+                else{//no errors
+
+                    //numeric value of operand
+                    let numericVal:number = (operand.getMyObj().value as Number).valueOf();
+
+                    //we make a copy of the original value
+                    let valueBeforeInc = ReturnValue.makeNumberReturn(numericVal);
+
+                    //we change the original value
+                    let operandPointer = (operand.specification as Pointer);
+                    operandPointer.myObj = new MyObj(MyType.numberTypeInstance, new Number(numericVal + 1));
+
+                    //return the copy
+                    return valueBeforeInc;
+                }
+                break;
+            case ExpressionKind.POSTFIX_DEC:
+
+                if(operandType.kind !== MyTypeKind.NUMBER){//first possible error
+                    throw new MyError(`Operador '${expr.expressionKind}' no acepta los tipos: '${operandType.kind}'`);
+                }
+                else if(operand.kind !== ReturnKind.POINTER){//second possible error
+                    throw new MyError(`El operando de '${expr.expressionKind}' debe ser una variable o property access`);
+                }
+                else{//no errors
+
+                    //numeric value of operand
+                    let numericVal:number = (operand.getMyObj().value as Number).valueOf();
+
+                    //we make a copy of the original value
+                    let valueBeforeDec = ReturnValue.makeNumberReturn(numericVal);
+
+                    //we change the original value
+                    let operandPointer = (operand.specification as Pointer);
+                    operandPointer.myObj = new MyObj(MyType.numberTypeInstance, new Number(numericVal - 1));
+
+                    //return the copy
+                    return valueBeforeDec;
+                }
+                break;
+        }
     }
 
     //If we reach this point in the code it means that the expression must
@@ -755,6 +796,41 @@ export function runExpression(expr:Expression):ReturnValue{
     }
 }
 
+export function runDeclaration(declaration:Declaration):null{
+    let id = declaration.identifier;
+    let myType:(MyType | null);
+    if(declaration.myTypeNode === null){
+        myType = null;
+    }else{
+        myType = runNonPropertyMyTypeNode(declaration.myTypeNode);
+    }
+    let val = (declaration.expression === null ? MyObj.undefinedInstance : runExpression(declaration.expression).getMyObj());
+
+    //we check types
+    if(myType !== null){
+        //TODO: hay casos en los que no se va a poder hacer custom = custom y este mensaje no va ayudar en nada
+        if(!compareMyTypes(myType, val.myType)){
+            throw new MyError(`No se puede asignar el tipo: '${myType.kind}' un valor de tipo: ${val.myType.kind}`);
+        }
+
+        //this is baaaaaaaaaaaaad :((((
+        //All this awfulness because we put the type inside MyObj and not inside pointer :(
+        //Special case. Arbitrary awful patch so everything doesnt end up as anon type all the time
+        if(myType.kind === MyTypeKind.CUSTOM && val.myType.kind === MyTypeKind.CUSTOM){
+            //Si ambos son custom y se paso la prueba de compare types entonces puede darse el caso 
+            //en el que lvalue force su tipo sobre rvalue
+            let lvalueTypeSignature = myType.specification as TypeSignature;
+            if(lvalueTypeSignature.name != null ){
+                (val.myType.specification as TypeSignature).name = lvalueTypeSignature.name;
+            }
+        }
+    }
+
+    Env.addVariable(id, val);
+
+    return null;
+}
+
 export function runBlock(block:Block):(Jumper | null){
     Env.pushScope();
     for (const statement of block.statements) {
@@ -770,6 +846,8 @@ export function runBlock(block:Block):(Jumper | null){
 
 export function runWhile(whileStatement:WhileStatement):(Jumper | null){
     while(true){
+        //runExpression can safetly throw a myError because we dont have any scopes pending
+        //i.e. we havent pushed a scope yet
         let exprResult = runExpression(whileStatement.expr);
         if(!exprResult.getMyObj().getTruthy()){
             break;
@@ -832,4 +910,108 @@ export function runIfStatment(ifStatement:IfStatement):(Jumper | null){
     }
     Env.popScope();
     return null;
+}
+
+export function runFor(forStatement:ForStatement):(Jumper | null){
+
+    //We compute the initialExpression and put it in its on scope
+    Env.pushScope();
+    if(forStatement.initialExpression !== null){
+        if(forStatement.initialExpression instanceof Expression){
+            //We already pushed a scope so if runExpression throws an error we must pop it back
+            try {
+                runExpression(forStatement.initialExpression);
+            } catch (error) {
+                if(error instanceof MyError){
+                    Env.popScope();
+                }
+                throw error;
+            }
+        }
+        else{//It must be a statement
+            if(forStatement.initialExpression.statementKind !== StatementKind.DeclarationKind){
+                Env.popScope
+                throw new MyError(`initialExpression de for debe ser una expresion o una declaracion. Se tiene: '${forStatement.initialExpression.statementKind}'`);
+            }
+            try {
+                runDeclaration(forStatement.initialExpression.child as Declaration);
+            } catch (error) {
+                if(error instanceof MyError){
+                    Env.popScope();
+                }
+                throw error;
+            }
+        }
+    }
+    
+    while(true){
+        let exprResult:ReturnValue;
+        //We already pushed a scope so if runExpression throws an error we must pop it back
+        try {
+            exprResult = runExpression(forStatement.condicion);
+        } catch (error) {
+            if(error instanceof MyError){
+                Env.popScope();
+            }
+            throw error;
+        }
+        if(!exprResult.getMyObj().getTruthy()){
+            Env.popScope();
+            return null;
+        }
+
+        //From this point on if we are done running the for statements but not the loop itself we pop once
+        //if we are done with the loop (i.e. we return or we exit the while(true)) we must pop once.
+        //everytime we start going thru the for statements again we must push a scope
+        Env.pushScope();
+        for (const statement of forStatement.statements) {
+            let statementResult = runStatement(statement);
+
+            if(statementResult === null){
+                // We just go to the next statement because the current statement didnt
+                // return a jumper
+                continue;
+            }
+            else if(statementResult.kind === JumperKind.CONTINUE){
+                // We break out of the foreach statements but not the while(true)
+                // This way we dont run the statements after continue; and we go to the
+                // next iteration of the while
+                break;
+            }
+            else if(statementResult.kind === JumperKind.BREAK){
+                // We must exit out of the loop and return no Jumper because we
+                // 'consumed' the break jumper
+                // we pop two times because of the scope we pushed for the initialExpression
+                Env.popScope();
+                Env.popScope();
+                return null;
+            }
+            else if(statementResult.kind === JumperKind.RETURN ||
+                    statementResult.kind === JumperKind.RETURN_VALUE){
+                // We must exit out of the loop and return a Jumper because we
+                // a while cant 'consume' a return jumper
+                // we pop two times because of the scope we pushed for the initialExpression
+                Env.popScope();
+                Env.popScope();
+                return statementResult;
+            }
+            else{//a sneaky assertion just in case
+                throw new Error(`runFor no implentado para resultado de bloque: ${statementResult.kind}`);
+            }
+        }
+        Env.popScope();
+
+
+        //We run the finalExpression
+        //at this point we already poped one of the 2 scopes we pushed.
+        //if there is a error we only need to pop 1
+        try {
+            runExpression(forStatement.finalExpression);
+        } catch (error) {
+            if(error instanceof MyError){
+                Env.popScope();
+            }
+            throw error;
+        }
+    }
 }

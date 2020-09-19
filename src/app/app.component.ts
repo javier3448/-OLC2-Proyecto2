@@ -316,6 +316,7 @@ console.log(b);//[10,20,30]
     `;
     }
 
+    {
     let testString = `
 let a = 20;
 if(a <= 20){
@@ -330,8 +331,14 @@ else if(a <= 60){
 else{
   console.log("else");
 }
-    `
+    `;
+    }
 
+    let testString = `
+for(let i = 0; i < 10; i++){
+  console.log(i);
+}
+    `;
     this.sourceString = testString;
     this.runtimeInterface.translation = graphTest(testString);
     runTest(this.sourceString, this.runtimeInterface);

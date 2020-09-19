@@ -9,6 +9,7 @@ export enum StatementKind{
 
     WhileKind = 'WhileKind',
     IfKind = 'IfKind',
+    ForKind = 'ForKind',
 
     BlockKind = 'BlockKind',
 
@@ -23,13 +24,22 @@ export class Block {
     constructor(public statements:Array<Statement>){   }
 }
 
+export class IfStatement {
+    constructor(public expr:Expression, public statements:Array<Statement>, public elseStatment:(null | Statement)){  }
+}
+
 export class WhileStatement {
     constructor(public expr:Expression, public statements:Array<Statement>){  }
 }
 
-
-export class IfStatement {
-    constructor(public expr:Expression, public statements:Array<Statement>, public elseStatment:(null | Statement)){  }
+export class ForStatement {
+    constructor(
+        //If inicialExpression is Statement it can only be a declaration statement
+        public initialExpression:(Expression | Statement),
+        public condicion:(Expression | null), 
+        public finalExpression:(Expression | null), 
+        public statements:Array<Statement>
+    ){  }
 }
 
 export class Statement {
@@ -66,13 +76,18 @@ export class Statement {
                     throw new Error(`constructor de statement no valido para ${statementKind} y ${child}`);
                 }
                 break;
+            case StatementKind.IfKind:
+                if(!(child instanceof IfStatement)){
+                    throw new Error(`constructor de statement no valido para ${statementKind} y ${child}`);
+                }
+                break;
             case StatementKind.WhileKind:
                 if(!(child instanceof WhileStatement)){
                     throw new Error(`constructor de statement no valido para ${statementKind} y ${child}`);
                 }
                 break;
-            case StatementKind.IfKind:
-                if(!(child instanceof IfStatement)){
+            case StatementKind.ForKind:
+                if(!(child instanceof ForStatement)){
                     throw new Error(`constructor de statement no valido para ${statementKind} y ${child}`);
                 }
                 break;

@@ -1,6 +1,6 @@
 import { digraph, Digraph, attribute, INode, toDot } from "ts-graphviz";
 import { Expression, ExpressionKind, LiteralExpression, IdentifierExpression, BinaryExpression, UnaryExpression, TernaryExpression, MemberAccessExpression, FunctionCallExpression, ObjectLiteralExpression, PropertyNode, ArrayLiteralExpression } from "./Ast/Expression";
-import { Statement, WhileStatement, Block, StatementKind, IfStatement } from "./Ast/Statement";
+import { Statement, WhileStatement, Block, StatementKind, IfStatement, ForStatement } from "./Ast/Statement";
 import { AstNode } from "./Ast/AstNode";
 
 import { parser } from "./Runner/RunnerParser.js";
@@ -490,172 +490,9 @@ function expressionToLabel(expr:Expression):string{
     }
 }
 
-function graphStatements(g:Digraph, stmts:Statement[]):INode{
-
-    const result = g.createNode(`stmt_list${AstNode.getNextAstNodeId()}`, {
-        [attribute.label]: "stmt list",
-        [attribute.shape]: 'box',
-    });
-
-    for (const statement of stmts) {
-        let child: INode = graphStatement(g, statement);
-        g.createEdge([result, child]);
-    }
-
-    return result;
-}
-
-export function graphStatement(g:Digraph, statement:Statement):INode{
-    const result = g.createNode(`statement${statement.astNode.getId()}`, {
-        [attribute.label]: "stmt",
-        [attribute.shape]: 'box',
-    });
-
-    let child: INode;
-    switch (statement.statementKind) {
-        case StatementKind.ExpressionKind:
-            child = graphExpression(g, statement.child as Expression);
-            break;
-        case StatementKind.DeclarationKind:
-            child = graphDeclaration(g, statement.child as Declaration);
-            break;
-
-        //Flujo de control
-        case StatementKind.WhileKind:
-            child = graphWhileStatement(g, statement.child as WhileStatement);
-            break;
-        case StatementKind.IfKind:
-            child = graphIfStatement(g, statement.child as IfStatement);
-            break;
-
-        case StatementKind.BlockKind:
-            child = graphBlock(g, statement.child as Block);
-            break;
-
-        //Jumpers
-        case StatementKind.BreakKind:
-            child = g.createNode(`break${statement.astNode.getId()}`, {
-                [attribute.label]: "break",
-                [attribute.shape]: 'box',
-            });
-            break;
-        case StatementKind.ContinueKind:
-            child = g.createNode(`continue${statement.astNode.getId()}`, {
-                [attribute.label]: "continue",
-                [attribute.shape]: 'box',
-            });
-            break;
-        case StatementKind.ReturnKind:
-            child = g.createNode(`return${statement.astNode.getId()}`, {
-                [attribute.label]: "return",
-                [attribute.shape]: 'box',
-            });
-        case StatementKind.ReturnWithValueKind:
-        {
-            child = g.createNode(`return_with_val${statement.astNode.getId()}`, {
-                [attribute.label]: "return with val",
-                [attribute.shape]: 'box',
-            });
-            let grandChild = graphExpression(g, statement.child as Expression);
-            g.createEdge([child, grandChild]);
-        }break;
-        default:
-            throw new Error(`Assertion Error: Graph statement no implementado para : ${statement.child}`)
-    }
-
-    g.createEdge([result, child]);
-
-    return result;
-}
-
-function graphBlock(g:Digraph, block:Block):INode{
-
-    const result = g.createNode(`block${AstNode.getNextAstNodeId()}`, {
-        [attribute.label]: "Block",
-        [attribute.shape]: 'box',
-    });
-
-    for (const statement of block.statements) {
-        let child: INode = graphStatement(g, statement);
-        g.createEdge([result, child]);
-    }
-
-    return result;
-}
-
-export function graphDeclaration(g:Digraph, decl:Declaration):INode{
-
-    const result = g.createNode(`Declaration${decl.astNode.getId()}`, {
-        [attribute.label]: "Declaration",
-        [attribute.shape]: 'box',
-    });
-
-    const identifierNode = g.createNode(`Identifier${AstNode.getNextAstNodeId()}`, {
-        [attribute.label]: "<<B>Id<BR/></B>" + decl.identifier + ">",
-        [attribute.shape]: 'box',
-    });
-    g.createEdge([result, identifierNode]);
-            
-    if(decl.myTypeNode){
-        let typeNode = graphMyTypeNode(g, decl.myTypeNode);
-        g.createEdge([result, typeNode]);
-    }
-
-    if(decl.expression){
-        let exprNode = graphExpression(g, decl.expression);
-        g.createEdge([result, exprNode]);
-    }
-
-    return result;
-}
-
-function graphWhileStatement(g:Digraph, whileStatement:WhileStatement):INode{
-    
-    const result = g.createNode(`While${AstNode.getNextAstNodeId()}`, {
-        [attribute.label]: "While",
-        [attribute.shape]: 'box',
-    });
-
-    const exprNode = graphExpression(g, whileStatement.expr);
-    g.createEdge([result, exprNode]);
-
-    const blockNode = graphStatements(g, whileStatement.statements);
-    g.createEdge([result, blockNode]);
-
-    return result;
-}
-
-function graphIfStatement(g:Digraph, ifStatement:IfStatement):INode{
-    
-    const result = g.createNode(`IfStatement${AstNode.getNextAstNodeId()}`, {
-        [attribute.label]: "If",
-        [attribute.shape]: 'box',
-    });
-
-    const exprNode = graphExpression(g, ifStatement.expr);
-    g.createEdge([result, exprNode]);
-
-    const blockNode = graphStatements(g, ifStatement.statements);
-    g.createEdge([result, blockNode]);
-
-
-    if(ifStatement.elseStatment !== null){
-        const elseNode = g.createNode(`Else${AstNode.getNextAstNodeId()}`, {
-            [attribute.label]: "else",
-            [attribute.shape]: 'box',
-        });
-        g.createEdge([result, elseNode]);
-        let elseSubNode = graphStatement(g, ifStatement.elseStatment);
-        g.createEdge([elseNode, elseSubNode]);
-    }
-
-    return result;
-}
-
 function myTypeNodeToLabel(myTypeNode:MyTypeNode){
     switch (myTypeNode.kind) {
-        case MyTypeNodeKind.BOOLEAN:
-            return "<<B>Type</B><BR/>Boolean>"
+        case MyTypeNodeKind.BOOLEAN: return "<<B>Type</B><BR/>Boolean>"
         case MyTypeNodeKind.NUMBER:
             return "<<B>Type</B><BR/>Number>"
         case MyTypeNodeKind.STRING:
@@ -712,6 +549,32 @@ export function graphMyTypeNode(g:Digraph, myType:MyTypeNode):INode{
     return result;
 }
 
+export function graphDeclaration(g:Digraph, decl:Declaration):INode{
+
+    const result = g.createNode(`Declaration${decl.astNode.getId()}`, {
+        [attribute.label]: "Declaration",
+        [attribute.shape]: 'box',
+    });
+
+    const identifierNode = g.createNode(`Identifier${AstNode.getNextAstNodeId()}`, {
+        [attribute.label]: "<<B>Id<BR/></B>" + decl.identifier + ">",
+        [attribute.shape]: 'box',
+    });
+    g.createEdge([result, identifierNode]);
+            
+    if(decl.myTypeNode){
+        let typeNode = graphMyTypeNode(g, decl.myTypeNode);
+        g.createEdge([result, typeNode]);
+    }
+
+    if(decl.expression){
+        let exprNode = graphExpression(g, decl.expression);
+        g.createEdge([result, exprNode]);
+    }
+
+    return result;
+}
+
 export function graphAssignment(g:Digraph, assignment:Assignment):INode{
 
     const result = g.createNode(`assignment${assignment.astNode.getId()}`, {
@@ -728,3 +591,192 @@ export function graphAssignment(g:Digraph, assignment:Assignment):INode{
     return result;
 }
 
+function graphStatements(g:Digraph, stmts:Statement[]):INode{
+
+    const result = g.createNode(`stmt_list${AstNode.getNextAstNodeId()}`, {
+        [attribute.label]: "stmt list",
+        [attribute.shape]: 'box',
+    });
+
+    for (const statement of stmts) {
+        let child: INode = graphStatement(g, statement);
+        g.createEdge([result, child]);
+    }
+
+    return result;
+}
+
+export function graphStatement(g:Digraph, statement:Statement):INode{
+    let result:INode;
+
+    switch (statement.statementKind) {
+        case StatementKind.ExpressionKind:
+        {
+            result = g.createNode(`statement${statement.astNode.getId()}`, {
+                [attribute.label]: "stmt",
+                [attribute.shape]: 'box',
+            });
+            let child = graphExpression(g, statement.child as Expression);
+            g.createEdge([result, child]);
+        }
+            break;
+        case StatementKind.DeclarationKind:
+            result = graphDeclaration(g, statement.child as Declaration);
+            break;
+
+        //Flujo de control
+        case StatementKind.IfKind:
+            result = graphIfStatement(g, statement.child as IfStatement);
+            break;
+        case StatementKind.WhileKind:
+            result = graphWhileStatement(g, statement.child as WhileStatement);
+            break;
+        case StatementKind.ForKind:
+            result = graphForStatement(g, statement.child as ForStatement);
+            break;
+
+        case StatementKind.BlockKind:
+            result = graphBlock(g, statement.child as Block);
+            break;
+
+        //Jumpers
+        case StatementKind.BreakKind:
+            result = g.createNode(`break${statement.astNode.getId()}`, {
+                [attribute.label]: "break",
+                [attribute.shape]: 'box',
+            });
+            break;
+        case StatementKind.ContinueKind:
+            result = g.createNode(`continue${statement.astNode.getId()}`, {
+                [attribute.label]: "continue",
+                [attribute.shape]: 'box',
+            });
+            break;
+        case StatementKind.ReturnKind:
+            result = g.createNode(`return${statement.astNode.getId()}`, {
+                [attribute.label]: "return",
+                [attribute.shape]: 'box',
+            });
+        case StatementKind.ReturnWithValueKind:
+        {
+            result = g.createNode(`return_with_val${statement.astNode.getId()}`, {
+                [attribute.label]: "return with val",
+                [attribute.shape]: 'box',
+            });
+            let child = graphExpression(g, statement.child as Expression);
+            g.createEdge([result, child]);
+        }break;
+        default:
+            throw new Error(`Assertion Error: Graph statement no implementado para : ${statement.child}`)
+    }
+
+    return result;
+}
+
+function graphBlock(g:Digraph, block:Block):INode{
+
+    const result = g.createNode(`block${AstNode.getNextAstNodeId()}`, {
+        [attribute.label]: "Block",
+        [attribute.shape]: 'box',
+    });
+
+    for (const statement of block.statements) {
+        let child: INode = graphStatement(g, statement);
+        g.createEdge([result, child]);
+    }
+
+    return result;
+}
+
+
+function graphWhileStatement(g:Digraph, whileStatement:WhileStatement):INode{
+    
+    const result = g.createNode(`While${AstNode.getNextAstNodeId()}`, {
+        [attribute.label]: "While",
+        [attribute.shape]: 'box',
+    });
+
+    const exprNode = graphExpression(g, whileStatement.expr);
+    g.createEdge([result, exprNode]);
+
+    const blockNode = graphStatements(g, whileStatement.statements);
+    g.createEdge([result, blockNode]);
+
+    return result;
+}
+
+function graphIfStatement(g:Digraph, ifStatement:IfStatement):INode{
+    
+    const result = g.createNode(`IfStatement${AstNode.getNextAstNodeId()}`, {
+        [attribute.label]: "If",
+        [attribute.shape]: 'box',
+    });
+
+    const exprNode = graphExpression(g, ifStatement.expr);
+    g.createEdge([result, exprNode]);
+
+    const blockNode = graphStatements(g, ifStatement.statements);
+    g.createEdge([result, blockNode]);
+
+
+    if(ifStatement.elseStatment !== null){
+        const elseNode = g.createNode(`Else${AstNode.getNextAstNodeId()}`, {
+            [attribute.label]: "else",
+            [attribute.shape]: 'box',
+        });
+        g.createEdge([result, elseNode]);
+        let elseSubNode = graphStatement(g, ifStatement.elseStatment);
+        g.createEdge([elseNode, elseSubNode]);
+    }
+
+    return result;
+}
+
+function graphForStatement(g:Digraph, forStatement:ForStatement):INode{
+    
+    const result = g.createNode(`ForStatement${AstNode.getNextAstNodeId()}`, {
+        [attribute.label]: "For",
+        [attribute.shape]: 'box',
+    });
+
+    let initialExprName = g.createNode(`for_init_expr${AstNode.getNextAstNodeId()}`, {
+        [attribute.label]: "Initial Action",
+        [attribute.shape]: 'box',
+    });
+    g.createEdge([result, initialExprName]);
+    if(forStatement.initialExpression !== null){
+        if(forStatement.initialExpression instanceof Statement){
+            let initialDeclaration = graphStatement(g, forStatement.initialExpression as Statement);
+            g.createEdge([initialExprName, initialDeclaration]);
+        }
+        else{//It must be expression
+            let initialExprNode = graphExpression(g, forStatement.initialExpression as Expression);
+            g.createEdge([initialExprName, initialExprNode]);
+        }
+    }
+
+    const conditionName = g.createNode(`for_condition${AstNode.getNextAstNodeId()}`, {
+        [attribute.label]: "Condition",
+        [attribute.shape]: 'box',
+    });
+    g.createEdge([result, conditionName]);
+    if(forStatement.condicion !== null){
+        let conditionNode = graphExpression(g, forStatement.condicion);
+        g.createEdge([conditionName, conditionNode]);
+    }
+
+    const finalExprName = g.createNode(`for_final_expr${AstNode.getNextAstNodeId()}`, {
+        [attribute.label]: "Final Action",
+        [attribute.shape]: 'box',
+    });
+    g.createEdge([result, finalExprName]);
+    if(forStatement.finalExpression !== null){
+        let finalExprNode = graphExpression(g, forStatement.finalExpression);
+        g.createEdge([finalExprName, finalExprNode]);
+    }
+
+    const blockNode = graphStatements(g, forStatement.statements);
+    g.createEdge([result, blockNode]);
+
+    return result;
+}

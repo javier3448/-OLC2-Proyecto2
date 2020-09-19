@@ -5,7 +5,7 @@
     PropertyNode, ObjectLiteralExpression, ArrayLiteralExpression } = require('../Ast/Expression');
     const { MemberAccess, AccessKind, FunctionAccess, IndexAccess, AttributeAccess } = require('../Ast/MemberAccess');
     const { Statement, StatementKind, Block, 
-            WhileStatement, IfStatement} = require('../Ast/Statement');
+            WhileStatement, IfStatement, ForStatement} = require('../Ast/Statement');
     const { Assignment } = require('../Ast/Assignment');
     const { Declaration } = require('../Ast/Declaration');
     const { MyTypeNode, MyTypeNodeKind } = require('../Ast/MyTypeNode');
@@ -56,6 +56,8 @@
 "<="                          return '<='
 ">"                           return '>'
 "<"                           return '<'
+"++"                          return '++'
+"--"                          return '--'
 "+"                           return '+'
 "-"                           return '-'
 "*"                           return '*'
@@ -63,8 +65,6 @@
 "%"                           return '%'
 "**"                          return '**'
 "NOT"                         return 'NOT'
-"++"                          return '++'
-"--"                          return '--'
 "("                           return '('
 ")"                           return ')'
 "="                           return '='
@@ -343,6 +343,10 @@ Statement
     {
         $$ = $1;
     }
+    | FOR '(' ExpressionOrDeclaration_ ';' Expression_ ';' Expression_ ')' '{' StatementList_ '}'
+    {
+        $$ = new Statement(StatementKind.ForKind, new ForStatement($3, $5, $7, $10), @1.first_line, @1.first_column, @7.last_line, @7.last_column);
+    }
     //Jumpers
     | BREAK ';'
     {
@@ -359,6 +363,32 @@ Statement
     | RETURN Expresssion ';'
     {
         $$ = new Statement(StatementKind.ReturnWithExpression, $2, @1.first_line, @1.first_column, @3.last_line, @3.last_column);
+    }
+;
+
+ExpressionOrDeclaration_
+    : Expression
+    {
+        $$ = $1;
+    }
+    | Declaration
+    {
+        $$ = new Statement(StatementKind.DeclarationKind, $1, @1.first_line, @1.first_column, @1.last_line, @1.last_column);
+    }
+    | /* empty */
+    {
+        $$ = null;
+    }
+;
+
+Expression_
+    : Expression
+    {
+        $$ = $1;
+    }
+    | /*empty*/
+    {
+        $$ = null;
     }
 ;
 

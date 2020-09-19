@@ -140,6 +140,7 @@ export class Expression {
                 if(!(specification instanceof UnaryExpression)){
                     throw new Error(`Assertion Error: Operator ${expressionKind.toString()} must be type UnaryExpression instead of ${(specification)}`);
                 }
+            break;
             case ExpressionKind.IDENTIFIER:
                 if(!(specification instanceof IdentifierExpression)){
                     throw new Error(`Assertion Error: expressionKind ${expressionKind.toString()} must be type IdentifierExpression instead of ${(specification)}`);

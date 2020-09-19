@@ -791,3 +791,20 @@
 
 
 //TODO: Test block. The grammar was full of bugs!
+
+
+//This error would be impossible to catch unless we do some MAYOR changes to the everything
+{
+    let a = 10;
+    {
+        let a = a;
+    }
+}
+
+//TODO: tests para for que se apeguen bien bien a https://developer.mozilla.org/es/docs/Web/JavaScript/Referencia/Sentencias/for
+
+//BIG TODO: Something that tests if we handle the double scope properly AND if we dont fuck up the scope stack if an error occurs on the initial expression
+//          see your runFor code
+
+
+//TODO: something that test if the finalExpression runs outside of the scope of for's block
