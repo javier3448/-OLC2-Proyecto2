@@ -881,3 +881,9 @@
         //0 1 2
     }
 }
+
+//TODO: test to check if the switch case can match multiple cases if it has no break
+//TODO: test to check if the default can be anywhere in the switch
+
+
+//TODO: test the unary minus. It gave us problems last time!

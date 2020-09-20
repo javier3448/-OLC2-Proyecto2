@@ -1,6 +1,7 @@
 import { AstNode } from "./AstNode";
 import { Expression } from "./Expression"
 import { Declaration } from "./Declaration";
+import { state } from '@angular/animations';
 
 //TODO: los enums no deberian ser strings
 export enum StatementKind{
@@ -32,7 +33,48 @@ export class IfStatement {
 }
 
 export class SwitchStatement {
-    constructor(){  }
+    constructor(
+        public expr:Expression,
+        public switchInstructions:SwitchInstructions,
+    ){  }
+}
+
+//Kinda unnecessary I guess but it makes generating the AST in the grammar more ergonomic
+export class SwitchInstructions {
+    constructor(
+        public cases:Array<SwitchCase>,
+        public defaults:Array<SwitchDefault>,
+        public statements:Array<Statement>,
+    ) {   }
+
+    // public addCase(switchCase:SwitchCase){
+    //     this.cases.push(switchCase);
+    // }
+
+    // public addDefault(switchDefault:SwitchDefault){
+    //     this.defaults.push(switchDefault);
+    // }
+
+    // public addStatement(statement:Statement){
+    //     this.statements.push(statement);
+    // }
+}
+
+export class SwitchCase {
+    constructor(
+        public expr:Expression,
+        //The index of the statement to be executed next if this case matches
+        //only makes sense inside the context of SwitchInstrucctions
+        public nextStatement:number,
+    ) {   }
+}
+
+export class SwitchDefault {
+    constructor(
+        //The index of the statement to be executed next if this case matches
+        //only makes sense inside the context of SwitchInstrucctions
+        public nextStatement:number,
+    ) {   }
 }
 
 export class WhileStatement {
@@ -74,9 +116,9 @@ export class Statement {
     //In Rust this would be an enum Statement, with: if, ifelse, block, assignment ... and other variants
     //child expression para ReturnWithValueKind
     //child null para todos los otros jumpers 
-    public child:(Expression | Declaration | Block | WhileStatement | null/* | if | ifelse | ... */);
+    public child:(Expression | Declaration | Block | WhileStatement | ForStatement | ForOfStatement | ForInStatement | SwitchStatement | null );
 
-    constructor(statementKind:StatementKind, child:(Expression | Declaration | Block | WhileStatement | null ),
+    constructor(statementKind:StatementKind, child:(Expression | Declaration | Block | WhileStatement | ForStatement | ForOfStatement | ForInStatement | SwitchStatement | null ),
                 firstLine:number, firstColumn:number, lastLine:number, lastColumn:number){
 
         this.astNode = new AstNode(firstLine, firstColumn, lastLine, lastColumn);
@@ -125,7 +167,7 @@ export class Statement {
                 }
                 break;
             case StatementKind.SwitchKind:
-                if(!(child instanceof ForInStatement)){
+                if(!(child instanceof SwitchStatement)){
                     throw new Error(`constructor de statement no valido para ${statementKind} y ${child}`);
                 }
                 break;

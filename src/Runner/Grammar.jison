@@ -6,7 +6,8 @@
     const { MemberAccess, AccessKind, FunctionAccess, IndexAccess, AttributeAccess } = require('../Ast/MemberAccess');
     const { Statement, StatementKind, Block, 
             WhileStatement, IfStatement, ForStatement, 
-            ForOfStatement, ForInStatement, SwitchStatement } = require('../Ast/Statement');
+            ForOfStatement, ForInStatement, SwitchStatement,
+            SwitchCase, SwitchDefault, SwitchInstructions} = require('../Ast/Statement');
     const { Assignment } = require('../Ast/Assignment');
     const { Declaration } = require('../Ast/Declaration');
     const { MyTypeNode, MyTypeNodeKind } = require('../Ast/MyTypeNode');
@@ -41,6 +42,7 @@
 "else"                        return 'ELSE'
 "switch"                      return 'SWITCH'
 "case"                        return 'CASE'
+"default"                     return 'DEFAULT'
 "for"                         return 'FOR'
 "forin"                       return 'FORIN'
 "in"                          return 'IN'
@@ -340,6 +342,10 @@ Statement
     {
         $$ = $1;
     }
+    | SwitchStatement
+    {
+        $$ = $1;
+    }
     //Jumpers
     | BREAK ';'
     {
@@ -387,6 +393,55 @@ ForInStatement
     : FOR '(' 'LET' IDENTIFIER 'IN' Expression ')' '{' StatementList_ '}'
     {
         $$ = new Statement(StatementKind.ForInKind, new ForInStatement($4, $6, $9), @1.first_line, @1.first_column, @10.last_line, @10.last_column);
+    }
+;
+
+SwitchStatement
+    : 'SWITCH' '(' Expression ')' '{' SwitchInstructions_ '}'
+    {
+        $$ = new Statement(StatementKind.SwitchKind, new SwitchStatement($3, $6), @1.first_line, @1.first_column, @7.last_line, @7.last_column);
+    }
+;
+
+SwitchInstructions_
+    : SwitchInstructions
+    {
+        $$ = $1;
+    }
+    | /*empty*/
+    {
+        $$ = new SwitchInstructions([],[],[]);
+    }
+;
+
+//BAD: we lose a bunch of info about begining and end of the lang constructs here because none of the switch stuff has astNode
+SwitchInstructions
+    : 'CASE' Expression ':'
+    {
+        $$ = new SwitchInstructions([new SwitchCase($2, 0)],[],[]);
+    }
+    | 'DEFAULT' ':'
+    {
+        $$ = new SwitchInstructions([],[new SwitchDefault(0)],[]);
+    }
+    | Statement
+    {
+        $$ = new SwitchInstructions([],[],[$3]);
+    }
+    | SwitchInstructions 'CASE' Expression ':'
+    {
+        $$ = $1;
+        $$.cases.push(new SwitchCase($3, $$.statements.length));
+    }
+    | SwitchInstructions 'DEFAULT' ':'
+    {
+        $$ = $1;
+        $$.defaults.push(new SwitchDefault($$.statements.length));
+    }
+    | SwitchInstructions Statement
+    {
+        $$ = $1;
+        $$.statements.push($2);
     }
 ;
 

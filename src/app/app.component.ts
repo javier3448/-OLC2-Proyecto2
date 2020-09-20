@@ -334,6 +334,7 @@ else{
     `;
     }
 
+    {
     let testString = `
 let array = [1,2,4,5];
 for(let a of array){
@@ -359,6 +360,31 @@ for(let prop in { a:"Javier", b:10, c:true }){
   console.log(prop);
 }
     `;
+    }
+
+    let testString = `
+let a = 20;
+switch(a){
+  case 10:
+    console.log("ten");
+  break;
+  case 20:
+    console.log("twenty");
+  break;
+  case 30:
+    console.log("thirty");
+  break;
+  case 40:
+    console.log("forty");
+  break;
+  case 50:
+    console.log("fifty");
+  break;
+  default:
+    console.log("none");
+}
+    `
+
     this.sourceString = testString;
     this.runtimeInterface.translation = graphTest(testString);
     runTest(this.sourceString, this.runtimeInterface);

@@ -1,6 +1,6 @@
 import { digraph, Digraph, attribute, INode, toDot } from "ts-graphviz";
 import { Expression, ExpressionKind, LiteralExpression, IdentifierExpression, BinaryExpression, UnaryExpression, TernaryExpression, MemberAccessExpression, FunctionCallExpression, ObjectLiteralExpression, PropertyNode, ArrayLiteralExpression } from "./Ast/Expression";
-import { Statement, WhileStatement, Block, StatementKind, IfStatement, ForStatement, ForInStatement, ForOfStatement  } from "./Ast/Statement";
+import { Statement, WhileStatement, Block, StatementKind, IfStatement, ForStatement, ForInStatement, ForOfStatement, SwitchStatement  } from "./Ast/Statement";
 import { AstNode } from "./Ast/AstNode";
 
 import { parser } from "./Runner/RunnerParser.js";
@@ -638,11 +638,13 @@ export function graphStatement(g:Digraph, statement:Statement):INode{
             result = graphForStatement(g, statement.child as ForStatement);
             break;
         case StatementKind.ForInKind:
-            result = graphForInStatement
-            (g, statement.child as ForInStatement);
+            result = graphForInStatement(g, statement.child as ForInStatement);
             break;
         case StatementKind.ForOfKind:
             result = graphForOfStatement(g, statement.child as ForOfStatement);
+            break;
+        case StatementKind.SwitchKind:
+            result = graphSwitch(g, statement.child as SwitchStatement);
             break;
 
         case StatementKind.BlockKind:
@@ -851,6 +853,62 @@ function graphForOfStatement(g:Digraph, forOfStatement:ForOfStatement):INode{
 
     const blockNode = graphStatements(g, forOfStatement.statements);
     g.createEdge([result, blockNode]);
+
+    return result;
+}
+
+function graphSwitch(g:Digraph, switchStatement:SwitchStatement):INode{
+
+    const result = g.createNode(`switch_stmt${AstNode.getNextAstNodeId()}`, {
+        [attribute.label]: "switch",
+        [attribute.shape]: 'box',
+    });
+
+    let expressionNode = graphExpression(g, switchStatement.expr);
+    g.createEdge([result, expressionNode]);
+
+    let stmts = switchStatement.switchInstructions.statements;
+    let cases = switchStatement.switchInstructions.cases;
+    let defaults = switchStatement.switchInstructions.defaults;
+
+    let stmtIndex = 0;
+    let caseIndex = 0;
+    let defaultIndex = 0;
+    //NOTE: if a case and a default are written next to each other we can no longer
+    //guarantee they will be graphed in the order they were originally written.
+    //this doesn't affect the behaviour when running tho
+    //TODO: honestly this whole for needs some serious testing
+    for(;stmtIndex < stmts.length || caseIndex < cases.length || defaultIndex < defaults.length;){//maybe we dont need the for condition to be so 'exhaustive'
+
+        if(caseIndex < cases.length && 
+            cases[caseIndex].nextStatement <= stmtIndex){
+
+            const caseNode = g.createNode(`case_node${AstNode.getNextAstNodeId()}`, {
+                [attribute.label]: "case",
+                [attribute.shape]: 'box',
+            });
+            g.createEdge([result, caseNode]);
+            const caseExprNode = graphExpression(g, cases[caseIndex].expr);
+            g.createEdge([caseNode, caseExprNode]);
+            caseIndex++;
+        }
+        else if(defaultIndex < defaults.length && 
+            defaults[defaultIndex].nextStatement <= stmtIndex){
+
+            const defaultNode = g.createNode(`default_node${AstNode.getNextAstNodeId()}`, {
+                [attribute.label]: "default",
+                [attribute.shape]: 'box',
+            });
+            g.createEdge([result, defaultNode]);
+            defaultIndex++;
+        }
+        //this might cause a runtime exception????
+        else{
+            const defaultNode = graphStatement(g, stmts[stmtIndex]);
+            g.createEdge([result, defaultNode]);
+            stmtIndex++;
+        }
+    }
 
     return result;
 }
