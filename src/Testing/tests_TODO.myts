@@ -1,6 +1,8 @@
 //TODO EN GENERAL: que las pruebas impriman un mensaje facil de leer
 //cuando pasan y cuando no
 
+import { Console } from "console";
+
 {
     console = null;//Deberia de tronarse la consola :s
     console.log("a");//no deberia de funcionar
@@ -887,3 +889,52 @@
 
 
 //TODO: test the unary minus. It gave us problems last time!
+
+
+{
+    let a = {a:"hello"};
+    let b = {a:"hello"};
+
+    if(a == b){
+        console.log("FAIL");
+    }
+    else{
+        console.log("PASS");
+    }
+}
+
+{
+    let a = {a:"hello"};
+    let b = a;
+
+    if(a == b){
+        console.log("PASS");
+    }
+    else{
+        console.log("FAIL");
+    }
+}
+
+{
+    let a = [1,2,3];
+    let b = a;
+
+    if(a == b){
+        console.log("PASS");
+    }
+    else{
+        console.log("FAIL");
+    }
+}
+
+{
+    let a = [1,2,3];
+    let b = [1,2,3];
+
+    if(a == b){
+        console.log("FAIL");
+    }
+    else{
+        console.log("PASS");
+    }
+}

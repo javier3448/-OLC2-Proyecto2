@@ -6,7 +6,7 @@ import { parser } from "./RunnerParser.js";
 import { RuntimeInterface, TsEntry } from "../app/app.component";
 import { Env, Scope } from "./Environment";
 
-import { Statement, StatementKind, WhileStatement, Block, IfStatement, ForStatement, ForInStatement, ForOfStatement } from "../Ast/Statement";
+import { Statement, StatementKind, WhileStatement, Block, IfStatement, ForStatement, ForInStatement, ForOfStatement, SwitchStatement } from "../Ast/Statement";
 
 import { MyObj, CustomObj, compareMyTypes, MyArray } from "./MyObj";
 import { MyType, MyTypeKind, TypeSignature } from "./MyType";
@@ -20,9 +20,6 @@ import { ArrayTypeNode, CustomTypeNode, MyTypeNode, MyTypeNodeKind } from 'src/A
 import { GlobalInstructions } from 'src/Ast/GlobalInstructions';
 import { TypeDef, AttributeNode } from "../Ast/TypeDef";
 import { FunctionDef, ParamNode } from "../Ast/FunctionDef";
-import { stringify } from '@angular/compiler/src/util';
-import { enableDebugTools } from '@angular/platform-browser';
-
 
 
 // REGION: IO functions
@@ -68,7 +65,6 @@ export function resetRuntimeInterface(){
 //TODO: get a better name for the param runtimeInterface for the lo of god.
 //NOTE: the name is like that because we cant use here
 export function test(source:string, _runtimeInterface:RuntimeInterface):void{
-
 
     //varciar todas las 'interfaces' necesarias de runtimeInterface
     runtimeInterface = _runtimeInterface;
@@ -266,6 +262,10 @@ export function runStatement(statement:Statement):(Jumper | null){
 
             case StatementKind.ForOfKind:
                 return runForOf(child as ForOfStatement);
+                break;
+
+            case StatementKind.SwitchKind:
+                return runSwitch(child as SwitchStatement);
                 break;
 
             default:
@@ -504,59 +504,10 @@ export function runExpression(expr:Expression):ReturnValue{
                 }
             break;
             case ExpressionKind.EQUAL_EQUAL:
-                // if(leftType.kind === MyTypeKind.NULL && rightType.kind !== MyTypeKind.NULL
-                //     ||
-                //     leftType.kind !== MyTypeKind.NULL && rightType.kind === MyTypeKind.NULL
-                //     ||
-                //     leftType.kind == MyTypeKind.UNDEFINED && rightType.kind !== MyTypeKind.UNDEFINED
-                //     ||
-                //     leftType.kind !== MyTypeKind.UNDEFINED && rightType.kind === MyTypeKind.UNDEFINED
-                // )
-                // {
-                //     return ReturnValue.makeBooleanReturn(false);
-                // }
-                //Maybe we can just use the TS ===. idk :/
-                //it is the easiest thing now, so fuck it 
-                //TODO: Test the fuck out of this, it might not work at all
-                //TODO: maybe using the value would be better i dont fucking now
-                if(leftType.kind === MyTypeKind.NUMBER && rightType.kind === MyTypeKind.NUMBER){
-                    let leftValue:number = (leftResult.value as Number).valueOf();
-                    let rightValue:number = (rightResult.value as Number).valueOf();
-                    return ReturnValue.makeBooleanReturn(leftValue === rightValue);
-                }
-                else if(leftType.kind === MyTypeKind.STRING && rightType.kind === MyTypeKind.STRING){
-                    let leftValue:string = (leftResult.value as String).valueOf();
-                    let rightValue:string = (rightResult.value as String).valueOf();
-                    return ReturnValue.makeBooleanReturn(leftValue === rightValue);
-                }
-                else if(leftType.kind === MyTypeKind.BOOLEAN && rightType.kind === MyTypeKind.BOOLEAN){
-                    let leftValue:string = (leftResult.value as String).valueOf();
-                    let rightValue:string = (rightResult.value as String).valueOf();
-                    return ReturnValue.makeBooleanReturn(leftValue === rightValue);
-                }
-
-                //POTENCIAL BUG: WE CANT COMPARE POINTERS ANYMORE
-                return ReturnValue.makeBooleanReturn(leftResult === rightResult);
+                return ReturnValue.makeBooleanReturn(myObjEquals(leftResult, rightResult));
             break;
             case ExpressionKind.NOT_EQUAL:
-                if(leftType.kind === MyTypeKind.NUMBER && rightType.kind === MyTypeKind.NUMBER){
-                    let leftValue:number = (leftResult.value as Number).valueOf();
-                    let rightValue:number = (rightResult.value as Number).valueOf();
-                    return ReturnValue.makeBooleanReturn(leftValue !== rightValue);
-                }
-                else if(leftType.kind === MyTypeKind.STRING && rightType.kind === MyTypeKind.STRING){
-                    let leftValue:string = (leftResult.value as String).valueOf();
-                    let rightValue:string = (rightResult.value as String).valueOf();
-                    return ReturnValue.makeBooleanReturn(leftValue !== rightValue);
-                }
-                else if(leftType.kind === MyTypeKind.BOOLEAN && rightType.kind === MyTypeKind.BOOLEAN){
-                    let leftValue:string = (leftResult.value as String).valueOf();
-                    let rightValue:string = (rightResult.value as String).valueOf();
-                    return ReturnValue.makeBooleanReturn(leftValue !== rightValue);
-                }
-
-                //POTENCIAL BUG: WE CANT COMPARE POINTERS ANYMORE
-                return ReturnValue.makeBooleanReturn(leftResult !== rightResult);
+                return ReturnValue.makeBooleanReturn(!myObjEquals(leftResult, rightResult));
             break;
             case ExpressionKind.ADDITION:
                 if(leftType.kind === MyTypeKind.STRING || rightType.kind === MyTypeKind.STRING){
@@ -802,6 +753,31 @@ export function runExpression(expr:Expression):ReturnValue{
             console.log(expr);
             throw new Error(`runExpression no implementado para expressionKind: '${expr.expressionKind}'`);
     }
+}
+
+export function myObjEquals(left:MyObj, right:MyObj):boolean{
+
+    let leftType = left.myType;
+    let rightType = right.myType;
+
+    if(leftType.kind === MyTypeKind.NUMBER && rightType.kind === MyTypeKind.NUMBER){
+        let leftValue:number = (left.value as Number).valueOf();
+        let rightValue:number = (right.value as Number).valueOf();
+        return leftValue === rightValue;
+    }
+    else if(leftType.kind === MyTypeKind.STRING && rightType.kind === MyTypeKind.STRING){
+        let leftValue:string = (left.value as String).valueOf();
+        let rightValue:string = (right.value as String).valueOf();
+        return leftValue === rightValue;
+    }
+    else if(leftType.kind === MyTypeKind.BOOLEAN && rightType.kind === MyTypeKind.BOOLEAN){
+        let leftValue:string = (left.value as String).valueOf();
+        let rightValue:string = (right.value as String).valueOf();
+        return leftValue === rightValue;
+    }
+
+    return left === right;
+
 }
 
 export function runDeclaration(declaration:Declaration):null{
@@ -1154,4 +1130,66 @@ export function runForOf(forOfStatement:ForOfStatement):(Jumper | null){
         Env.popScope();
         Env.popScope();
     }
+}
+
+export function runSwitch(switchStatement:SwitchStatement):(Jumper | null){
+
+    let cases = switchStatement.switchInstructions.cases;
+    let defaults = switchStatement.switchInstructions.defaults;
+    let statements = switchStatement.switchInstructions.statements;
+
+    if(defaults.length > 1){
+        throw new MyError(`switch statement con multiples 'default'. Se utilizara el primero`);
+    }
+    
+    let exprResult = runExpression(switchStatement.expr).getMyObj();
+
+    //[Think] this is another place where gotos would be very useful
+    let instructionIndex = -1;//Se queda en menos 1 si ningun case hace match y no tiene default
+    for (const switchCase of cases) {
+        let caseResult = runExpression(switchCase.expr).getMyObj();
+
+        if(myObjEquals(exprResult, caseResult)){
+            instructionIndex = switchCase.nextStatement;
+            break;
+        }
+    }
+    //If no matches were found we use the switch's default
+    if(instructionIndex === -1 && defaults.length > 0){
+        instructionIndex = defaults[0].nextStatement;
+    }
+
+    if(instructionIndex === -1){//No cases were matched and the switch has no default
+        return null;//so we return without an error or a jumper
+    }
+
+    Env.pushScope();
+    for(let i = instructionIndex; i < statements.length; i++){
+        let statement = statements[i];
+        let statementResult = runStatement(statement);
+
+        if(statementResult === null){
+            // We just go to the next statement because the current statement didnt
+            // return a jumper
+            continue;
+        }
+        else if(statementResult.kind === JumperKind.BREAK){
+            // We must exit out of the loop and return no Jumper because we
+            // 'consumed' the break jumper
+            Env.popScope();
+            return null;
+        }
+        else if(statementResult.kind === JumperKind.CONTINUE ||
+                statementResult.kind === JumperKind.RETURN ||
+                statementResult.kind === JumperKind.RETURN_VALUE){
+            // We must exit out of the loop and return a Jumper because we
+            // a switch cant 'consume' a return/continue jumper
+            Env.popScope();
+            return statementResult;
+        }
+        else{//a sneaky assertion just in case
+            throw new Error(`runWhile no implentado para resultado de bloque: ${statementResult.kind}`);
+        }
+    }
+    Env.popScope();
 }
