@@ -26,7 +26,7 @@
 
 
 
-//TODO: String Template
+//TODO BIG: String Template
 "true"                        return 'TRUE'
 "false"                       return 'FALSE'
 "undefined"                   return 'UNDEFINED'
@@ -77,6 +77,7 @@
 "]"                           return ']'
 
 "let"                         return 'LET'
+"const"                       return 'LET'//TODO TODO TODO: HACER EL CONST DE VERDAD!!!!!
 "number"                      return 'NUMBER'
 "string"                      return 'STRING'
 "boolean"                     return 'BOOLEAN'
@@ -87,6 +88,7 @@
 "{"                           return '{'
 "}"                           return '}'
 ":"                           return ':'
+"?"                           return '?'
 
 //Debug char:
 "~"                           return '~'
@@ -99,12 +101,11 @@
 
 /lex
 
-//TODO: falta operador ++ y --. 
 //[?] en la clase digieron que solo hibamos a hacer unary postIncrement
 //falta el operador %
 //[?] tenemos que hacer los operadores: = += <unary+>
-//TODO: como hacer el unary minux
 %right '='
+%right '?'
 %left 'OR'
 %left 'AND'
 %left '==', '!='
@@ -115,12 +116,6 @@
 %right 'NOT', UNARY_MINUS 
 %nonassoc POSTFIX_DEC, POSTFIX_INC, '++', '--'
 %left '.', '[', DOT
-
-//TODO: completar los operadores:
-//NOT
-//incrmento (solo post [?] preguntar en foro para estar tranquilo)
-//decremento (solo post [?] preguntar en foro para estar tranquilo)
-//ternario
 
 //CONVENCION: El nombre de las listas que pueden venir vacias debe de tener un _ al final
 
@@ -320,7 +315,7 @@ Statement
     }
     | Block
     {
-        $$ = new Statement(StatementKind.Block, $1, @1.first_line, @1.first_column, @1.last_line, @1.last_column);
+        $$ = new Statement(StatementKind.BlockKind, $1, @1.first_line, @1.first_column, @1.last_line, @1.last_column);
     }
     | WHILE '(' Expression ')' '{' StatementList_ '}'
     {
@@ -489,7 +484,11 @@ Declaration
     }
     | LET IDENTIFIER ':' Type
     {
-        $$ = new Declaration($1, $4, null, @1.first_line, @1.first_column, @4.last_line, @4.last_column);
+        $$ = new Declaration($2, $4, null, @1.first_line, @1.first_column, @4.last_line, @4.last_column);
+    }
+    | LET IDENTIFIER 
+    {
+        $$ = new Declaration($2, null, null, @1.first_line, @1.first_column, @2.last_line, @2.last_column);
     }
 ;
 
@@ -574,9 +573,9 @@ Expression
     {
         $$ = new Expression(ExpressionKind.AND, new BinaryExpression($1, $3), @1.first_line, @1.first_column, @3.last_line, @3.last_column);
     }
-    | 'NOT' Expression
+    | 'NOT' Expression %prec NOT
     {
-        $$ = new Expression(ExpressionKind.NOT, new UnaryExpression($2), @1.first_line, @1.first_column, @2.last_line, @2.last_column);
+        $$ = new Expression(ExpressionKind.NEGATION, new UnaryExpression($2), @1.first_line, @1.first_column, @2.last_line, @2.last_column);
     }
     | '-' Expression %prec UNARY_MINUS
     {
@@ -593,6 +592,10 @@ Expression
     | Expression MemberAccess %prec DOT /* Esta precedencia si es necesaria */
     {
         $$ = new Expression(ExpressionKind.MEMBER_ACCESS, new MemberAccessExpression($1, $2), @1.first_line, @1.first_column, @2.last_line, @2.last_column);
+    }
+    | Expression '?' Expression ':' Expression
+    {
+        $$ = new Expression(ExpressionKind.TERNARY, new TernaryExpression($1, $3, $5), @1.first_line, @1.first_column, @5.last_line, @5.last_column);
     }
     | Expression '=' Expression
     {
@@ -723,7 +726,7 @@ ExpressionList
     }
 ;
 
-// TODO:
+// POSSIBLE IMPROVEMENT:
 // Si encontramos como hacer un gramatica que sea capaz de generar una lista de member accesses
 // despues de encontrar el primer member access despues de la expression entonces vamos a necesitar 
 // esto:

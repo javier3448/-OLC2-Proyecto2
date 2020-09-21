@@ -23,8 +23,8 @@ export enum ExpressionKind{
     ASSIGNMENT = '=',
 
     //unary
-    UNARY_MINUS = '-',
-    NEGATION = '!',
+    UNARY_MINUS = 'UNARY_MINUS',
+    NEGATION = 'NOT',
     POSTFIX_INC = '++',
     POSTFIX_DEC = '--',
 
@@ -53,7 +53,9 @@ export class TernaryExpression{
 }
 
 export class LiteralExpression{
-    constructor(public literal:(String | Number | Boolean | undefined | null)){   }
+    constructor(public literal:(String | Number | Boolean | undefined | null)){ 
+
+    }
 }
 
 export class IdentifierExpression{
@@ -99,7 +101,6 @@ export class Expression {
     public astNode: AstNode;
 
     public expressionKind: ExpressionKind;
-    // TODO: Think of a better name, might not be possible
     public specification: (UnaryExpression | BinaryExpression | TernaryExpression | 
                            IdentifierExpression | LiteralExpression | MemberAccessExpression | 
                            ObjectLiteralExpression | ArrayLiteralExpression);
@@ -110,7 +111,6 @@ export class Expression {
         this.astNode = new AstNode(firstLine, firstColumn, lastLine, lastColumn);
 
         //assertions
-        //TODO: las exceptions ocn typeof(ads;fkj) no van a imprimir nada util cambiar a class.name o lo que sea que use typescript
         switch(expressionKind){
             //binary
             case ExpressionKind.LESS:
@@ -180,7 +180,6 @@ export class Expression {
             break;
             //Solo para que no se nos olvide incluir todos los operadores posibles en este switch
             default:
-                console.log(this);
                 throw new Error(`[!!!] No se ha implementado todavia el operador ${expressionKind}`);
         }
 

@@ -3,7 +3,6 @@ import { Expression } from "./Expression"
 import { Declaration } from "./Declaration";
 import { state } from '@angular/animations';
 
-//TODO: los enums no deberian ser strings
 export enum StatementKind{
     ExpressionKind = 'Expression',
     DeclarationKind = 'Declaration',
@@ -123,7 +122,6 @@ export class Statement {
 
         this.astNode = new AstNode(firstLine, firstColumn, lastLine, lastColumn);
 
-        //TODO: refactor this assertion so it looks like the other ones
         switch (statementKind) {
 
             case StatementKind.ExpressionKind:
@@ -185,6 +183,7 @@ export class Statement {
                     throw new Error(`constructor de statement no valido para ${statementKind} y ${child}`);
                 }
             default:
+                console.log(statementKind);
                 throw new Error(`Assertion Error: Construccion de Statement no implementado para el statmentKind: ${statementKind}`);
         }
 

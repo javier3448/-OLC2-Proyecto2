@@ -54,13 +54,11 @@ export module Env{
 
         //Inicializamos los tipos primitivos y Cosole
         //FOR DEBUG ONLY:
-        //FIXME
-        //TODO TODO TODO TODO: Uncomment it!
-        // global.myTypeSignatures["string"] = MyType.stringTypeInstance;
-        // global.myTypeSignatures["number"] = MyType.numberTypeInstance;
-        // global.myTypeSignatures["boolean"] = MyType.booleanTypeInstance;
-        // global.myTypeSignatures["null"] = MyType.nullTypeInstance;
-        // global.myTypeSignatures["undefined"] = MyType.undefinedTypeInstance;
+        global.myTypeSignatures["string"] = MyType.stringTypeInstance;
+        global.myTypeSignatures["number"] = MyType.numberTypeInstance;
+        global.myTypeSignatures["boolean"] = MyType.booleanTypeInstance;
+        global.myTypeSignatures["null"] = MyType.nullTypeInstance;
+        global.myTypeSignatures["undefined"] = MyType.undefinedTypeInstance;
 
         // global.myTypeSignatures["Console"] = MyType.consoleTypeInstance;
 
@@ -134,7 +132,7 @@ export module Env{
             iter = iter.previous;
         }
         if(myFunctionSignature === undefined){
-            throw new MyError(`No existe una funcion con el nomber <${id}> en el entorno actual`);
+            throw new MyError(`No existe una funcion con el nomber '${id}' en el entorno actual`);
         }
 
         // chapuz: revisamos si es una funcion nativa y, de ser asi, la ejecutamos

@@ -196,8 +196,7 @@ export class MyObj {
     // Si tratamos de acceder a null o undefined retornamos error
     // return pointer to undefined if the attribute doesnt exist or is undefined
     //[throws_MyError]
-    //TODO: Poner que atrapa y que no
-    //TODO: [!!!] pensar en que tiene que devolver. Mi intuicion dice que siempre debe devolver Pointer
+    //Atrapa si se esta tratado de 'desreferencia' un null o un undefined
     //pero el .length de array lo complica todo. porque tendriamos que matener un attributo length en my array
     //Y mantener el .length real y el mio de acuedo siempre
     //Por ahora retornamos ReturnValue porque si no existe el atributo retornamos undefined. Ver comentarios de Env.callFunction para mas info
@@ -224,14 +223,14 @@ export class MyObj {
                 // means custom.id is not part of the type. So, to be like typescript we need to
                 // return a pointer to undefined
                 if(custom[id] === undefined){
-                    //return new pointer to undef
+                    return ReturnValue.makeUndefinedReturn();
                 }
                 return ReturnValue.makePointerReturn(custom[id]);
             }
             case MyTypeKind.NULL:
-                throw new MyError(`No se puede leer propiedad <${id}> de null`);
+                throw new MyError(`No se puede leer propiedad '${id}' de null`);
             case MyTypeKind.UNDEFINED:
-                throw new MyError(`No se puede leer propiedad <${id}> de undefined`);
+                throw new MyError(`No se puede leer propiedad '${id}' de undefined`);
 
             default:
                 throw new Error(`GetAttribute: no implementado para el tipo: <${this.myType.kind}`);
@@ -265,8 +264,8 @@ export class MyObj {
     }
 
     //[throws_MyError]
-    //TODO: Poner que atrapa y que no
-    //TODO: consider if functionArguments should be pointers or... something else i dont fucking now
+    //Atrapa si this no tiene un metodo con el nombre: id
+    //Atrapa si this es null o undefined
     public callFunction(id:string, functionArguments:ReturnValue[]):MyObj{
         
         //WE dont create a new scope for this function calls. or set current to global

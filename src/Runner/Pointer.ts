@@ -23,7 +23,6 @@ export class Pointer{
         this.myObj = myObj;
     }
 
-    //TODO: Consider cleaning up all these functions, I dont think they are being used, maybe
     public static makeLiteralExpressionPointer(literalExpression:LiteralExpression):Pointer{
         let val = literalExpression.literal;
         if(val instanceof String){

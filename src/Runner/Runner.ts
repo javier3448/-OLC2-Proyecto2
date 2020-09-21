@@ -20,6 +20,7 @@ import { ArrayTypeNode, CustomTypeNode, MyTypeNode, MyTypeNodeKind } from 'src/A
 import { GlobalInstructions } from 'src/Ast/GlobalInstructions';
 import { TypeDef, AttributeNode } from "../Ast/TypeDef";
 import { FunctionDef, ParamNode } from "../Ast/FunctionDef";
+import { ɵSWITCH_COMPILE_NGMODULE__POST_R3__ } from '@angular/core';
 
 
 // REGION: IO functions
@@ -30,7 +31,6 @@ export function myPrint(/* pointer to static console instance, */ myObj:MyObj){
 }
 
 export function graficar_ts(){
-    //TODO:
     console.log(Env.current);
 
     let iter = Env.current;
@@ -53,8 +53,8 @@ export function graficar_ts(){
             runtimeInterface.tsDataSet.push(new TsEntry("top-"+count.toString(), key, variable.myObj.myType.myToString(), variable.myObj.toPrintableString()));
         }
         iter = iter.previous;
+        count++;
     }
-    console.log(runtimeInterface.tsDataSet);
 }
 
 export function resetRuntimeInterface(){
@@ -62,8 +62,6 @@ export function resetRuntimeInterface(){
 }
 // END: IO functions
 
-//TODO: get a better name for the param runtimeInterface for the lo of god.
-//NOTE: the name is like that because we cant use here
 export function test(source:string, _runtimeInterface:RuntimeInterface):void{
 
     //varciar todas las 'interfaces' necesarias de runtimeInterface
@@ -87,7 +85,9 @@ export function runGlobalInstructions(globalInstructions:GlobalInstructions):voi
             if(error instanceof MyError){
                 console.log(error);
             }
-            throw error;
+            else{
+                throw error;
+            }
         }
     }
     //revisamos si quedo algun tipo sin definir
@@ -109,7 +109,9 @@ export function runGlobalInstructions(globalInstructions:GlobalInstructions):voi
             if(error instanceof MyError){
                 console.log(error);
             }
-            throw error;
+            else{
+                throw error;
+            }
         }
     }
 
@@ -196,6 +198,9 @@ export function runTypeDef(typeDef:TypeDef){
             typeInTable.kind = MyTypeKind.CUSTOM;
             typeInTable.specification = newTypeSignature;
         }
+        else{
+            throw new MyError(`Ya existe un tipo con el nombre: ${typeDef.name}`);
+        }
     }else{
         Env.global.myTypeSignatures[typeDef.name] = MyType.makeCustomType(newTypeSignature);
     }
@@ -276,6 +281,7 @@ export function runStatement(statement:Statement):(Jumper | null){
             //throw myError;
             //TODO: que lo ponga en la tabla de errores o algo asi
             console.log(myError);
+            return null;//We return null because a caught error is not a Jumper
         }else{
             throw myError;
         }
@@ -357,6 +363,7 @@ export function runNonPropertyMyTypeNode(myTypeNode:MyTypeNode):MyType{
     }
 }
 
+//TODO?: might be a good idea to split this func into smaller funcs like: runTernary, RunAssignment etc
 // function add
 //[throws_MyError]
 // Atrapa si la operacion no se puede realizar entre por los tipos de los operandos
@@ -394,8 +401,7 @@ export function runExpression(expr:Expression):ReturnValue{
 
             //we check types
             if(!compareMyTypes(lvalue.myObj.myType, rvalue.myType)){
-                //TODO: hay casos en los que no se va a poder hacer custom = custom y este mensaje no va ayudar en nada
-                throw new MyError(`No se puede asignar el tipo: '${lvalue.myObj.myType.kind}' un valor de tipo: ${rvalue.myType.kind}`);
+                throw new MyError(`No se puede asignar el tipo: '${lvalue.myObj.myType.myToString()}' un valor de tipo: ${rvalue.myType.myToString()}`);
             }
 
             //this is baaaaaaaaaaaaad :((((
@@ -652,12 +658,12 @@ export function runExpression(expr:Expression):ReturnValue{
             return Env.getVariable(identExpression.name.toString());
 
         }break;
+        //The way we traverse member access is kinda weird because the way the AST is shaped
+        //but we wont bother to describe it in a comment :/
         case ExpressionKind.MEMBER_ACCESS:
         {
             let memberAccessExpression = expr.specification as MemberAccessExpression;
 
-            //TODO: think of a better name that ilustrastes the weird traversal we have to do 
-            //to run the memberaccess
             let result = runExpression(memberAccessExpression.expression);
 
             switch (memberAccessExpression.memberAccess.accessKind) {
@@ -745,12 +751,22 @@ export function runExpression(expr:Expression):ReturnValue{
         case ExpressionKind.TERNARY:
         {
             let ternary = expr.specification as TernaryExpression;
-            //BIG TODO: si es templated string hay que calcular todas sus subexpresiones
-            throw new Error(`runExpression no implementado todavia para ExpresionKind.TERNARY`);
+            
+            let conditionResult = runExpression(ternary.left).getMyObj();
+
+            if(conditionResult.getTruthy()){
+                let trueResult = runExpression(ternary.middle);
+                return trueResult;
+            }
+            else{
+                let falseResult = runExpression(ternary.right);
+                return falseResult;
+            }
+            
         }break;
+        //BIG TODO: si es templated string hay que calcular todas sus subexpresiones
     
         default:
-            console.log(expr);
             throw new Error(`runExpression no implementado para expressionKind: '${expr.expressionKind}'`);
     }
 }
@@ -792,9 +808,8 @@ export function runDeclaration(declaration:Declaration):null{
 
     //we check types
     if(myType !== null){
-        //TODO: hay casos en los que no se va a poder hacer custom = custom y este mensaje no va ayudar en nada
         if(!compareMyTypes(myType, val.myType)){
-            throw new MyError(`No se puede asignar el tipo: '${myType.kind}' un valor de tipo: ${val.myType.kind}`);
+            throw new MyError(`No se puede asignar el tipo: '${myType.myToString()}' un valor de tipo: ${val.myType.myToString()}`);
         }
 
         //this is baaaaaaaaaaaaad :((((

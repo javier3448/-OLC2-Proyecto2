@@ -14,11 +14,6 @@ export class Declaration {
 
         this.astNode = new AstNode(firstLine, firstColumn, lastLine, lastColumn);
 
-        //assertions:
-        if(myTypeNode === null && expression === null){
-            throw new Error(`Assertion Error: No se puede instanciar una Declaracion con tipo = null Y exprecion = null`);
-        }
-
         this.identifier = identifier;
         this.myTypeNode = myTypeNode;
         this.expression = expression;

@@ -7,9 +7,8 @@ export enum ReturnKind{
     MY_OBJ = 'MY_OBJ'
 }
 
+//Its intended to be the thing that is returned by 'everything'. Like runExpression runStatement
 //basically a simple union between (Pointer | MyObj)
-//TODO: Think of a better name because the name ReturnValue might get confused
-//with the jumpers: return; and return expr;
 export class ReturnValue{
     kind:ReturnKind;
     specification:(Pointer | MyObj);
@@ -72,7 +71,7 @@ export class ReturnValue{
             return ReturnValue.makeNumberReturn((val as Number).valueOf());
         }
         else if(val instanceof Boolean){
-            return ReturnValue.makeBooleanReturn(val as Boolean);
+            return ReturnValue.makeBooleanReturn((val as Boolean).valueOf());
         }
         else if(val === undefined){
             return ReturnValue.makeUndefinedReturn();

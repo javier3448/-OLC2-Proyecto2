@@ -429,7 +429,7 @@ function expressionToLabel(expr:Expression):string{
         case ExpressionKind.OR:
             return "<<B>OR</B>>"
         case ExpressionKind.AND:
-            return "<<B>OR</B>>"
+            return "<<B>AND</B>>"
 
         case ExpressionKind.ADDITION:
             return "<<B>+</B>>";
@@ -447,7 +447,7 @@ function expressionToLabel(expr:Expression):string{
         case ExpressionKind.UNARY_MINUS:
             return "<<B>Unary<BR/>-</B>>";
         case ExpressionKind.NEGATION:
-            return "<<B>!</B>>";
+            return "<<B>NOT</B>>";
         case ExpressionKind.POSTFIX_INC:
             return "<<B>Post<BR/>++</B>>";
         case ExpressionKind.POSTFIX_DEC:
@@ -484,7 +484,7 @@ function expressionToLabel(expr:Expression):string{
             return "<<B>MemberAccessExpression</B>>";
 
         case ExpressionKind.TERNARY:
-            return "<<B>?</B>>";
+            return "<<B>.. ? .. : ..</B>>";
         default:
             throw Error(`expressionToLabel no tiene implementacion para expression kind: ${expr.expressionKind}`)
     }
@@ -877,7 +877,7 @@ function graphSwitch(g:Digraph, switchStatement:SwitchStatement):INode{
     //NOTE: if a case and a default are written next to each other we can no longer
     //guarantee they will be graphed in the order they were originally written.
     //this doesn't affect the behaviour when running tho
-    //TODO: honestly this whole for needs some serious testing
+    //TODO: honestly this whole 'for' needs some serious testing
     for(;stmtIndex < stmts.length || caseIndex < cases.length || defaultIndex < defaults.length;){//maybe we dont need the for condition to be so 'exhaustive'
 
         if(caseIndex < cases.length && 

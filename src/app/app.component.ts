@@ -126,6 +126,11 @@ type A = {
     b: B;
 }
 
+type B = {
+    a: A;
+    b: number;
+}
+
 let a:A = {
     a:"a1", 
     b : { 
@@ -157,14 +162,15 @@ hello(10);
 `
     }
 
+    //old bug: it printed undef
     {
     let testString = `
 //failing test for null bug
-console.log(null);//BUG prints undef
+console.log(null);
 console.log(undefined);
 let a = null;
 let b = undefined;
-console.log(a);//BUG prints undef
+console.log(a);
 console.log(b);
     `;
     }
@@ -362,6 +368,7 @@ for(let prop in { a:"Javier", b:10, c:true }){
     `;
     }
 
+    {
     let testString = `
 let a = 20;
 switch(a){
@@ -383,7 +390,31 @@ switch(a){
   default:
     console.log("none");
 }
+    `;
+    }
+
+    {
+    let testString = `
+let a = false;
+console.log(a ? "true" : "false");
+console.log(a);
+    `;
+    }
+
+    {
+    //unary minus
+    let testString = `
+let a = -1;
+console.log(a);
     `
+    }
+
+    // 20/09 we passed all the {}s tests
+
+    let testString = `
+let a = NOT true;
+console.log(a);
+    `;
 
     this.sourceString = testString;
     this.runtimeInterface.translation = graphTest(testString);

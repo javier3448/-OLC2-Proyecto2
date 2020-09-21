@@ -43,9 +43,6 @@ export class TypeSignature
     }
 }
 
-
-//TODO: write a MyArrayType similar to TypeSignature.
-//      it would only have a member subType:MyType
 export class MyType
 {
     public kind:MyTypeKind;
@@ -54,8 +51,6 @@ export class MyType
     //null for everything else
     public specification:(MyType | TypeSignature | null);
 
-    //TODO: if we decide to keep the constructor as private we dont really
-    // need all those assertions
     private constructor(kind:MyTypeKind, specification:(MyType | TypeSignature | null)) {
         //assertions:
         switch (kind) {
@@ -112,7 +107,6 @@ export class MyType
             {
                 let signature = this.specification as TypeSignature;
                 if(signature.name === null){
-                    //TODO: imprimir bien el tipo anonimo o buscar en la tabla de simbolos un tipo compatible e imprimir ese tipo
                     return "anonymous";
                 }
                 return signature.name;

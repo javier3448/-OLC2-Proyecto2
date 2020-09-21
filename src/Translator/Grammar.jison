@@ -35,11 +35,10 @@
 
 /lex
 
-//TODO: falta operador ++ y --. 
 //[?] en la clase digieron que solo hibamos a hacer unary postIncrement
 //falta el operador %
 //[?] tenemos que hacer los operadores: = += <unary+>
-//TODO: como hacer el unary minux
+//TODO: como  el unary minux
 %left 'OR'
 %left 'AND'
 %left '==', '!='

@@ -1,7 +1,6 @@
 //TODO EN GENERAL: que las pruebas impriman un mensaje facil de leer
+//                 y que sean automaticas y facil de correr todas al mismo tiempo
 //cuando pasan y cuando no
-
-import { Console } from "console";
 
 {
     console = null;//Deberia de tronarse la consola :s
@@ -22,11 +21,11 @@ import { Console } from "console";
         b:number
     }
 
-    function setParam(a:number){
+    function setParam(a:number):void{
         a = 10;
     }
 
-    let myA = { a:10, b:undefined }
+    let myA = { a:10, b:undefined };
 
     console.log(myA.b);//no longer prints undefined
     console.log(myA.c);//prints undefinded??????
@@ -51,56 +50,7 @@ import { Console } from "console";
 //Algo que verifique si se tira error cuando se llama una funcion
 //con un custom type o con array
 
-//Verificar que NO exista conflicto entre dos custom types cuando sea
-//adecuado
-{
-    type A = {
-        a:number,
-        b:number
-    }
-    function aFunc(a:A){
-        
-    }
-    {
-        //No importa si el nombre de B es A. Esto corre de cualquier manera
-        type B = {
-            a:number,
-            b:number
-        }
 
-        let a:B = {a:10, b:10};
-        aFunc(a);
-    }
-}
-
-{
-    type A = {
-        a:number,
-        b:number
-    }
-    {
-        type A = {
-            a:string,
-            b:string
-        }
-
-        //Esta function debe de tener la segunda def de A
-        function afunc(a:A){
-            
-        }
-    }
-}
-
-
-// TODO algo que verifique que la verificacion de tipos no 
-// solo revise si dos tipos son CUSTOM
- 
-
-// TODO: algo que pruebe que los primitivos si se pasen por valor
-
-// TODO: algo que pruebe que los Array y los custom se pase por referencia
- 
- 
 //Pruebas de + con string
 {
     //Number
@@ -449,10 +399,6 @@ import { Console } from "console";
     undefined ? "truthy" : "falsy"; // falsy
 }
 
-//TODO: Algo para probar truthiness con operadores
-//TODO: Revisar bien que cosas son las que causan truthiness
-
-
 //TODO: Una declarion que verifique que si se haga bien la compativilidad de tipos entre
 //Customs
 
@@ -476,8 +422,6 @@ import { Console } from "console";
     a = b;//Esto no deberia dar error
 }
 
-//TODO: [?] los types pueden tener inicializaciones default????????????????????
-
 //Probar que se puedan tener variables y types con el mismo nombre
 {
     type A = {
@@ -490,7 +434,6 @@ import { Console } from "console";
 }
 
 //TODO: Algo para probar el const
-
 
 {//no se cual es la respuesta aqui. Depende de lo que digan en el github
     type A = {
@@ -530,7 +473,7 @@ import { Console } from "console";
 
 //TODO: algo que verifique que la asignacion retorne un valor
 
-
+//NO VALIDO: no se pueden tener typedef adentro de un scope
 //No se ni siquiera si esto sirve en typescript. Per
 {
     type A = {
@@ -548,9 +491,15 @@ import { Console } from "console";
     }
 }
 
+//BIG BUG: (solved)
+//when runStatement catches an error it would return undefined messing up our entire
+//system of jumpers. causing graficar_ts(); to never be ran in this case
 {
-    let a = 10;
-    (a = 10) = 20;
+    {
+        let a = 10;
+        (a = 10) = 20;
+        graficar_ts();
+    }
 }
 
 {
@@ -559,9 +508,24 @@ import { Console } from "console";
 }
 
 {
-    type string = {//we should print a special error message
+    type string = {//we should print a special error message: it prints a syntax error. Special enough in my opinion
         a:number;
     }
+}
+
+
+{
+    type A = {
+        a: string;
+        b: B;
+    }
+    type A = {
+        a: A;
+        b: number;
+    }
+    //prints: "No se encontro definicion para el tipo: 'B'. Se definira con {} para continuar la ejecucion"
+    //deberia de imprimir algo que diga que A tiene dos definiciones
+    //SOLVED
 }
 
 {
@@ -610,14 +574,13 @@ import { Console } from "console";
     }
 
     while(true){
-        console.log("Solo esto se deberia de imprimir");
+        console.log("Hola!");
         a_bad_break();
-        console.log("Si esto se imprime algo anda mal");
+        console.log("Si esto no se imprime algo anda mal");
         break;
     }
 }
 
-//NO SE COMO NI PORQUE PASO ESTA PRUEBA
 {
     let a:number = 10;
     let b:number = a;
@@ -645,14 +608,21 @@ import { Console } from "console";
 
     b = 20;
 
-    console.log(a);//ambos deberia de imprimir { a: 20 }
-    console.log(b);
+    console.log(a);//10
+    console.log(b);//20
 }
 
 
-//TODO: prueba que typedef dentro de scope den error 
+{//this should be an error
+    {
+        type A ={
+            a:string
+        }
+    }
+}
 
 //BUG!!
+//SOLVED
 {
     type A = {
         a: number,
@@ -678,28 +648,10 @@ import { Console } from "console";
     console.log(a);//should print 10
 }
 
-{
-    type A = {
-        a: number,
-    }
-    function nullifyA(a:A){
-
-    }
-    //this function shouldn't have any effects on the argument that
-    //was passed to it
-    function nullifyNumber(a:number){
-        a = null;
-    }
-
-    a.a = 20;
-	a = null;
-
-    console.log(a);//IMPRIME UNDEFINED CUANDO DEBERIA DE IMPRIMIR null
-    console.log(b);
-}
 
 //old bug:
 //failing test for null bug
+//SOLVED
 {
     console.log(null);//BUG prints undef
     console.log(undefined);
@@ -715,34 +667,29 @@ import { Console } from "console";
     let n:number = 0;
 
     while(n < 10){
-    n = n + 1;
-    console.log(n);
-    continue;
-    console.log("FAIL");
+        n = n + 1;
+        console.log(n);
+        continue;
+        console.log("FAIL");
     }
 }
 
 //TODO: test return jumpers, empty, not empty, correct, with incorrect type, with incorrect void/not_void
+//test jumpers when void. and test that jumpers return the correct type
 
 //TODO: mas de estas:
 //Para verificar que regresemos al scope global antes de llamar a las funciones
 {
     let b = "PASS";
     function lol():void{
-        console.log(a);
-        console.log(b);
+        console.log(a);//undefined
+        console.log(b);//PASS
     }
 
     {
         let a = "FAIL";
         lol();
     }
-}
-
-//TODO: finish this test
-//Possible bug we caught
-{
-    //we didnt check for type correctness in assignment
 }
 
 {
@@ -769,8 +716,6 @@ import { Console } from "console";
     let d:C[][][][];//we should get an error here!
 }
 
-//TODO tests for ternary!
-
 {
     console.log([1,2,3,4]);
     console.log([1,2,3,"4"]);//Esto deberia dar error
@@ -788,23 +733,17 @@ import { Console } from "console";
 
 //TODO: probar que con push se pasen las mierdas por referencia tambien. como cualquier otra funcion
 
-//TODO: push return the length of the array
-
-
-//TODO: Test block. The grammar was full of bugs!
-
-
+//BUG
 //This error would be impossible to catch unless we do some MAYOR changes to the everything
 {
     let a = 10;
     {
         let a = a;
+        console.log(a);
     }
 }
 
-//TODO: tests para for que se apeguen bien bien a https://developer.mozilla.org/es/docs/Web/JavaScript/Referencia/Sentencias/for
-
-//BIG TODO: Something that tests if we handle the double scope properly AND if we dont fuck up the scope stack if an error occurs on the initial expression
+//TODO BIG: Something that tests if we handle the double scope properly AND if we dont fuck up the scope stack if an error occurs on the initial expression
 //          see your runFor code
 
 
@@ -825,8 +764,6 @@ import { Console } from "console";
     }
 }
 
-
-//TODO: very rigorous testing with jumpers. pls
 
 //BUG: this should be an error in TS. But i dont think it is in C. idk
 {
@@ -888,7 +825,9 @@ import { Console } from "console";
 //TODO: test to check if the default can be anywhere in the switch
 
 
-//TODO: test the unary minus. It gave us problems last time!
+{
+    console.log(-(1+2));
+}
 
 
 {
@@ -937,4 +876,12 @@ import { Console } from "console";
     else{
         console.log("PASS");
     }
+}
+
+//BUG: this prints true true for some reason :(
+//SOLVED
+{
+    let a = false;
+    console.log(a ? "true" : "false");
+    console.log(a);
 }
