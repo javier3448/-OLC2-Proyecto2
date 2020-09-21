@@ -256,10 +256,35 @@ export class MyObj {
 
         let arrayVal = (this.value as MyArray);
         let numberIndex = (index.value as Number).valueOf();
-        if(numberIndex >= arrayVal.array.length){
-            throw new MyError(`Indice: '${numberIndex}' fuera de limites: '[0, ${arrayVal.array.length})'`);
+        //BUG: TYPESCRIPT NO HACE ESTE CHECKEO!!!! El imbecil solo retorna undef cuando accedemos
+        //     a algo fuera de rangos. 
+        //     y si lo utilizamos para asignar llenar todo lo que necesite con nulls
+        //BUG: Tampoco reviza si el indice es entero!!!
+        //from SO: JavaScript arrays aren't really arrays, they're JavaScript objects 
+        //         that have prototype methods that cause them to act like arrays. arr['one'] = 1 is valid JavaScript.
+        //         TypeScript is fucking stupid and doesnt make any sence
+        if(numberIndex < 0){
+            throw new MyError(`Indice: '${numberIndex}' fuera de limites: no puede ser negativo`);
         }
 
+        if(!Number.isInteger(numberIndex)){
+            throw new MyError(`Indice: '${numberIndex}' no valido. Debe ser un entero`);
+        }
+
+        //big bodge :(
+        //the fill happens even if we dont assign anything to the resulting pointer
+        //but we have 6 days left and it would require us to make quite a few things
+        //when getting rvalue. Possible, but pretty hard
+        //FUCK. its not only lvalue because we can pass by reference so there are more
+        //special cases when we should fill other than assignment :(
+        //i.e its not gonna happen :/
+
+        //We fill the array if the numberIndex goes out of bounds and it is possitive
+        for(let i = arrayVal.array.length; i < numberIndex + 1; i++){
+            arrayVal.array[i] = Pointer.makeNullPointer();
+        }
+
+        //At this point we guarantee that arrayVal.array[numberIndex]; has a pointer
         return arrayVal.array[numberIndex];
     }
 

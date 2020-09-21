@@ -562,6 +562,16 @@ export function runExpression(expr:Expression):ReturnValue{
                     throw new MyError(`Operador '${expr.expressionKind}' no acepta los tipos: '${leftType.kind}' y '${rightType.kind}'`)
                 }
             break;
+            case ExpressionKind.MODULUS:
+                if(leftType.kind === MyTypeKind.NUMBER && rightType.kind === MyTypeKind.NUMBER){
+                    let leftValue:number = (leftResult.value as Number).valueOf();
+                    let rightValue:number = (rightResult.value as Number).valueOf();
+                    return ReturnValue.makeNumberReturn(leftValue % rightValue);
+                }
+                else{
+                    throw new MyError(`Operador '${expr.expressionKind}' no acepta los tipos: '${leftType.kind}' y '${rightType.kind}'`)
+                }
+            break;
             default:
                 throw new Error(`runExpression con expr.specification de tipo Binary expression no tienen implementacion para expression kind ${expr.expressionKind}`)
         }

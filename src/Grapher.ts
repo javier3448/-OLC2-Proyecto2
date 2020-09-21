@@ -182,6 +182,9 @@ export function graphParam(g:Digraph, param:ParamNode):INode{
 //g: SubGraph donde vamos a ir metiendo todos los nodos
 export function graphExpression(g:Digraph, expr:Expression):INode{
 
+    if(expr == null){
+        console.log("null");
+    }
     let result = g.createNode(`expr${expr.astNode.getId()}`, {
         // BAD PERFORMANCE: we do this switch two times because of binExpressionToLable
         [attribute.label]: expressionToLabel(expr),
@@ -202,6 +205,7 @@ export function graphExpression(g:Digraph, expr:Expression):INode{
         case ExpressionKind.SUBSTRACTION:
         case ExpressionKind.MULTIPLICATION:
         case ExpressionKind.DIVISION:
+        case ExpressionKind.MODULUS:
         case ExpressionKind.ASSIGNMENT:
         case ExpressionKind.POWER:
         {
@@ -439,6 +443,8 @@ function expressionToLabel(expr:Expression):string{
             return "*";
         case ExpressionKind.DIVISION:
             return "/";
+        case ExpressionKind.MODULUS:
+            return "%";
         case ExpressionKind.ASSIGNMENT:
             return "Assignment";
         case ExpressionKind.POWER:
@@ -598,9 +604,6 @@ function graphStatements(g:Digraph, stmts:Statement[]):INode{
         [attribute.shape]: 'box',
     });
 
-    if(stmts === undefined){
-        console.log("lol");
-    }
     for (const statement of stmts) {
         let child: INode = graphStatement(g, statement);
         g.createEdge([result, child]);
@@ -672,6 +675,7 @@ export function graphStatement(g:Digraph, statement:Statement):INode{
                 [attribute.label]: "return",
                 [attribute.shape]: 'box',
             });
+            break;
         case StatementKind.ReturnWithValueKind:
         {
             result = g.createNode(`return_with_val${statement.astNode.getId()}`, {

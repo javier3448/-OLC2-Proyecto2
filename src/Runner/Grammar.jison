@@ -103,9 +103,6 @@
 
 /lex
 
-//[?] en la clase digieron que solo hibamos a hacer unary postIncrement
-//falta el operador %
-//[?] tenemos que hacer los operadores: = += <unary+>
 %right '='
 %right '?'
 %left 'OR'
@@ -200,7 +197,7 @@ StatementList
 ;
 
 FunctionDef
-    : FUNCTION IDENTIFIER "(" ParamList_ ")" ":" MyTypeNode "{" StatementList_ "}"
+    : FUNCTION IDENTIFIER "(" ParamList_ ")" ":" Type "{" StatementList_ "}"
     {
         $$ = new FunctionDef($2, $4, $7, $9, @1.first_line, @1.first_column, @2.last_line, @2.last_column);
     }
@@ -360,9 +357,9 @@ Statement
     {
         $$ = new Statement(StatementKind.ReturnKind, null, @1.first_line, @1.first_column, @2.last_line, @2.last_column);
     }
-    | RETURN Expresssion ';'
+    | RETURN Expression ';'
     {
-        $$ = new Statement(StatementKind.ReturnWithExpression, $2, @1.first_line, @1.first_column, @3.last_line, @3.last_column);
+        $$ = new Statement(StatementKind.ReturnWithValueKind, $2, @1.first_line, @1.first_column, @3.last_line, @3.last_column);
     }
 ;
 
@@ -543,6 +540,10 @@ Expression
     {
         $$ = new Expression(ExpressionKind.DIVISION, new BinaryExpression($1, $3), @1.first_line, @1.first_column, @3.last_line, @3.last_column);
     }
+    | Expression '%' Expression
+    {
+        $$ = new Expression(ExpressionKind.MODULUS, new BinaryExpression($1, $3), @1.first_line, @1.first_column, @3.last_line, @3.last_column);
+    }
     | Expression '**' Expression
     {
         $$ = new Expression(ExpressionKind.POWER, new BinaryExpression($1, $3), @1.first_line, @1.first_column, @3.last_line, @3.last_column);
@@ -634,7 +635,6 @@ Expression
         let s = $1.slice(1, $1.length - 1).replaceAll("\\n", "\n");
         s = s.replaceAll("\\r", "\r");
         s = s.replaceAll("\\t", "\t");
-        console.log(s);
         $$ = new Expression(ExpressionKind.LITERAL, new LiteralExpression(new String(s)), @1.first_line, @1.first_column, @1.last_line, @1.last_column);
     }
     | TRUE

@@ -18,6 +18,7 @@ export enum ExpressionKind{
     ADDITION = '+',
     SUBSTRACTION = '-',
     MULTIPLICATION = '*',
+    MODULUS = '%',
     DIVISION = '/',
     POWER = '**',
     ASSIGNMENT = '=',
@@ -125,6 +126,7 @@ export class Expression {
             case ExpressionKind.SUBSTRACTION:
             case ExpressionKind.MULTIPLICATION:
             case ExpressionKind.DIVISION:
+            case ExpressionKind.MODULUS:
             case ExpressionKind.ASSIGNMENT:
             case ExpressionKind.POWER:
                 if(!(specification instanceof BinaryExpression)){

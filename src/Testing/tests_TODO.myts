@@ -885,3 +885,47 @@
     console.log(a ? "true" : "false");
     console.log(a);
 }
+
+//BUG: let array:number[] = []
+// from Stack overflow: JavaScript arrays aren't really arrays, they're JavaScript 
+// objects that have prototype methods that cause them to act like arrays. 
+// arr['one'] = 1 is valid JavaScript.
+{
+    let array:number[] = []
+    array[2.5] = 3;
+    console.log(array.length);//0
+    console.log(array);//[]
+    console.log(array[2.5]);//prints 3 because typescript is fucking retarded
+}
+
+//BUG: 
+// from Stack overflow: JavaScript arrays aren't really arrays, they're JavaScript 
+// objects that have prototype methods that cause them to act like arrays. 
+// arr['one'] = 1 is valid JavaScript.
+{
+    let array:number[] = []
+    array[2.5] = 3;
+    console.log(array.length);//0
+    console.log(array);//[]
+    console.log(array[2.5]);//prints 3 because typescript is fucking retarded
+}
+
+//BUG: ours just says out of bounds and throws error.
+//     Stupid typescript fills whatever it needs with nulls
+{
+    let array:number[] = []
+    array[10] = 3;
+    console.log(array.length);//0
+    console.log(array);//[null, null, null, null, null, null, null, null, null, 3]
+    console.log(array[10]);//prints 3 because typescript is fucking retarded
+}
+
+
+//BUG: Typescript doesnt fill the array unless you assign something to the outofbounds index
+{
+    let array:number[] = []
+    console.log(array[10]);
+    console.log(array.length);//0
+    console.log(array);//[]
+    console.log(array[30]);//prints 3 because typescript is fucking retarded
+}

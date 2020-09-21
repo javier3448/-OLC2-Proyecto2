@@ -192,8 +192,8 @@ export class Statement {
                 if(!(child instanceof Expression)){
                     throw new Error(`constructor de statement no valido para ${statementKind} y ${child}`);
                 }
+                break;
             default:
-                console.log(statementKind);
                 throw new Error(`Assertion Error: Construccion de Statement no implementado para el statmentKind: ${statementKind}`);
         }
 
