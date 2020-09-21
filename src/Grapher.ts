@@ -1,6 +1,6 @@
 import { digraph, Digraph, attribute, INode, toDot } from "ts-graphviz";
 import { Expression, ExpressionKind, LiteralExpression, IdentifierExpression, BinaryExpression, UnaryExpression, TernaryExpression, MemberAccessExpression, FunctionCallExpression, ObjectLiteralExpression, PropertyNode, ArrayLiteralExpression } from "./Ast/Expression";
-import { Statement, WhileStatement, Block, StatementKind, IfStatement, ForStatement, ForInStatement, ForOfStatement, SwitchStatement  } from "./Ast/Statement";
+import { Statement, WhileStatement, Block, StatementKind, IfStatement, ForStatement, ForInStatement, ForOfStatement, SwitchStatement, DoWhileStatement  } from "./Ast/Statement";
 import { AstNode } from "./Ast/AstNode";
 
 import { parser } from "./Runner/RunnerParser.js";
@@ -59,7 +59,7 @@ function graphTypeDefs(g:Digraph, typeDefs:TypeDef[]):INode{
 function graphTypeDef(g:Digraph, typeDef:TypeDef):INode{
 
     const result = g.createNode(`type_def${typeDef.astNode.getId()}`, {
-        [attribute.label]: `<<B>TypeDef</B><BR/>${typeDef.name}>`,
+        [attribute.label]: `TypeDef\n${typeDef.name}`,
         [attribute.shape]: 'box',
     });
 
@@ -274,7 +274,7 @@ export function graphExpression(g:Digraph, expr:Expression):INode{
         {
             const functionCallExpression = expr.specification as FunctionCallExpression;
             let nameNode:INode = g.createNode(`function_name${AstNode.getNextAstNodeId()}`, {
-                [attribute.label]: `<<B>Name</B><BR/>${functionCallExpression.name}>`,
+                [attribute.label]: `Name\n${functionCallExpression.name}>`,
                 [attribute.shape]: 'box',
             });
             let argsNode = graphExpressionList(g, functionCallExpression.functionArgs);
@@ -344,7 +344,7 @@ export function graphMemberAccess(g:Digraph, memberAccess:MemberAccess):INode{
             });
 
             let nameNode:INode = g.createNode(`function_name${AstNode.getNextAstNodeId()}`, {
-                [attribute.label]: `<<B>Name</B><BR/>${functionAccess.functionName}>`,
+                [attribute.label]: `Name\n${functionAccess.functionName}`,
                 [attribute.shape]: 'box',
             });
 
@@ -382,7 +382,7 @@ export function graphMemberAccess(g:Digraph, memberAccess:MemberAccess):INode{
             });
 
             let nameNode:INode = g.createNode(`member_access${AstNode.getNextAstNodeId()}`, {
-                [attribute.label]: `<<B>Name</B><BR/>${attributeAccess.name}>`,
+                [attribute.label]: `Name\n${attributeAccess.name}`,
                 [attribute.shape]: 'box',
             });
 
@@ -423,35 +423,35 @@ function expressionToLabel(expr:Expression):string{
         case ExpressionKind.GREATER_OR_EQUAL:
             return ">=";
         case ExpressionKind.EQUAL_EQUAL:
-            return "<<B>==</B>>";
+            return "==";
         case ExpressionKind.NOT_EQUAL:
-            return "<<B>!=</B>>";
+            return "!=";
         case ExpressionKind.OR:
-            return "<<B>OR</B>>"
+            return "OR"
         case ExpressionKind.AND:
-            return "<<B>AND</B>>"
+            return "AND"
 
         case ExpressionKind.ADDITION:
-            return "<<B>+</B>>";
+            return "+";
         case ExpressionKind.SUBSTRACTION:
-            return "<<B>-</B>>";
+            return "-";
         case ExpressionKind.MULTIPLICATION:
-            return "<<B>*</B>>";
+            return "*";
         case ExpressionKind.DIVISION:
-            return "<<B>/</B>>";
+            return "/";
         case ExpressionKind.ASSIGNMENT:
-            return "<Assignment>";
+            return "Assignment";
         case ExpressionKind.POWER:
-            return "<<B>**</B>>";
+            return "**";
 
         case ExpressionKind.UNARY_MINUS:
-            return "<<B>Unary<BR/>-</B>>";
+            return "Unary";
         case ExpressionKind.NEGATION:
-            return "<<B>NOT</B>>";
+            return "NOT";
         case ExpressionKind.POSTFIX_INC:
-            return "<<B>Post<BR/>++</B>>";
+            return "Post\n++";
         case ExpressionKind.POSTFIX_DEC:
-            return "<<B>Post<BR/>--</B>>";
+            return "Post\n--";
 
         case ExpressionKind.LITERAL:
         {
@@ -460,31 +460,31 @@ function expressionToLabel(expr:Expression):string{
             //litExpr.literal.constructor.name no funciono
             //
             if(litExpr.literal instanceof Boolean){
-                return `<<B>Boolean</B><BR/>${litExpr.literal}>`;
+                return `Boolean\n${litExpr.literal}`;
             }
             else if(litExpr.literal instanceof Number){
-                return `<<B>Number</B><BR/>${litExpr.literal}>`;
+                return `Number\n${litExpr.literal}`;
             }
             else if(litExpr.literal instanceof String){
-                return `<<B>String</B><BR/>${litExpr.literal}>`;
+                return `String\n${litExpr.literal}`;
             }
         }
         case ExpressionKind.OBJECT_LITERAL:
-            return `<<B>ObjectLiteral</B>>`;
+            return `ObjectLiteral`;
         case ExpressionKind.ARRAY_LITERAL:
-            return `<<B>ArrayLiteral</B>>`;
+            return `ArrayLiteral`;
 
         case ExpressionKind.IDENTIFIER:
-            return `<<B>Identifier</B><BR/>${(expr.specification as IdentifierExpression).name}>`;
+            return `Identifier\n${(expr.specification as IdentifierExpression).name}`;
 
         case ExpressionKind.FUNCTION_CALL:
-            return `<<B>FunctionCall</B>>`;
+            return `FunctionCall`;
 
         case ExpressionKind.MEMBER_ACCESS:
-            return "<<B>MemberAccessExpression</B>>";
+            return "MemberAccessExpression";
 
         case ExpressionKind.TERNARY:
-            return "<<B>.. ? .. : ..</B>>";
+            return ".. ? .. : ..";
         default:
             throw Error(`expressionToLabel no tiene implementacion para expression kind: ${expr.expressionKind}`)
     }
@@ -492,19 +492,19 @@ function expressionToLabel(expr:Expression):string{
 
 function myTypeNodeToLabel(myTypeNode:MyTypeNode){
     switch (myTypeNode.kind) {
-        case MyTypeNodeKind.BOOLEAN: return "<<B>Type</B><BR/>Boolean>"
+        case MyTypeNodeKind.BOOLEAN: return "Type\nBoolean"
         case MyTypeNodeKind.NUMBER:
-            return "<<B>Type</B><BR/>Number>"
+            return "Type\nNumber"
         case MyTypeNodeKind.STRING:
-            return "<<B>Type</B><BR/>String>"
+            return "Type\nString"
 
         case MyTypeNodeKind.CUSTOM:
-            return `<<B>Type</B><BR/>${(myTypeNode.spec as CustomTypeNode).name}>`
+            return `Type\n${(myTypeNode.spec as CustomTypeNode).name}`
 
         case MyTypeNodeKind.BOXY_ARRAY:
-            return `<<B>Type</B><BR/>Boxy Array>`;
+            return `Type\nBoxy Array`;
         case MyTypeNodeKind.GENERIC_ARRAY:
-            return `<<B>Type</B><BR/>Generic Array>`;
+            return `Type\nGeneric Array`;
 
         default:
             throw new Error(`myTypeNodeToLabel no implementado para myTypeNode: ${myTypeNode.kind}`);
@@ -557,7 +557,7 @@ export function graphDeclaration(g:Digraph, decl:Declaration):INode{
     });
 
     const identifierNode = g.createNode(`Identifier${AstNode.getNextAstNodeId()}`, {
-        [attribute.label]: "<<B>Id<BR/></B>" + decl.identifier + ">",
+        [attribute.label]: "Id\n" + decl.identifier,
         [attribute.shape]: 'box',
     });
     g.createEdge([result, identifierNode]);
@@ -633,6 +633,9 @@ export function graphStatement(g:Digraph, statement:Statement):INode{
             break;
         case StatementKind.WhileKind:
             result = graphWhileStatement(g, statement.child as WhileStatement);
+            break;
+        case StatementKind.DoWhileKind:
+            result = graphDoWhileStatement(g, statement.child as DoWhileStatement);
             break;
         case StatementKind.ForKind:
             result = graphForStatement(g, statement.child as ForStatement);
@@ -713,6 +716,22 @@ function graphWhileStatement(g:Digraph, whileStatement:WhileStatement):INode{
 
     const blockNode = graphStatements(g, whileStatement.statements);
     g.createEdge([result, blockNode]);
+
+    return result;
+}
+
+function graphDoWhileStatement(g:Digraph, doWhileStatement:DoWhileStatement):INode{
+    
+    const result = g.createNode(`do_while${AstNode.getNextAstNodeId()}`, {
+        [attribute.label]: "Do While",
+        [attribute.shape]: 'box',
+    });
+
+    const blockNode = graphStatements(g, doWhileStatement.statements);
+    g.createEdge([result, blockNode]);
+
+    const exprNode = graphExpression(g, doWhileStatement.expr);
+    g.createEdge([result, exprNode]);
 
     return result;
 }
@@ -806,7 +825,7 @@ function graphForInStatement(g:Digraph, forInStatement:ForInStatement):INode{
     });
     g.createEdge([result, variableNode]);
     let varName = g.createNode(`for_in_var_name${AstNode.getNextAstNodeId()}`, {
-        [attribute.label]: `<<B>Identifier</B><BR/>${forInStatement.variableId}>`,
+        [attribute.label]: `Identifier\n${forInStatement.variableId}`,
         [attribute.shape]: 'box',
     });
     g.createEdge([variableNode, varName]);
@@ -838,7 +857,7 @@ function graphForOfStatement(g:Digraph, forOfStatement:ForOfStatement):INode{
     });
     g.createEdge([result, variableNode]);
     let varName = g.createNode(`for_of_var_name${AstNode.getNextAstNodeId()}`, {
-        [attribute.label]: `<<B>Identifier</B><BR/>${forOfStatement.variableId}>`,
+        [attribute.label]: `Identifier\n${forOfStatement.variableId}>`,
         [attribute.shape]: 'box',
     });
     g.createEdge([variableNode, varName]);

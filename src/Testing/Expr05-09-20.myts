@@ -1,10 +1,9 @@
-
 let let1 = 1;
 let punteo = 0;
 
 Inicio();
 
- function  Inicio() {
+ function  Inicio():void {
     console.log("-----------------CALIFICACION-----------------");
     let let1 = 0;
     //Verificar ámbitos, se toma con prioridad la letiable local ante la global.
@@ -39,7 +38,7 @@ Inicio();
     console.log("punteo Final: "+punteo);
 }
 
- function  Declaracion(){
+ function  Declaracion():void{
     /*
         SALIDA ESPERADA:
             ========= Metodo Declaracion =========
@@ -74,7 +73,7 @@ Inicio();
     punteo = punteo + 5;
 }
 
- function  Ambitos2(){
+ function  Ambitos2():void{
     //debería lanzar un error, cualquiera
     //comentar luego de que lanze el error
     console.log("========= Error Ambitos ==============");
@@ -88,7 +87,7 @@ Inicio();
 
 }
 
- function  Aritmeticas(){
+ function  Aritmeticas():void{
     //suma de lets con caracteres
     /*
         SALIDA ESPERADA
@@ -138,7 +137,7 @@ Inicio();
     
 }
 
- function  operacionesBasicas(){
+ function  operacionesBasicas():void{
     console.log("Operaciones Aritmeticas 1: valor esperado:  \na)62   \nb)0   \nc)-19   \nd)256   \nresultados>");
     let a = (20-10+8/2*3+10-10-10+50);
     let b = (50/50*50+50-100+100-100);
@@ -174,7 +173,7 @@ Inicio();
 
 //FN5HU-3uykL
 
- function  logicas(){
+ function  logicas():void{
      console.log("==============logicas1=============");
     if (!!!!!!!!!!!!!!!!!!!!!!true){
         punteo = punteo + 1;
@@ -193,7 +192,7 @@ Inicio();
     logicas2();
 }
 
- function  logicas2(){
+ function  logicas2():void{
     let n0 = 16;
          console.log("==============logicas2=============");
 
@@ -220,7 +219,7 @@ Inicio();
             console.log("======================================");
 }
 
- function  Relacionales(){
+ function  Relacionales():void{
     let n0 = 34;
     let n1 = 16;
     
@@ -229,7 +228,7 @@ Inicio();
 }
 
 
- function  relaciones1(salida:number)
+ function  relaciones1(salida:number):void
 {
         console.log("==============relacionales1=============");
         let n0 = salida + 0.0;
@@ -262,7 +261,7 @@ Inicio();
         console.log("======================================");
 }
 
- function  relaciones2(n0:number){
+ function  relaciones2(n0:number):void{
             console.log("vas bien, animo :D");
             console.log("============Relacionales2=============");
 
@@ -296,7 +295,7 @@ Inicio();
         FactorialIterativo(7);
 }
 
-function  FactorialIterativo(n2:number){
+function  FactorialIterativo(n2:number):void{
                      console.log("==============for Calificar Ciclos=============");
 
     let numeroFactorial = n2;
@@ -309,7 +308,7 @@ function  FactorialIterativo(n2:number){
 
 }
 
- function  mostrarFactorial(n2:number){
+ function  mostrarFactorial(n2:number):void{
     let fact = 1;
     let str= "El factorial de: "+n2 +" = ";
     if (n2 !=0){
@@ -329,7 +328,7 @@ function  FactorialIterativo(n2:number){
 }
 
 
- function  figura1(n: number){
+ function  figura1(n: number):void{
     
     let letFigura = "";
     for (let i = -3*n/2; i <= n; i++) {
@@ -358,7 +357,7 @@ function  FactorialIterativo(n2:number){
     console.log("if la figura es un corazon +10 <3");
 }
 
- function  figura2(){
+ function  figura2():void{
     let letFigura = "";
      let c = "* ";
         let b = "  ";
@@ -429,7 +428,7 @@ function  FactorialIterativo(n2:number){
 
        }
 
- function  SentenciasAnidadas(){
+ function  SentenciasAnidadas():void{
     let numero1 = 0;
     do{
     switch(numero1){
@@ -450,7 +449,7 @@ function  FactorialIterativo(n2:number){
     }while(numero1 <5);
 }
 
- function  figura0(numero:number){
+ function  figura0(numero:number):void{
     let i = 0;
     while(i < numero){
         let j = 0;

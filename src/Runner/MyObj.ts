@@ -171,7 +171,7 @@ export class MyObj {
 
         switch (this.myType.kind) {
             case MyTypeKind.STRING:
-                return '"' + (this.value as String).toString() + '"';
+                return (this.value as String).toString();
             case MyTypeKind.NUMBER:
                 return (this.value as Number).toString();
             case MyTypeKind.BOOLEAN:

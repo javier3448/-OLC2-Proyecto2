@@ -8,6 +8,7 @@ export enum StatementKind{
     DeclarationKind = 'Declaration',
 
     WhileKind = 'WhileKind',
+    DoWhileKind = 'DoWhileKind',
     IfKind = 'IfKind',
     SwitchKind = 'SwitchKind',
     ForKind = 'ForKind',
@@ -80,6 +81,10 @@ export class WhileStatement {
     constructor(public expr:Expression, public statements:Array<Statement>){  }
 }
 
+export class DoWhileStatement {
+    constructor(public statements:Array<Statement>, public expr:Expression){  }
+}
+
 export class ForStatement {
     constructor(
         //If inicialExpression is Statement it can only be a declaration statement
@@ -115,9 +120,9 @@ export class Statement {
     //In Rust this would be an enum Statement, with: if, ifelse, block, assignment ... and other variants
     //child expression para ReturnWithValueKind
     //child null para todos los otros jumpers 
-    public child:(Expression | Declaration | Block | WhileStatement | ForStatement | ForOfStatement | ForInStatement | SwitchStatement | null );
+    public child:(Expression | Declaration | Block | WhileStatement | DoWhileStatement | ForStatement | ForOfStatement | ForInStatement | SwitchStatement | null );
 
-    constructor(statementKind:StatementKind, child:(Expression | Declaration | Block | WhileStatement | ForStatement | ForOfStatement | ForInStatement | SwitchStatement | null ),
+    constructor(statementKind:StatementKind, child:(Expression | Declaration | Block | WhileStatement | DoWhileStatement | ForStatement | ForOfStatement | ForInStatement | SwitchStatement | null ),
                 firstLine:number, firstColumn:number, lastLine:number, lastColumn:number){
 
         this.astNode = new AstNode(firstLine, firstColumn, lastLine, lastColumn);
@@ -146,6 +151,11 @@ export class Statement {
                 break;
             case StatementKind.WhileKind:
                 if(!(child instanceof WhileStatement)){
+                    throw new Error(`constructor de statement no valido para ${statementKind} y ${child}`);
+                }
+                break;
+            case StatementKind.DoWhileKind:
+                if(!(child instanceof DoWhileStatement)){
                     throw new Error(`constructor de statement no valido para ${statementKind} y ${child}`);
                 }
                 break;

@@ -6,7 +6,7 @@ import { parser } from "./RunnerParser.js";
 import { RuntimeInterface, TsEntry } from "../app/app.component";
 import { Env, Scope } from "./Environment";
 
-import { Statement, StatementKind, WhileStatement, Block, IfStatement, ForStatement, ForInStatement, ForOfStatement, SwitchStatement } from "../Ast/Statement";
+import { Statement, StatementKind, WhileStatement, Block, IfStatement, ForStatement, ForInStatement, ForOfStatement, SwitchStatement, DoWhileStatement} from "../Ast/Statement";
 
 import { MyObj, CustomObj, compareMyTypes, MyArray } from "./MyObj";
 import { MyType, MyTypeKind, TypeSignature } from "./MyType";
@@ -255,6 +255,10 @@ export function runStatement(statement:Statement):(Jumper | null){
 
             case StatementKind.WhileKind:
                 return runWhile(child as WhileStatement);
+                break;
+
+            case StatementKind.DoWhileKind:
+                return runDoWhile(child as DoWhileStatement);
                 break;
 
             case StatementKind.ForKind:
@@ -886,6 +890,54 @@ export function runWhile(whileStatement:WhileStatement):(Jumper | null){
         }
         Env.popScope();
     }
+    return null;
+}
+
+export function runDoWhile(doWhileStatement:DoWhileStatement):(Jumper | null){
+    while(true){
+
+        Env.pushScope();
+        for (const statement of doWhileStatement.statements) {
+            let statementResult = runStatement(statement);
+
+            if(statementResult === null){
+                // We just go to the next statement because the current statement didnt
+                // return a jumper
+                continue;
+            }
+            else if(statementResult.kind === JumperKind.CONTINUE){
+                // We break out of the foreach statements but not the while(true)
+                // This way we dont run the statements after continue; and we go to the
+                // next iteration of the while
+                break;
+            }
+            else if(statementResult.kind === JumperKind.BREAK){
+                // We must exit out of the loop and return no Jumper because we
+                // 'consumed' the break jumper
+                Env.popScope();
+                return null;
+            }
+            else if(statementResult.kind === JumperKind.RETURN ||
+                    statementResult.kind === JumperKind.RETURN_VALUE){
+                // We must exit out of the loop and return a Jumper because we
+                // a while cant 'consume' a return jumper
+                Env.popScope();
+                return statementResult;
+            }
+            else{//a sneaky assertion just in case
+                throw new Error(`runWhile no implentado para resultado de bloque: ${statementResult.kind}`);
+            }
+        }
+        Env.popScope();
+
+        //runExpression can safetly throw a myError because we dont have any scopes pending
+        //i.e. we havent pushed a scope yet
+        let exprResult = runExpression(doWhileStatement.expr);
+        if(!exprResult.getMyObj().getTruthy()){
+            break;
+        }
+    }
+    return null;
 }
 
 export function runIfStatment(ifStatement:IfStatement):(Jumper | null){
@@ -1013,6 +1065,8 @@ export function runFor(forStatement:ForStatement):(Jumper | null){
             throw error;
         }
     }
+    return null;//I know its unreachable, but just in case. Becuase stupid TypeScript
+                //doesnt complain if not every path in the function return a value
 }
 
 export function runForIn(forInStatement:ForInStatement):(Jumper | null){
@@ -1077,6 +1131,7 @@ export function runForIn(forInStatement:ForInStatement):(Jumper | null){
         Env.popScope();
         Env.popScope();
     }
+    return null;
 }
 
 export function runForOf(forOfStatement:ForOfStatement):(Jumper | null){
@@ -1145,6 +1200,7 @@ export function runForOf(forOfStatement:ForOfStatement):(Jumper | null){
         Env.popScope();
         Env.popScope();
     }
+    return null;
 }
 
 export function runSwitch(switchStatement:SwitchStatement):(Jumper | null){
@@ -1207,4 +1263,5 @@ export function runSwitch(switchStatement:SwitchStatement):(Jumper | null){
         }
     }
     Env.popScope();
+    return null;
 }

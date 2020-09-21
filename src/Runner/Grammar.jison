@@ -5,9 +5,10 @@
     PropertyNode, ObjectLiteralExpression, ArrayLiteralExpression } = require('../Ast/Expression');
     const { MemberAccess, AccessKind, FunctionAccess, IndexAccess, AttributeAccess } = require('../Ast/MemberAccess');
     const { Statement, StatementKind, Block, 
-            WhileStatement, IfStatement, ForStatement, 
-            ForOfStatement, ForInStatement, SwitchStatement,
-            SwitchCase, SwitchDefault, SwitchInstructions} = require('../Ast/Statement');
+            WhileStatement, DoWhileStatement, IfStatement, 
+            ForStatement, ForOfStatement, ForInStatement, 
+            SwitchStatement, SwitchCase, SwitchDefault, 
+            SwitchInstructions } = require('../Ast/Statement');
     const { Assignment } = require('../Ast/Assignment');
     const { Declaration } = require('../Ast/Declaration');
     const { MyTypeNode, MyTypeNodeKind } = require('../Ast/MyTypeNode');
@@ -64,10 +65,10 @@
 "--"                          return '--'
 "+"                           return '+'
 "-"                           return '-'
+"**"                          return '**'
 "*"                           return '*'
 "/"                           return '/'
 "%"                           return '%'
-"**"                          return '**'
 "NOT"                         return 'NOT'
 "("                           return '('
 ")"                           return ')'
@@ -98,6 +99,7 @@
 ([a-zA-Z_])[a-zA-Z0-9_ñÑ]*    return 'IDENTIFIER'
 //TODO: mejorar string, esta regex no acepta caracteres especiales como \n \t etc. pero si acepta saltos de linea y todo eso
 (\"[^"]*\")                   return 'STRING'
+(\'[^']*\')                    return 'STRING'
 
 /lex
 
@@ -320,6 +322,10 @@ Statement
     | WHILE '(' Expression ')' '{' StatementList_ '}'
     {
         $$ = new Statement(StatementKind.WhileKind, new WhileStatement($3, $6), @1.first_line, @1.first_column, @6.last_line, @6.last_column);
+    }
+    | DO '{' StatementList_ '}' WHILE '(' Expression ')' ';' 
+    {
+        $$ = new Statement(StatementKind.DoWhileKind, new DoWhileStatement($3, $7), @1.first_line, @1.first_column, @6.last_line, @6.last_column);
     }
     | IfStatement
     {
@@ -623,7 +629,13 @@ Expression
     }
     | STRING
     {
-        $$ = new Expression(ExpressionKind.LITERAL, new LiteralExpression(new String($1.slice(1, $1.length - 1))), @1.first_line, @1.first_column, @1.last_line, @1.last_column);
+        //TERRIBLE PERFORMANCE:
+        //The worst performance ever. You really should be ashamed of yourself :(
+        let s = $1.slice(1, $1.length - 1).replaceAll("\\n", "\n");
+        s = s.replaceAll("\\r", "\r");
+        s = s.replaceAll("\\t", "\t");
+        console.log(s);
+        $$ = new Expression(ExpressionKind.LITERAL, new LiteralExpression(new String(s)), @1.first_line, @1.first_column, @1.last_line, @1.last_column);
     }
     | TRUE
     {
