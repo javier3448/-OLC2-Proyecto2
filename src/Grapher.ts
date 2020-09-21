@@ -902,6 +902,7 @@ function graphSwitch(g:Digraph, switchStatement:SwitchStatement):INode{
         if(caseIndex < cases.length && 
             cases[caseIndex].nextStatement <= stmtIndex){
 
+
             const caseNode = g.createNode(`case_node${AstNode.getNextAstNodeId()}`, {
                 [attribute.label]: "case",
                 [attribute.shape]: 'box',
