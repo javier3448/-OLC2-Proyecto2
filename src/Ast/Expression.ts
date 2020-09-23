@@ -106,6 +106,11 @@ export class Expression {
                            IdentifierExpression | LiteralExpression | MemberAccessExpression | 
                            ObjectLiteralExpression | ArrayLiteralExpression);
 
+
+    //Huge bodge. 
+    //its only useful when this Expression is being in a translation AST
+    public hasParenthesis: boolean;
+
     constructor(expressionKind:ExpressionKind, specification:(UnaryExpression | BinaryExpression | TernaryExpression | IdentifierExpression | LiteralExpression | MemberAccessExpression | ObjectLiteralExpression | ArrayLiteralExpression),
                 firstLine:number, firstColumn:number, lastLine:number, lastColumn:number){
 
@@ -187,5 +192,6 @@ export class Expression {
 
         this.expressionKind = expressionKind;
         this.specification = specification;
+        this.hasParenthesis = false;
     }
 }

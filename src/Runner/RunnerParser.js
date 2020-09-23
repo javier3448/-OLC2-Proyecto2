@@ -97,7 +97,7 @@ case 2: case 10: case 16: case 24: case 38: case 40: case 41: case 42: case 53: 
 break;
 case 3:
 
-        this.$ = new GlobalInstructions();
+        this.$ = new GlobalInstructionsRunner();
     
 break;
 case 4:
@@ -117,19 +117,19 @@ case 6:
 break;
 case 7:
 
-        this.$ = new GlobalInstructions();
+        this.$ = new GlobalInstructionsRunner();
         this.$.addStatement($$[$0]);
     
 break;
 case 8:
 
-        this.$ = new GlobalInstructions();
+        this.$ = new GlobalInstructionsRunner();
         this.$.addTypeDef($$[$0]);
     
 break;
 case 9:
 
-        this.$ = new GlobalInstructions();
+        this.$ = new GlobalInstructionsRunner();
         this.$.addFunctionDef($$[$0]);
     
 break;
@@ -735,7 +735,7 @@ parse: function parse(input) {
     const { Assignment } = require('../Ast/Assignment');
     const { Declaration } = require('../Ast/Declaration');
     const { MyTypeNode, MyTypeNodeKind } = require('../Ast/MyTypeNode');
-    const { GlobalInstructions } = require('../Ast/GlobalInstructions')
+    const { GlobalInstructionsRunner } = require('../Ast/GlobalInstructionsRunner')
     const { TypeDef, AttributeNode } = require('../Ast/TypeDef')
     const { FunctionDef, ParamNode } = require('../Ast/FunctionDef')
     //const {Literal} = require('../Expression/Literal');

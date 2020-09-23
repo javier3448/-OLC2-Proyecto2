@@ -50,7 +50,7 @@ export class MemberAccess {
                     throw new Error(`Constructor MemberAccess: accessKind: <${accessKind}> solo puede tener access con tipo AttributeAccess y no: <${access}>`);
                 }
                 break;
-        
+
             default:
                 throw new Error(`Constructor de member access no implementado para el accessKind: <${accessKind}>`);
         }

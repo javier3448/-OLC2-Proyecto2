@@ -12,7 +12,7 @@
     const { Assignment } = require('../Ast/Assignment');
     const { Declaration } = require('../Ast/Declaration');
     const { MyTypeNode, MyTypeNodeKind } = require('../Ast/MyTypeNode');
-    const { GlobalInstructions } = require('../Ast/GlobalInstructions')
+    const { GlobalInstructionsRunner } = require('../Ast/GlobalInstructionsRunner')
     const { TypeDef, AttributeNode } = require('../Ast/TypeDef')
     const { FunctionDef, ParamNode } = require('../Ast/FunctionDef')
     //const {Literal} = require('../Expression/Literal');
@@ -137,7 +137,7 @@ GlobalInstructions_
     }
     | /*empty*/
     {
-        $$ = new GlobalInstructions();
+        $$ = new GlobalInstructionsRunner();
     }
 ;
 
@@ -158,17 +158,17 @@ GlobalInstructions
     }
     | Statement
     {
-        $$ = new GlobalInstructions();
+        $$ = new GlobalInstructionsRunner();
         $$.addStatement($1);
     }
     | TypeDef
     {
-        $$ = new GlobalInstructions();
+        $$ = new GlobalInstructionsRunner();
         $$.addTypeDef($1);
     }
     | FunctionDef
     {
-        $$ = new GlobalInstructions();
+        $$ = new GlobalInstructionsRunner();
         $$.addFunctionDef($1);
     }
 ;

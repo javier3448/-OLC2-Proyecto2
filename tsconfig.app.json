@@ -16,7 +16,8 @@
     "src/Ast/Declaration.ts",
     "src/Ast/AstNode.ts",
     "src/Ast/MyTypeNode.ts",
-    "src/Ast/GlobalInstructions.ts",
+    "src/Ast/GlobalInstructionsRunner.ts",
+    "src/Ast/GlobalInstructionsTranslator.ts",
     "src/polyfills.ts",
   ],
   "include": [

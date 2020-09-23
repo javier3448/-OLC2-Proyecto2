@@ -22,11 +22,12 @@ export class FunctionDef {
     //Common AST attributes
     public astNode:AstNode;
 
-    name:string;
-    params:ParamNode[];
+    public name:string;
+    public params:ParamNode[];
     //IF NULL IT MEANS IT RETURN VOID
-    returnType:(MyTypeNode | null);
-    statements:Statement[];
+    public returnType:(MyTypeNode | null);
+
+    public statements:Statement[];
 
     constructor(name:string, params:ParamNode[], returnType:MyTypeNode, statements:Statement[],
                 firstLine:number, firstColumn:number, lastLine:number, lastColumn:number){

@@ -17,10 +17,9 @@ import { Expression, ExpressionKind, FunctionCallExpression, LiteralExpression, 
 import { Declaration } from '../Ast/Declaration';
 import { AccessKind, AttributeAccess, FunctionAccess, IndexAccess } from 'src/Ast/MemberAccess';
 import { ArrayTypeNode, CustomTypeNode, MyTypeNode, MyTypeNodeKind } from 'src/Ast/MyTypeNode';
-import { GlobalInstructions } from 'src/Ast/GlobalInstructions';
+import { GlobalInstructionsRunner } from 'src/Ast/GlobalInstructionsRunner';
 import { TypeDef, AttributeNode } from "../Ast/TypeDef";
 import { FunctionDef, ParamNode } from "../Ast/FunctionDef";
-import { ɵSWITCH_COMPILE_NGMODULE__POST_R3__ } from '@angular/core';
 
 
 // REGION: IO functions
@@ -59,10 +58,11 @@ export function graficar_ts(){
 
 export function resetRuntimeInterface(){
     runtimeInterface.myConsole = "";
+    runtimeInterface.tsDataSet = [];
 }
 // END: IO functions
 
-export function test(source:string, _runtimeInterface:RuntimeInterface):void{
+export function testRun(source:string, _runtimeInterface:RuntimeInterface):void{
 
     //varciar todas las 'interfaces' necesarias de runtimeInterface
     runtimeInterface = _runtimeInterface;
@@ -71,12 +71,12 @@ export function test(source:string, _runtimeInterface:RuntimeInterface):void{
     Env.initEnvironment();
 
     // we start walking that damn AST for realz here
-    let root =  parser.parse(source) as GlobalInstructions;
+    let root =  parser.parse(source) as GlobalInstructionsRunner;
 
     runGlobalInstructions(root);
 }
 
-export function runGlobalInstructions(globalInstructions:GlobalInstructions):void{
+export function runGlobalInstructions(globalInstructions:GlobalInstructionsRunner):void{
 
     for (const typeDef of globalInstructions.typeDefs) {
         try {

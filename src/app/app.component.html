@@ -333,12 +333,11 @@
         ></ngx-codemirror>
     </td>
     <td colspan="2" style="width: 50%">
-        <ngx-codemirror #textBoxJs [(ngModel)]="runtimeInterface.myConsole"
+        <ngx-codemirror #textBoxJs [(ngModel)]="runtimeInterface.translation"
             [options]="{
-                lineNumbers: false,
+                lineNumbers: true,
                 theme: 'material',
-                mode: 'null',
-                readOnly: 'true'
+                mode: 'javascript'
             }"
         ></ngx-codemirror>
     </td>
@@ -346,8 +345,18 @@
   <tr style>
     <td colspan="4">
         <mat-tab-group>
+          <mat-tab label="Consola">
+            <ngx-codemirror #textBoxJs [(ngModel)]="runtimeInterface.myConsole"
+                [options]="{
+                    lineNumbers: false,
+                    theme: 'material',
+                    mode: 'null',
+                    readOnly: 'true'
+                }"
+            ></ngx-codemirror>
+          </mat-tab>
           <mat-tab label="AST">
-            <ngx-codemirror #textBoxJs [(ngModel)]="runtimeInterface.translation"
+            <ngx-codemirror #textBoxJs [(ngModel)]="runtimeInterface.dotSource"
                 [options]="{
                     lineNumbers: true,
                     theme: 'material',
@@ -355,7 +364,7 @@
                 }"
             ></ngx-codemirror>
           </mat-tab>
-          <mat-tab label="Second">
+          <mat-tab label="Tabla de simbolos">
             <table class="table">
                 <thead>
                     <tr align="center">

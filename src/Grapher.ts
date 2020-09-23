@@ -8,11 +8,11 @@ import { Declaration } from './Ast/Declaration';
 import { Assignment } from './Ast/Assignment';
 import { ArrayTypeNode, CustomTypeNode, MyTypeNode, MyTypeNodeKind } from './Ast/MyTypeNode';
 import { MemberAccess, AccessKind, FunctionAccess, IndexAccess, AttributeAccess } from './Ast/MemberAccess';
-import { GlobalInstructions } from './Ast/GlobalInstructions';
+import { GlobalInstructionsRunner } from './Ast/GlobalInstructionsRunner';
 import { AttributeNode, TypeDef } from './Ast/TypeDef';
 import { FunctionDef, ParamNode } from './Ast/FunctionDef';
 
-export function test(source:String):string{
+export function testGraph(source:String):string{
     let root =  parser.parse(source);
     const g = digraph('G');
 
@@ -23,7 +23,7 @@ export function test(source:String):string{
     return dot;
 }
 
-function graphGlobalInstructions(g:Digraph, globalInstructions:GlobalInstructions):INode{
+function graphGlobalInstructions(g:Digraph, globalInstructions:GlobalInstructionsRunner):INode{
 
     let result = g.createNode(`globalInstructions${globalInstructions.astNode.getId()}`, {
         [attribute.label]: 'Global',
@@ -926,7 +926,6 @@ function graphSwitch(g:Digraph, switchStatement:SwitchStatement):INode{
             g.createEdge([result, defaultNode]);
             defaultIndex++;
         }
-        //this might cause a runtime exception????
         else{
             const defaultNode = graphStatement(g, stmts[stmtIndex]);
             g.createEdge([result, defaultNode]);
