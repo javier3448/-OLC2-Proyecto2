@@ -3,7 +3,8 @@ import { Expression, ExpressionKind, LiteralExpression, IdentifierExpression, Bi
 import { Statement, WhileStatement, Block, StatementKind, IfStatement, ForStatement, ForInStatement, ForOfStatement, SwitchStatement, DoWhileStatement  } from "./Ast/Statement";
 import { AstNode } from "./Ast/AstNode";
 
-import { parser } from "./Runner/RunnerParser.js";
+import { parser as parserTranslator } from "./Translator/TranslatorParser.js";
+import { parser as parserRunner } from "./Runner/RunnerParser.js";
 import { Declaration } from './Ast/Declaration';
 import { Assignment } from './Ast/Assignment';
 import { ArrayTypeNode, CustomTypeNode, MyTypeNode, MyTypeNodeKind } from './Ast/MyTypeNode';
@@ -11,9 +12,20 @@ import { MemberAccess, AccessKind, FunctionAccess, IndexAccess, AttributeAccess 
 import { GlobalInstructionsRunner } from './Ast/GlobalInstructionsRunner';
 import { AttributeNode, TypeDef } from './Ast/TypeDef';
 import { FunctionDef, ParamNode } from './Ast/FunctionDef';
+import { GlobalInstructionsTranslator } from './Ast/GlobalInstructionsTranslator';
+import { FunctionDefTranslator } from './Ast/FunctionDefTranslator';
 
-export function testGraph(source:String):string{
-    let root =  parser.parse(source);
+export function testTranslatorGraph(root:GlobalInstructionsTranslator):string{
+    const g = digraph('G');
+
+    graphGlobalInstructionsTranslator(g, root);
+
+    let dot = toDot(g);
+
+    return dot;
+}
+
+export function testRunnerGraph(root:GlobalInstructionsRunner):string{
     const g = digraph('G');
 
     graphGlobalInstructions(g, root);
@@ -23,7 +35,7 @@ export function testGraph(source:String):string{
     return dot;
 }
 
-function graphGlobalInstructions(g:Digraph, globalInstructions:GlobalInstructionsRunner):INode{
+export function graphGlobalInstructions(g:Digraph, globalInstructions:GlobalInstructionsRunner):INode{
 
     let result = g.createNode(`globalInstructions${globalInstructions.astNode.getId()}`, {
         [attribute.label]: 'Global',
@@ -37,6 +49,30 @@ function graphGlobalInstructions(g:Digraph, globalInstructions:GlobalInstruction
     g.createEdge([result, typeDefsNode]);
     g.createEdge([result, functionDefsNode]);
     g.createEdge([result, stmtsNode]);
+
+    return result;
+}
+
+export function graphGlobalInstructionsTranslator(g:Digraph, globalInstructions:GlobalInstructionsTranslator):INode{
+
+    let result = g.createNode(`globalInstructions${globalInstructions.astNode.getId()}`, {
+        [attribute.label]: 'Global',
+        [attribute.shape]: 'box',
+    });
+
+    for (const instruction of globalInstructions.instructions) {
+        let instructionNode:INode;
+        if(instruction instanceof FunctionDefTranslator){
+            instructionNode = graphFunctionDefTranslator(g, instruction);
+        }
+        else if(instruction instanceof TypeDef){
+            instructionNode = graphTypeDef(g, instruction);
+        }
+        else{//must be statement
+            instructionNode = graphStatement(g, instruction);
+        }
+        g.createEdge([result, instructionNode]);
+    }
 
     return result;
 }
@@ -106,16 +142,30 @@ export function graphFunctionDefs(g:Digraph, functionDefs:FunctionDef[]):INode{
     return result;
 }
 
+export function graphFunctionDefsTranslator(g:Digraph, functionDefsTranslator:FunctionDefTranslator[]):INode{
+    
+    let result = g.createNode(`function_defs${AstNode.getNextAstNodeId()}`, {
+        // BAD PERFORMANCE: we do this switch two times because of binExpressionToLable
+        [attribute.label]: 'Function defs',
+        [attribute.shape]: 'box',
+    });
+
+    for (const functionDefTranslator of functionDefsTranslator) {
+        let child = graphFunctionDefTranslator(g, functionDefTranslator);
+        g.createEdge([result, child]);
+    }
+
+    return result;
+}
+
 export function graphFunctionDef(g:Digraph, functionDef:FunctionDef):INode{
 
     let result = g.createNode(`function_def${functionDef.astNode.getId()}`, {
-        // BAD PERFORMANCE: we do this switch two times because of binExpressionToLable
         [attribute.label]: 'Function Def',
         [attribute.shape]: 'box',
     });
 
     let nameNode = g.createNode(`function_def_name${AstNode.getNextAstNodeId()}`, {
-        // BAD PERFORMANCE: we do this switch two times because of binExpressionToLable
         [attribute.label]: `${functionDef.name}`,
         [attribute.shape]: 'box',
     });
@@ -136,6 +186,44 @@ export function graphFunctionDef(g:Digraph, functionDef:FunctionDef):INode{
         let retTypeNode = graphMyTypeNode(g, functionDef.returnType);
         g.createEdge([result, retTypeNode]);
     }
+
+    let statementsNode = graphStatements(g, functionDef.statements);
+    g.createEdge([result, statementsNode]);
+
+    return result;
+}
+
+export function graphFunctionDefTranslator(g:Digraph, functionDef:FunctionDefTranslator):INode{
+
+    let result = g.createNode(`function_def${functionDef.astNode.getId()}`, {
+        [attribute.label]: 'Function Def',
+        [attribute.shape]: 'box',
+    });
+
+    let nameNode = g.createNode(`function_def_name${AstNode.getNextAstNodeId()}`, {
+        [attribute.label]: `${functionDef.name}`,
+        [attribute.shape]: 'box',
+    });
+    g.createEdge([result, nameNode]);
+
+
+    let paramListNode = graphParams(g, functionDef.params);
+    g.createEdge([result, paramListNode]);
+
+    if(functionDef.returnType == null){
+        let nameNode = g.createNode(`ret_type${AstNode.getNextAstNodeId()}`, {
+            // BAD PERFORMANCE: we do this switch two times because of binExpressionToLable
+            [attribute.label]: `void`,
+            [attribute.shape]: 'box',
+        });
+        g.createEdge([result, nameNode]);
+    }else{
+        let retTypeNode = graphMyTypeNode(g, functionDef.returnType);
+        g.createEdge([result, retTypeNode]);
+    }
+
+    let functionDefsNode = graphFunctionDefsTranslator(g, functionDef.functionDefsTranslator);
+    g.createEdge([result, functionDefsNode]);
 
     let statementsNode = graphStatements(g, functionDef.statements);
     g.createEdge([result, statementsNode]);
@@ -182,9 +270,6 @@ export function graphParam(g:Digraph, param:ParamNode):INode{
 //g: SubGraph donde vamos a ir metiendo todos los nodos
 export function graphExpression(g:Digraph, expr:Expression):INode{
 
-    if(expr == null){
-        console.log("null");
-    }
     let result = g.createNode(`expr${expr.astNode.getId()}`, {
         // BAD PERFORMANCE: we do this switch two times because of binExpressionToLable
         [attribute.label]: expressionToLabel(expr),
@@ -278,7 +363,7 @@ export function graphExpression(g:Digraph, expr:Expression):INode{
         {
             const functionCallExpression = expr.specification as FunctionCallExpression;
             let nameNode:INode = g.createNode(`function_name${AstNode.getNextAstNodeId()}`, {
-                [attribute.label]: `Name\n${functionCallExpression.name}>`,
+                [attribute.label]: `Name\n${functionCallExpression.name}`,
                 [attribute.shape]: 'box',
             });
             let argsNode = graphExpressionList(g, functionCallExpression.functionArgs);

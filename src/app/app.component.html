@@ -355,8 +355,37 @@
                 }"
             ></ngx-codemirror>
           </mat-tab>
-          <mat-tab label="AST">
-            <ngx-codemirror #textBoxJs [(ngModel)]="runtimeInterface.dotSource"
+          <mat-tab label="Errores">
+            <table class="table">
+                <thead>
+                    <tr align="center">
+                        <th scope="col">Tipo</th>
+                        <th scope="col">Descripcion</th>
+                        <th scope="col">Linea</th>
+                        <th scope="col">Columna</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngFor="let entry of runtimeInterface.errorDataSet;">
+                        <td align="center">{{entry.kind}}</td>
+                        <td align="left">{{entry.message}}</td>
+                        <td align="center">{{entry.firstLine}}</td>
+                        <td align="center">{{entry.firstColumn}}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </mat-tab>
+          <mat-tab label="AST Traduccion">
+            <ngx-codemirror #textBoxJs [(ngModel)]="runtimeInterface.dotSourceTranslator"
+                [options]="{
+                    lineNumbers: true,
+                    theme: 'material',
+                    mode: 'javascript'
+                }"
+            ></ngx-codemirror>
+          </mat-tab>
+          <mat-tab label="AST Ejecucion">
+            <ngx-codemirror #textBoxJs [(ngModel)]="runtimeInterface.dotSourceRunner"
                 [options]="{
                     lineNumbers: true,
                     theme: 'material',

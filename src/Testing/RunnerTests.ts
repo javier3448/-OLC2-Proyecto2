@@ -116,7 +116,6 @@ console.log(a);`
 function hello(a:number):void{
   console.log("Hello " + a);
 }
-
 hello(10);
 `
     }
@@ -1347,7 +1346,6 @@ console.log(\`a + b = \${a + b}\`);
     `;
     }
 
-    
     //PASS 100%
     {
     let testString = `
@@ -1424,7 +1422,6 @@ console.log(\`a + b = \${a + b}\`);
         }
     }
     
-    
     function multiplicar(matrix1 : number[][], matrix2 : number[][], matrixR : number[][]): void{
         for(let i = min; i < max; i++){
             for(let j = min; j < max; j++){
@@ -1434,7 +1431,7 @@ console.log(\`a + b = \${a + b}\`);
             }
         }
     }
-    
+
     function transpuesta(matrix1: number[][]): void{
         const matrixAux : number[][] = [];
         for(let i = 0; i < max; i++){
@@ -1449,7 +1446,7 @@ console.log(\`a + b = \${a + b}\`);
             }
         }
     }
-    
+
     function minValue(matrix1 : number[][]) : number{   
     
         let iAux = 0;

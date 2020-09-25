@@ -161,7 +161,19 @@ export module Env{
         // At this point our function signature is a non_native kind
         // [Think]: goto would help avoid missing pops here... just saying
         let oldCurrent = Env.current;
-        Env.current = global;
+        //CHAPUZ MAXIMO
+        //We solved the nested functions problem by not unrolling all the way back to global when 
+        //we call a function that is inside anotherone. :(
+        //we know a function was defined inside another because it begins with '__'
+        //The part that made me give up is that we have to translate first so the info of who is the
+        //parent of the function is lost. unless we encode it in the function name which would be
+        //hard and stupid.
+        //And there is no time left
+        //BUG: if we call a nested function it can access variables that were declared by whoever
+        //called the parent function
+        if(!id.startsWith("__")){
+            Env.current = global;
+        }
         Env.pushScope();
 
         // Should the arrays indices be passed by reference too?? for now they are

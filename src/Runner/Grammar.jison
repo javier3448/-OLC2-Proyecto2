@@ -15,6 +15,7 @@
     const { GlobalInstructionsRunner } = require('../Ast/GlobalInstructionsRunner')
     const { TypeDef, AttributeNode } = require('../Ast/TypeDef')
     const { FunctionDef, ParamNode } = require('../Ast/FunctionDef')
+    const { MyError } = require('../Runner/MyError')
     //const {Literal} = require('../Expression/Literal');
 %}
 

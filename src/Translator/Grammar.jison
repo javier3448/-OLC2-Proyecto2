@@ -14,8 +14,12 @@
     const { MyTypeNode, MyTypeNodeKind } = require('../Ast/MyTypeNode');
     const { GlobalInstructionsTranslator } = require('../Ast/GlobalInstructionsTranslator')
     const { TypeDef, AttributeNode } = require('../Ast/TypeDef')
-    const { FunctionDef, ParamNode } = require('../Ast/FunctionDef')
+    const { FunctionDefTranslator, ParamNode } = require('../Ast/FunctionDefTranslator')
+    const { MyError, MyErrorKind } = require('../Runner/MyError')
     //const {Literal} = require('../Expression/Literal');
+
+
+    let errors = [];
 %}
 
 %lex
@@ -101,6 +105,14 @@
 (\"[^"]*\")                   return 'STRING'
 (\'[^']*\')                   return 'STRING'
 
+.	{ 
+        let lexicError = new MyError('Este es un error léxico: ' + yytext + ', en la linea: ' + yylloc.first_line + ', en la columna: ' + yylloc.first_column); 
+        lexicError.firstLine = yylloc.first_line;
+        lexicError.firstColumn = yylloc.first_column;
+        lexicError.kind = MyErrorKind.LEXICAL;
+        errors.push(lexicError);
+        console.log(lexicError);
+    }
 /lex
 
 %right '='
@@ -126,6 +138,8 @@ S
     {
         $$ = $1;
         $$.setAstNode(@1.first_line, @1.first_column, @2.last_line, @2.last_column);
+        //chapuz
+        $$.syntaxErrors = errors;
         return $$;
     }
 ;
@@ -137,7 +151,7 @@ GlobalInstructions_
     }
     | /*empty*/
     {
-        $$ = new GlobalInstructions();
+        $$ = new GlobalInstructionsTranslator();
     }
 ;
 
@@ -146,30 +160,38 @@ GlobalInstructions_
 GlobalInstructions
     : GlobalInstructions Statement
     {
-        $$.addStatement($2);
+        $$ = $1;
+        //we check if statement is an error
+        if($2 !== null){
+            $$.instructions.push($2);
+        }
     }
     | GlobalInstructions TypeDef
     {
-        $$.addTypeDef($2);
+        $$ = $1;
+        $$.instructions.push($2);
     }
     | GlobalInstructions FunctionDef
     {
-        $$.addFunctionDef($2);
+        $$ = $1;
+        $$.instructions.push($2);
     }
     | Statement
     {
-        $$ = new GlobalInstructions();
-        $$.addStatement($1);
+        $$ = new GlobalInstructionsTranslator();
+        if($1 !== null){
+            $$.instructions.push($1);
+        }
     }
     | TypeDef
     {
-        $$ = new GlobalInstructions();
-        $$.addTypeDef($1);
+        $$ = new GlobalInstructionsTranslator();
+        $$.instructions.push($1);
     }
     | FunctionDef
     {
-        $$ = new GlobalInstructions();
-        $$.addFunctionDef($1);
+        $$ = new GlobalInstructionsTranslator();
+        $$.instructions.push($1);
     }
 ;
 
@@ -188,22 +210,29 @@ StatementList
     : StatementList Statement
     {
         $$ = $1;
-        $$.push($2);
+        if($2 !== null){
+            $$.push($2);
+        }
     }
     | Statement
     {
-        $$ = new Array($1);
+        if($1 !== null){
+            $$ = new Array($1);
+        }
+        else{
+            $$ = new Array();
+        }
     }
 ;
 
 FunctionDef
     : FUNCTION IDENTIFIER "(" ParamList_ ")" ":" Type "{" FunctionInstructionList_ "}"
     {
-        $$ = new FunctionDef($2, $4, $7, $9, @1.first_line, @1.first_column, @2.last_line, @2.last_column);
+        $$ = new FunctionDefTranslator($2, $4, $7, $9.funcDefs, $9.statements, @1.first_line, @1.first_column, @2.last_line, @2.last_column);
     }
     | FUNCTION IDENTIFIER "(" ParamList_ ")" ":" VOID "{" FunctionInstructionList_ "}"
     {
-        $$ = new FunctionDef($2, $4, null, $9, @1.first_line, @1.first_column, @2.last_line, @2.last_column);
+        $$ = new FunctionDefTranslator($2, $4, null, $9.funcDefs, $9.statements, @1.first_line, @1.first_column, @2.last_line, @2.last_column);
     }
 ;
 
@@ -249,32 +278,19 @@ Param
 ;
 
 FunctionInstructionList_
-    : /* empty */
+    : Statement FunctionInstructionList_
     {
-
+        $$ = $2;
+        $$.statements.unshift($1);
     }
-    | FunctionInstructionList
+    | FunctionDef FunctionInstructionList_
     {
-
+        $$ = $2;
+        $$.funcDefs.unshift($1);
     }
-;
-
-FunctionInstructionList
-    : Statement
+    | /* empty */
     {
-
-    }
-    | FunctionDef
-    {
-
-    }
-    | FunctionInstructionList Statement
-    {
-
-    }
-    | FunctionInstructionList FunctionDef
-    {
-
+        $$ = { funcDefs:[], statements:[]};
     }
 ;
 
@@ -390,6 +406,16 @@ Statement
     | RETURN Expression ';'
     {
         $$ = new Statement(StatementKind.ReturnWithValueKind, $2, @1.first_line, @1.first_column, @3.last_line, @3.last_column);
+    }
+    | error ';'
+    {
+        let error = new MyError("Error sintactico");
+        error.firstLine = @1.first_line;
+        error.firstColumn = @1.first_column;
+        error.kind = MyErrorKind.SINTACTIC;
+        console.log(error);
+        errors.push(error);
+        $$ = null;
     }
 ;
 

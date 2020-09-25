@@ -27,9 +27,10 @@ export class FunctionDefTranslator {
     //IF NULL IT MEANS IT RETURN VOID
     public returnType:(MyTypeNode | null);
 
-    public funcInstructions:(Statement | FunctionDefTranslator)[];
+    public functionDefsTranslator:FunctionDefTranslator[];
+    public statements:Statement[];
 
-    constructor(name:string, params:ParamNode[], returnType:MyTypeNode, instructions:(Statement | FunctionDefTranslator)[],
+    constructor(name:string, params:ParamNode[], returnType:MyTypeNode, functionDefsTranslator:FunctionDefTranslator[], statements:Statement[],
                 firstLine:number, firstColumn:number, lastLine:number, lastColumn:number){
 
         this.astNode = new AstNode(firstLine, firstColumn, lastLine, lastColumn);
@@ -37,7 +38,8 @@ export class FunctionDefTranslator {
         this.name = name;
         this.params = params;
         this.returnType = returnType;
-        this.funcInstructions = instructions;
+        this.functionDefsTranslator = functionDefsTranslator;
+        this.statements = statements;
     }
 
 }

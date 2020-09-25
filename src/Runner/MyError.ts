@@ -1,29 +1,40 @@
 // Por ahora vamos a manejar los errores con exceptions.
 // CONVENCION: SOLO PODEMOS ATRAPAR LOS ERRORES QUE IMPLEMENTEMOS NOSOTROS
+
+import { AstNode } from 'src/Ast/AstNode';
+
+export enum MyErrorKind{
+    LEXICAL = 'Lexico',
+    SINTACTIC = 'Sintactico',
+    RUNNER = 'Ejecucion',
+    TRANSLATION = 'Traduccion',
+}
+
 // no vamos a usar nada de las p
 export class MyError{
 
+    public kind:MyErrorKind;
     public message:string;
 
     public firstLine:(number | null);
     public firstColumn:(number | null);
-    public lastLine:(number | null);
-    public lastColumn:(number | null);
 
     constructor(message:string) {
+        //por default es runner porque la mayoria de errores que tiramos son runner
+        this.kind = MyErrorKind.RUNNER;
         this.message = message;
 
         this.firstLine = null;
         this.firstColumn = null;
-        this.lastLine = null;
-        this.lastColumn = null;
     }
 
-    public setLocation(firstLine:number, firstColumn:number, lastLine:number, lastColumn:number){
-        this.firstLine = firstLine;
-        this.firstColumn = firstColumn;
-        this.lastLine = lastLine;
-        this.lastColumn = lastColumn;
+    public setLocation(astNode:AstNode){
+        this.firstLine = astNode.firstLine;
+        this.firstColumn = astNode.firstColumn;
+    }
+
+    public isLocationNull():boolean{
+        return this.firstLine === null || this.firstColumn === null; 
     }
 }
 

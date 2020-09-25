@@ -18,6 +18,7 @@
     "src/Ast/MyTypeNode.ts",
     "src/Ast/GlobalInstructionsRunner.ts",
     "src/Ast/GlobalInstructionsTranslator.ts",
+    "src/Ast/FunctionDefTranslator.ts",
     "src/polyfills.ts",
   ],
   "include": [

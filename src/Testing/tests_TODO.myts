@@ -929,3 +929,70 @@
     console.log(array);//[]
     console.log(array[30]);//prints 3 because typescript is fucking retarded
 }
+
+
+
+//TypeScript is stupid The following doesnt make a any sence
+//its fake types
+{
+    function foo(){
+        
+        function bar(){
+            console.log(a);
+        }
+        bar();
+        var a = 10;
+        a = undefined;//Says its an error.
+                      //but it prints a as undef.
+                      //so a CAN be undef. so weird and dumb
+    }
+}
+
+
+//more and more runtime exceptions...
+//this is why people dont like javascript
+{
+    function foo1(){
+        
+        function bar(){
+            console.log(a);
+        }
+        
+        let b = true;
+        if(b){
+            bar();
+        }
+
+        let a = 10;
+
+        if(!b){
+            bar();
+        }
+    }
+
+    foo1();
+}
+
+//BUG: we print true in case b is true even tho in ts it throws an error
+{
+    let a = "Javier";
+    function foo2(){
+        
+        function bar(){
+            console.log(a);
+        }
+        
+        let b = true;
+        if(b){
+            bar();//:think: even with the globa we still get an error here
+        }
+
+        let a = 10;//If we remove this let it prints the value of the global 'a' without a problem 
+
+        if(!b){
+            bar();
+        }
+    }
+
+    foo1();
+}
