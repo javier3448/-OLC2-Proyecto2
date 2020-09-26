@@ -97,6 +97,10 @@ export class PropertyNode{
     
 }
 
+export class TemplateString{
+    constructor(public values:(String | Expression)){  }
+}
+
 export class Expression {
     //Common AST attributes
     public astNode: AstNode;

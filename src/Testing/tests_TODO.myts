@@ -996,3 +996,10 @@
 
     foo1();
 }
+
+//BUG: we didnt even do anything about templateString
+
+{
+    console.log(`${`${{name:"Javier", number:10 + 3 * 4 ** 2}}`}`);
+    console.log(`${ 10 * 2 }`);
+}

@@ -223,10 +223,10 @@ export function translateStatement(indent:string, statement:Statement, funcNames
             return indent + "return;\n";
 
         case StatementKind.ReturnWithValueKind:
-            return indent + "return " + translateExpression(indent, (child as Expression), funcNamesToReplace) + ";";
+            return indent + "return " + translateExpression(indent, (child as Expression), funcNamesToReplace) + ";\n";
 
         case StatementKind.IfKind:
-            return translateIfStatment(indent, child as IfStatement, funcNamesToReplace);
+            return translateIfStatement(indent, child as IfStatement, funcNamesToReplace);
 
         case StatementKind.WhileKind:
             return translateWhile(indent, child as WhileStatement, funcNamesToReplace);
@@ -481,7 +481,7 @@ export function translateStatements(indent:string, statements:Statement[], funcN
     return result;
 }
 
-export function translateIfStatment(indent:string, ifStatement:IfStatement, funcNamesToReplace:FuncNamesToReplace):string{
+export function translateIfStatement(indent:string, ifStatement:IfStatement, funcNamesToReplace:FuncNamesToReplace):string{
     let result = indent + "if(" + translateExpression(indent, ifStatement.expr, funcNamesToReplace) + "){\n";
 
     const newIndent = indent + indentUnit;
@@ -489,6 +489,15 @@ export function translateIfStatment(indent:string, ifStatement:IfStatement, func
     result += translateStatements(newIndent, ifStatement.statements, funcNamesToReplace);
     
     result += indent + "}\n";
+
+    if(ifStatement.elseStatment !== null){
+        //Chapuz: le quitamos la primer indentacion del string del statement para que no quede asi:
+        //    else    if(){ ...
+        let elseTranslation = translateStatement(indent, ifStatement.elseStatment, funcNamesToReplace);
+        elseTranslation = elseTranslation.replace(/^\s+/g, '');
+        
+        result += indent + "else " + elseTranslation;
+    }
 
     return result;
 }

@@ -798,7 +798,7 @@ export function runExpression(expr:Expression):ReturnValue{
                 }
                 
             }break;
-            //BIG TODO: si es templated string hay que calcular todas sus subexpresiones
+            //BIG TODO: si es template string hay que calcular todas sus subexpresiones
         
             default:
                 throw new Error(`runExpression no implementado para expressionKind: '${expr.expressionKind}'`);

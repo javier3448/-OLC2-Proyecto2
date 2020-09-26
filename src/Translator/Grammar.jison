@@ -2,7 +2,8 @@
     const { Expression, ExpressionKind, 
     UnaryExpression, BinaryExpression, TernaryExpression, LiteralExpression, 
     IdentifierExpression, FunctionCallExpression, MemberAccessExpression, 
-    PropertyNode, ObjectLiteralExpression, ArrayLiteralExpression } = require('../Ast/Expression');
+    PropertyNode, ObjectLiteralExpression, ArrayLiteralExpression,
+    TemplateString} = require('../Ast/Expression');
     const { MemberAccess, AccessKind, FunctionAccess, IndexAccess, AttributeAccess } = require('../Ast/MemberAccess');
     const { Statement, StatementKind, Block, 
             WhileStatement, DoWhileStatement, IfStatement, 
@@ -18,6 +19,7 @@
     const { MyError, MyErrorKind } = require('../Runner/MyError')
     //const {Literal} = require('../Expression/Literal');
 
+    const templateStringParser = require("../TemplateStringParsing/TemplateStringParser");
 
     let errors = [];
 %}
@@ -104,6 +106,7 @@
 //TODO: mejorar string, esta regex no acepta caracteres especiales como \n \t etc. pero si acepta saltos de linea y todo eso
 (\"[^"]*\")                   return 'STRING'
 (\'[^']*\')                   return 'STRING'
+(\`[^`]*\`)                   return 'TEMPLATE_STRING'
 
 .	{ 
         let lexicError = new MyError('Este es un error léxico: ' + yytext + ', en la linea: ' + yylloc.first_line + ', en la columna: ' + yylloc.first_column); 
@@ -281,7 +284,9 @@ FunctionInstructionList_
     : Statement FunctionInstructionList_
     {
         $$ = $2;
-        $$.statements.unshift($1);
+        if($1 !== null){
+            $$.statements.unshift($1);
+        }
     }
     | FunctionDef FunctionInstructionList_
     {
@@ -427,7 +432,7 @@ IfStatement
     }
     | IF '(' Expression ')' '{' StatementList_ '}' ELSE Block
     {
-        let blockStatement =  new Statement(StatementKind.BlockKind, $9, @9.first_line, @9.first_column, @9.last_line, @9.last_column);
+        let blockStatement = new Statement(StatementKind.BlockKind, $9, @9.first_line, @9.first_column, @9.last_line, @9.last_column);
         $$ = new Statement(StatementKind.IfKind, new IfStatement($3, $6, blockStatement), @1.first_line, @1.first_column, @6.last_line, @6.last_column);
     }
     | IF '(' Expression ')' '{' StatementList_ '}' ELSE IfStatement
@@ -480,7 +485,12 @@ SwitchInstructions
     }
     | Statement
     {
-        $$ = new SwitchInstructions([],[],[$3]);
+        if($3 !== null){
+            $$ = new SwitchInstructions([],[],[$3]);
+        }
+        else{
+            $$ = new SwitchInstructions([],[],[]);
+        }
     }
     | SwitchInstructions 'CASE' Expression ':'
     {
@@ -495,7 +505,9 @@ SwitchInstructions
     | SwitchInstructions Statement
     {
         $$ = $1;
-        $$.statements.push($2);
+        if($2 !== null){
+            $$.statements.push($2);
+        }
     }
 ;
 
@@ -726,10 +738,6 @@ Expression
     {
         $$ = new Expression(ExpressionKind.ARRAY_LITERAL, new ArrayLiteralExpression($2), @1.first_line, @1.first_column, @3.last_line, @3.last_column);
     }
-    // | templateString
-    // {
-
-    // }
 ;
 
 PropertyList_
