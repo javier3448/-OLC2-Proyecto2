@@ -303,6 +303,7 @@ export function runStatement(statement:Statement):(Jumper | null){
 
 }
 
+//@cleanup: put every operation into its own function... maybe?
 export function runPropertyMyTypeNode(myTypeNode:MyTypeNode):MyType{
 
     if(myTypeNode.kind === MyTypeNodeKind.CUSTOM){
@@ -429,6 +430,7 @@ export function runExpression(expr:Expression):ReturnValue{
                 }
 
                 //this is baaaaaaaaaaaaad :((((
+                //we change the type of the rvalue to the type of the lvalue, if both lvalue and rvalue are CUSTOM
                 //All this awfulness because we put the type inside MyObj and not inside pointer :(
                 //Special case. Arbitrary awful patch so everything doesnt end up as anon type all the time
                 //BUG: ? if the custom type is nested inside an array we dont get the 'lvalue has the "dominant"
@@ -848,6 +850,7 @@ export function runDeclaration(declaration:Declaration):null{
         }
 
         //this is baaaaaaaaaaaaad :((((
+        //we change the type of the rvalue to the type of the lvalue, if both lvalue and rvalue are CUSTOM
         //All this awfulness because we put the type inside MyObj and not inside pointer :(
         //Special case. Arbitrary awful patch so everything doesnt end up as anon type all the time
         if(myType.kind === MyTypeKind.CUSTOM && val.myType.kind === MyTypeKind.CUSTOM){
@@ -1175,12 +1178,13 @@ export function runForOf(forOfStatement:ForOfStatement):(Jumper | null){
     let iterableObj:Array<Pointer>;
     if(exprResult.myType.kind === MyTypeKind.ARRAY){
         iterableObj = (exprResult.value as MyArray).array;
-    }else if(exprResult.myType.kind === MyTypeKind.STRING){
-        throw new Error(`forof con string no implementado todavia`);
     }else{
         throw new MyError(`Solo se puede utilizar for...of con tipos ARRAY o STRING, se tiene: '${exprResult.myType.kind}'`);
     }
-
+    //TODO: make string possible to iterate thru as well
+    //}else if(exprResult.myType.kind === MyTypeKind.STRING){
+    //    ...
+    //}
 
     for (const element of iterableObj) {
         // Creamos un nuevo scope intermedio para el forOfStatment.variable

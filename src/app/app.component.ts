@@ -364,7 +364,7 @@ hello(10);
     `;
     }
     
-    //FAIL. Template strings are too hard and bug prone in jison, bug prone. there is not enough time
+    //FAIL. Template strings are too hard and bug prone in jison.
     {
     let testString = `
 let a = 10;
@@ -375,7 +375,7 @@ console.log(\`a + b = \${a + b}\`);
 
     //PASS
     {
-    let testString = `
+        let testString = `
         type AVLNode = {
             left: AVLNode,
             right: AVLNode,
@@ -546,171 +546,426 @@ console.log(\`a + b = \${a + b}\`);
         tree.root = insert(tree.root, 1);
         preOrder(tree.root);
         `;
+    }
 
+    //PASS
+    {
+    let testString = `
+function getPivot(value:number):number{
+    return value % 2 == 0 ? value:value - 0.5;
+}
+
+
+function swap(i:number, j: number, array:number[]):void{
+    const temp = array[i];
+    array[i] = array[j];
+    array[j] = temp;
+}
+
+
+function bubbleSort(array:number[]):void{
+    for(let i = 0; i < array.length; i++){
+        for(let j = 0; j < array.length - 1; j++){
+            if(array[j] > array[j + 1]){
+                swap(j, j+1, array);
+            }
+        }
+    }
+}
+
+
+function quickSort(low: number, high: number, array:number[]):void{
+    let i = low;
+    let j = high;
+    let pivot = array[getPivot((low + high) / 2)];
+    while(i <= j){
+        while(array[i] < pivot){
+            i++;
+        }
+        while(array[j] > pivot){
+            j--;
+        }
+        if(i <= j){
+            swap(i, j, array);
+            i++;
+            j--;
+        }
+    }
+    if(low < j){
+        quickSort(low, j, array);
+    }
+    if(i < high){
+        quickSort(i, high, array);
+    }
+}
+
+
+function insertionSort(array:number[]):void{
+    for(let i = 1; i < array.length; i++){
+        let j = i;
+        let temp = array[i];
+        while(j > 0 AND array[j - 1] > temp){
+            array[j] = array[j-1];
+            j--;
+        }
+        array[j] = temp;
+    }
+}
+
+
+function selectionSort(array:number[]):void{
+    for(let j = 0; j < array.length; j++){
+        let iMin = j;
+        for(let i = j + 1; i < array.length; i++){
+            if(array[i] < array[iMin]){
+                iMin = i;
+            }
+        }
+        swap(j, iMin, array);
+    }
+}
+
+
+function mergeSort(array:number[], l:number, r:number):void{
+    if(l >= r){
+        return;
+    }
+    let m = getPivot((l + r) / 2);
+    mergeSort(array, l, m);
+    mergeSort(array, m + 1, r);
+    merge(array, l, m , r);
+}
+
+
+function merge(array:number[], l:number, m:number, r:number):void{
+    let n1 = m - l + 1;
+    let n2 = r - m;
+    let L:number[] = [];
+    let R:number[] = [];
+    for(let i = 0; i < n1; i++){
+        L[i] = array[l + i];
+    }
+    for(let j = 0; j < n2; j++){
+        R[j] = array[m + 1 + j];
+    }
+    let i = 0;
+    let j = 0;
+    let k = l;
+    while(i < n1 AND j < n2){
+        if(L[i] <= R[j]){
+            array[k] = L[i];
+            i++;
+        }
+        else{
+            array[k] = R[j];
+            j++;
+        }
+        k++;
+    }
+    while(i < n1){
+        array[k] = L[i];
+        i++;
+        k++;
+    }
+    while(j < n2){
+        array[k] = R[j];
+        j++;
+        k++;
+    }
+}
+
+
+function menu():void{
+    let i = 0;
+    while(true){
+        let array:number[] = [32, 21, 7, 89, 56, 909, 109, 2];
+        switch (i) {
+            case 0:
+                bubbleSort(array);
+                console.log('BubbleSort: ', array);
+                break;
+            case 1:
+                quickSort(0, array.length - 1, array);
+                console.log('QuickSort: ', array);
+                break;
+            case 2:
+                insertionSort(array);
+                console.log('InsertionSort', array);
+                break;
+            case 3:
+                selectionSort(array);
+                console.log('SelectionSort', array);
+                break;
+            case 4:
+                mergeSort(array, 0, array.length - 1);
+                console.log('MergeSort: ' , array);
+            default:
+                return;
+        }
+        i++;
+    }
+}
+
+menu();
+    `;
+    }
+
+    //PASS
+    {
+    let testString = `
+  function fibonacci( n:number):number {
+        if (n <= 1) {
+            return n;
+        }
+        return fibonacci(n - 1) + fibonacci(n - 2);
+    }
+    console.log(fibonacci(13));  // 233
+
+
+ function hanoi( discos:number, origen:number,  auxiliar:number,  destino:number):string {
+ let result:string = "";
+ if (discos == 1) {
+result = result + (origen + destino);
+  } else {
+    result = result + hanoi(discos - 1, origen, destino, auxiliar);
+     result = result + (origen + destino);
+     result = result + hanoi(discos - 1, auxiliar, origen, destino);
+  }
+        return result;
+    }
+
+    console.log(hanoi(4,1,5,3));  //648648648648648
+
+ function ackermann( m:number,  n:number):number {
+        if (m == 0) {
+            return (n + 1);
+        } else if (m > 0 AND n == 0) {
+             let cuatro:number = ackermann(m - 1, 1);
+            return cuatro;
+        } else {
+            let ret:number =  ackermann(m, n - 1);
+            let  nueva:number = ackermann(m - 1, ret);
+            return nueva;
+        }
+    
+}
+console.log(ackermann(3, 7)); //2045 se tardo 6 segundos
+
+
+    function par( nump:number):number {
+        if (nump == 0) {
+            return 1;
+        }
+        return impar(nump - 1);
+    }
+
+    function impar( numi:number):number {
+        if (numi == 0) {
+            return 0;
+        }
+        return par(numi - 1);
+    }
+    console.log(par(29)); //0
+    console.log(par(400)); //1
+
+    function hofstaderMasculino( n:number):number {
+        if (n < 0) {
+            return 0;
+        } else {
+           
+            if(n != 0){
+                return n - hofstaderMasculino(n - 1);
+            }else{ 
+                return 0;
+              
+            }
+        }
+    }
+    console.log(hofstaderMasculino(400)); // 619
+
+
+  
+    function factorial( n:number):number {
+      
+        switch(n){
+            case 0:
+                return 1;
+            case 0:
+                return -100; 
+            default:
+                return n * factorial(n - 1); 
+               
+        }
+    }
+    console.log(factorial(13)); //6227020800
+
+
+    function potencia( base:number,  exp:number):number {
+    
+        switch(exp){
+            case 0:
+                return 1;
+            case 0:
+                return -100; 
+            default:
+                return (base * potencia(base, exp - 1));
+               
+        }
+    }    
+console.log(potencia(30,5)); //24300000
+    `;
     }
 
     let testString = `
-    function getPivot(value : number) : number{
-      return value % 2 == 0 ? value : value - 0.5;
-  }
-  
-  function swap(i : number, j: number, array : number[]) : void{
-      const temp = array[i];
-      array[i] = array[j];
-      array[j] = temp;
-  }
-  
-  function bubbleSort(array : number[]) : void{
-      for(let i = 0; i < array.length; i++){
-          for(let j = 0; j < array.length - 1; j++){
-              if(array[j] > array[j + 1]){
-                  swap(j, j+1, array);
-              }
-          }
-      }
-  }
-  
-  function quickSort(low: number, high: number, array : number[]) : void{
-      let i = low;
-      let j = high;
-      let pivot = array[getPivot((low + high) / 2)];
-  
-      while(i <= j){
-          while(array[i] < pivot){
-              i++;
-          }
-  
-          while(array[j] > pivot){
-              j--;
-          }
-          if(i <= j){
-              swap(i, j, array);
-              i++;
-              j--;
-          }
-      }
-  
-      if(low < j){
-          quickSort(low, j, array);
-      }
-      if(i < high){
-          quickSort(i, high, array);
-      }
-  }
-  
-  function insertionSort(array : number[]) : void{
-      for(let i = 1; i < array.length; i++){
-          let j = i;
-          let temp = array[i];
-          while(j > 0 AND array[j - 1] > temp){
-              array[j] = array[j-1];
-              j--;
-          }
-          array[j] = temp;
-      }
-  }
-  
-  function selectionSort(array : number[]) : void{
-      for(let j = 0; j < array.length; j++){
-          let iMin = j;
-          for(let i = j + 1; i < array.length; i++){
-              if(array[i] < array[iMin]){
-                  iMin = i;
-              }
-          }
-          swap(j, iMin, array);
-      }
-  }
-  
-  function mergeSort(array : number[], l : number, r : number) : void{
-      if(l >= r){
-          return;
-      }
-      
-      let m = getPivot((l + r) / 2);
-      mergeSort(array, l, m);
-      mergeSort(array, m + 1, r);
-      merge(array, l, m , r);
-  }
-  
-  function merge(array : number[], l : number, m : number, r : number) : void{
-      let n1 = m - l + 1;
-      let n2 = r - m;
-  
-      let L : number[] = [];
-      let R : number[] = [];
-  
-      for(let i = 0; i < n1; i++){
-          L[i] = array[l + i];
-      }
-  
-      for(let j = 0; j < n2; j++){
-          R[j] = array[m + 1 + j];
-      }
-  
-      let i = 0;
-      let j = 0;
-      let k = l;
-  
-      while(i < n1 AND j < n2){
-          if(L[i] <= R[j]){
-              array[k] = L[i];
-              i++;
-          }
-          else{
-              array[k] = R[j];
-              j++;
-          }
-          k++;
-      }
-      
-      while(i < n1){
-          array[k] = L[i];
-          i++;
-          k++;
-      }
-  
-      while(j < n2){
-          array[k] = R[j];
-          j++;
-          k++;
-      }
-  }
-  
-  function menu() : void{
-      let i = 0;
-      while(true){
-          let array : number[] = [32,21,7,89,56,909,109, 2];
-          switch (i) {
-              case 0:
-                  bubbleSort(array);
-                  console.log('BubbleSort: ', array);
-                  break;
-              case 1:
-                  quickSort(0, array.length - 1, array);
-                  console.log('QuickSort: ', array);
-                  break;
-              case 2:
-                  insertionSort(array);
-                  console.log('InsertionSort', array);
-                  break;
-              case 3:
-                  selectionSort(array);
-                  console.log('SelectionSort', array);
-                  break;
-              case 4:
-                  mergeSort(array, 0, array.length - 1);
-                  console.log('MergeSort: ' , array);
-              default:
-                  return;
-          }
-          i++;
-      }
-  }
-  
-  menu();
-    `;
+function tail(strs:string[]):string[]{
+    let result = [];
+    for(let i = 1; i < strs.length; i++){
+        result.push(strs[i]);
+    }
+    return result;
+}
 
+function head(strs:string[]):string{
+    return strs[0];
+}
+
+function ml_list_constructor(head:string, tail:string[]):string[]{
+    let result = [head];
+    for(let i = 0; i < tail.length; i++){
+        result.push(tail[i]);
+    }
+    return result;
+}
+
+console.log(ml_list_constructor("head", ["tail", "tail2"]));
+
+function contains(str:string, strs:Array<string>):boolean{
+    function imp(strs:Array<string>):boolean{
+        if(strs.length == 0){
+            return false;
+        }
+        else{
+            let head_strs = head(strs);
+            let tail_strs = tail(strs);
+            if(head_strs == str){
+                return true;
+            }
+            else{
+                return imp(tail_strs);
+            }
+        }
+    }
+    return imp(strs);
+}
+
+function replace(target:string, replacement:string, strs:Array<string>):string[]{
+    function imp(strs:Array<string>):string[]{
+        if(strs.length == 0){
+            return [];
+        }
+        else{
+            let head_strs = head(strs);
+            let tail_strs = tail(strs);
+            if(head_strs == target){
+                return ml_list_constructor(replacement, tail_strs);
+            }
+            else{
+                return ml_list_constructor(head_strs, imp(tail_strs));
+            }
+        }
+    }
+    return imp(strs);
+}
+
+function replaceAll(target:string, replacement:string, strs:Array<string>):string[]{
+    function imp(strs:Array<string>):string[]{
+        if(strs.length == 0){
+            return [];
+        }
+        else{
+            let head_strs = head(strs);
+            let tail_strs = tail(strs);
+            if(head_strs == target){
+                return ml_list_constructor(replacement, imp(tail_strs));
+            }
+            else{
+                return ml_list_constructor(head_strs, imp(tail_strs));
+            }
+        }
+    }
+    return imp(strs);
+}
+
+function replaceInListOfLists(target:string, replacement:string, lists_of_strs:string[][]):string[][]{
+    
+    function helper_head(list_of_lists:string[][]):string[]{
+        return list_of_lists[0];
+    }
+    
+    function helper_tail(list_of_lists:string[][]):string[][]{
+        let result:string[][] = [];
+        for(let i = 1; i < list_of_lists.length; i++){
+            result.push(list_of_lists[i]);
+        }
+        return result;
+    }
+
+    function helper_ml_list_constructor(head:string[], tail:string[][]):string[][]{
+        let result = [head];
+        for(let i = 0; i < tail.length; i++){
+            result.push(tail[i]);
+        }
+        return result;
+    }
+
+    
+    function imp(lists_of_strs:string[][]):string[][]{
+
+        function helperReplaceAll(strs:string[]):string[]{
+            function imp(strs:Array<string>):string[]{
+                if(strs.length == 0){
+                    return [];
+                }
+                else{
+                    let head_strs = head(strs);
+                    let tail_strs = tail(strs);
+                    if(head_strs == target){
+                        return ml_list_constructor(replacement, imp(tail_strs));
+                    }
+                    else{
+                        return ml_list_constructor(head_strs, imp(tail_strs));
+                    }
+                }
+            }
+            return imp(strs);
+        }
+
+        if(lists_of_strs.length == 0){
+            return [];
+        }
+        else{
+            let head_list_of_strings = helper_head(lists_of_strs);
+            let tail_list_of_strings = helper_tail(lists_of_strs);
+            return helper_ml_list_constructor(helperReplaceAll(head_list_of_strings), imp(tail_list_of_strings));
+        }
+    }
+
+    return imp(lists_of_strs);
+}
+
+console.log(contains("Pararrayos", ["Pasta", "Ceremonia", "Ganancias", "Disciplina", "Bicho", "Bicho", "Mercado", "Pararrayos", "Agua", "Bicho"]));
+console.log(contains("Alvarez", ["Pasta", "Ceremonia", "Ganancias", "Disciplina", "Bicho", "Bicho", "Mercado", "Pararrayos", "Agua", "Bicho"]));
+console.log(replace("Bicho", ":)", ["Pasta", "Ceremonia", "Ganancias", "Disciplina", "Bicho", "Bicho", "Mercado", "Pararrayos", "Agua", "Bicho"]));
+console.log(replaceAll("Bicho", ":D", ["Pasta", "Ceremonia", "Ganancias", "Disciplina", "Bicho", "Bicho", "Mercado", "Pararrayos", "Agua", "Bicho"]));
+console.log(replace("nan", "FAIL", ["Pasta", "Ceremonia", "Ganancias", "Disciplina", "Bicho", "Bicho", "Mercado", "Pararrayos", "Agua", "Bicho"]));
+console.log(replaceAll("nan", "FAIL", ["Pasta", "Ceremonia", "Ganancias", "Disciplina", "Bicho", "Bicho", "Mercado", "Pararrayos", "Agua", "Bicho"]));
+console.log(replaceInListOfLists("Bicho", ":O", [["Pasta", "Ganar", "Bicho", "Bicho", "Mercado", "Rayos", "Agua", "Bicho"],
+                                                 ["Mono","Bicho","Alpaca","Buey","Ratón","Yak","Chinchilla","Bicho"],
+                                                 ["Bicho", "Erizo", "Mariposa", "Pez" , "betta", "Hurón", "Bicho", "Serpiente", "Ciervo"],
+                                                 ["Calamar", "Cisne", "Bicho", "Tigre", "Perico", "Bicho", "Poni", "Canario"]]));
+
+graficar_ts();
+    `;
 
     this.sourceString = testString;
 

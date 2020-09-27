@@ -256,6 +256,7 @@ export class MyObj {
 
         let arrayVal = (this.value as MyArray);
         let numberIndex = (index.value as Number).valueOf();
+
         //BUG: TYPESCRIPT NO HACE ESTE CHECKEO!!!! El imbecil solo retorna undef cuando accedemos
         //     a algo fuera de rangos. 
         //     y si lo utilizamos para asignar llenar todo lo que necesite con nulls
@@ -263,21 +264,26 @@ export class MyObj {
         //from SO: JavaScript arrays aren't really arrays, they're JavaScript objects 
         //         that have prototype methods that cause them to act like arrays. arr['one'] = 1 is valid JavaScript.
         //         TypeScript is fucking stupid and doesnt make any sence
+        if(!Number.isInteger(numberIndex)){
+            throw new MyError(`Indice: '${numberIndex}' no valido. Debe ser un entero`);
+        }
         if(numberIndex < 0){
             throw new MyError(`Indice: '${numberIndex}' fuera de limites: no puede ser negativo`);
         }
 
-        if(!Number.isInteger(numberIndex)){
-            throw new MyError(`Indice: '${numberIndex}' no valido. Debe ser un entero`);
-        }
-
+        //to imitate the behaviour of typescript where it fills the missing values with
+        //with null the programmer assigns a value to an  out of bounds index
+        //Example:
+        //let a = [0,1,2];
+        //a[5] = 5;
+        //console.log(a);//[0,1,2,null,null,5];
         //big bodge :(
         //the fill happens even if we dont assign anything to the resulting pointer
         //but we have 6 days left and it would require us to make quite a few things
         //when getting rvalue. Possible, but pretty hard
         //FUCK. its not only lvalue because we can pass by reference so there are more
         //special cases when we should fill other than assignment :(
-        //i.e its not gonna happen :/
+        //i.e its not gonna happen. We wont unbodge it
 
         //We fill the array if the numberIndex goes out of bounds and it is possitive
         for(let i = arrayVal.array.length; i < numberIndex + 1; i++){

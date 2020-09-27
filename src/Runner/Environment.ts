@@ -169,7 +169,7 @@ export module Env{
         //parent of the function is lost. unless we encode it in the function name which would be
         //hard and stupid.
         //And there is no time left
-        //BUG: if we call a nested function it can access variables that were declared by whoever
+        //BUG: if we call a nested function it can access variables that were defined by whoever
         //called the parent function
         if(!id.startsWith("__")){
             Env.current = global;

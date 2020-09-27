@@ -311,6 +311,11 @@ export function translateExpression(indent:string, expr:Expression, funcNamesToR
         let a = spec;
     }
 
+    if(expr.hasParenthesis){
+        //chapuz: para incluir parentesis!!
+        result = "(" + result + ")";
+    }
+
     return result;
 }
 

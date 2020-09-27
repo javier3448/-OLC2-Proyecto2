@@ -1003,3 +1003,19 @@
     console.log(`${`${{name:"Javier", number:10 + 3 * 4 ** 2}}`}`);
     console.log(`${ 10 * 2 }`);
 }
+
+//la llamada a la funcion anidada solo tiene acceso a las variables declaradas en el 
+//mismo scope en el que la funcion fue definida
+//Cuando se llama a una funcion anidada como sabe a que simbolo en los scope usar
+{
+    function parent1():void{
+        function child():void{
+            console.log(a);//deberia de decir que a no exis
+        }
+        child();
+        {
+            let a = 20;
+            child();
+        }
+    }
+}

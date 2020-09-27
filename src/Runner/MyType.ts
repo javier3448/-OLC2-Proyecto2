@@ -1,3 +1,5 @@
+import { MyTypeNode } from 'src/Ast/MyTypeNode';
+
 export enum MyTypeKind {
     NUMBER = 'NUMBER',
     STRING = 'STRING',
@@ -98,9 +100,8 @@ export class MyType
                 return this.kind.toString();
             case MyTypeKind.ARRAY:
             {
-                throw new Error(`MyType.myToString No implementado para ${this.kind}`)
-                // let arrayType = this.specification as ArrayType
-                // return `Array<${}`
+                let subType = this.specification as MyType;
+                return `Array<${subType.myToString()}>`
             }break;
 
             case MyTypeKind.CUSTOM:
