@@ -553,9 +553,9 @@ case 105:
 
         //TERRIBLE PERFORMANCE:
         //The worst performance ever. You really should be ashamed of yourself :(
-        let s = $$[$0].slice(1, $$[$0].length - 1).replaceAll("\\n", "\n");
-        s = s.replaceAll("\\r", "\r");
-        s = s.replaceAll("\\t", "\t");
+        let s = $$[$0].slice(1, $$[$0].length - 1).replace(/\\n/g, "\n");
+        s = s.replace(/\\r/g, "\r");
+        s = s.replace(/\\t/g, "\t");
         this.$ = new Expression(ExpressionKind.LITERAL, new LiteralExpression(new String(s)), _$[$0].first_line, _$[$0].first_column, _$[$0].last_line, _$[$0].last_column);
     
 break;

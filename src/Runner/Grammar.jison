@@ -631,9 +631,9 @@ Expression
     {
         //TERRIBLE PERFORMANCE:
         //The worst performance ever. You really should be ashamed of yourself :(
-        let s = $1.slice(1, $1.length - 1).replaceAll("\\n", "\n");
-        s = s.replaceAll("\\r", "\r");
-        s = s.replaceAll("\\t", "\t");
+        let s = $1.slice(1, $1.length - 1).replace(/\\n/g, "\n");
+        s = s.replace(/\\r/g, "\r");
+        s = s.replace(/\\t/g, "\t");
         $$ = new Expression(ExpressionKind.LITERAL, new LiteralExpression(new String(s)), @1.first_line, @1.first_column, @1.last_line, @1.last_column);
     }
     | TRUE
