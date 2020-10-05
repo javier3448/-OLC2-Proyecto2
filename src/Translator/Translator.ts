@@ -396,9 +396,22 @@ export function translateArrayLiteral(indent:string, arrayLiteral:ArrayLiteralEx
 }
 
 export function translateTemplateString(indent:string, templateString:TemplateString, funcNamesToReplace:FuncNamesToReplace):string{
-    //@FixMe:
-    //AQUI AQUI AQUI
-    return "\" FIX ME  FIX ME  FIX ME  FIX ME  FIX ME  FIX ME  FIX ME  FIX ME  FIX ME  FIX ME \"";
+    let result = "`";
+
+    for (const templateChunk of templateString.values) {
+        if(templateChunk instanceof String){
+            result += templateChunk.toString();
+        }
+        else if(templateChunk instanceof Expression){
+            result += "${" + translateExpression(indent, templateChunk, funcNamesToReplace) + "}"; 
+        }
+        else{
+            throw new Error(`translateTEmpalteSTring not implemented for ${templateChunk}`);
+        }
+    }
+
+    result += "`";
+    return result
 }
 
 export function trasnlateCommaSeparatedExpressions(indent:string, expressions:Expression[], funcNamesToReplace:FuncNamesToReplace):string{

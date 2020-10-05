@@ -12,7 +12,7 @@ import { MyType, MyTypeKind, TypeSignature } from "./MyType";
 import { MyFunction, MyFunctionKind, GraficarTs, Parameter, MyNonNativeFunction } from "./MyFunction";
 import { MyError } from './MyError';
 
-import { Expression, ExpressionKind, FunctionCallExpression, LiteralExpression, IdentifierExpression, MemberAccessExpression, BinaryExpression, UnaryExpression, TernaryExpression, ObjectLiteralExpression, ArrayLiteralExpression } from '../Ast/Expression';
+import { Expression, ExpressionKind, FunctionCallExpression, LiteralExpression, IdentifierExpression, MemberAccessExpression, BinaryExpression, UnaryExpression, TernaryExpression, ObjectLiteralExpression, ArrayLiteralExpression, TemplateString } from '../Ast/Expression';
 import { Declaration } from '../Ast/Declaration';
 import { AccessKind, AttributeAccess, FunctionAccess, IndexAccess } from 'src/Ast/MemberAccess';
 import { ArrayTypeNode, CustomTypeNode, MyTypeNode, MyTypeNodeKind } from 'src/Ast/MyTypeNode';
@@ -798,6 +798,29 @@ export function runExpression(expr:Expression):ReturnValue{
                     let falseResult = runExpression(ternary.right);
                     return falseResult;
                 }
+                
+            }break;
+            case ExpressionKind.TEMPLATE_STRING:
+            {
+                let templateString = expr.specification as TemplateString;
+                
+                //Should be a stringBuilder or something
+                let resultString = "";
+
+                for (const templateChunk of templateString.values) {
+                    if(templateChunk instanceof String){
+                        resultString += templateChunk.toString();
+                    }
+                    else if(templateChunk instanceof Expression){
+                        let exprResult = runExpression(templateChunk);
+                        resultString += exprResult.getMyObj().myToString();
+                    }
+                    else{
+                        throw new Error(`runExpression (run template string) no implementado para chunk: '${templateChunk}'`);
+                    }
+                }
+
+                return ReturnValue.makeStringReturn(resultString);
                 
             }break;
             //BIG TODO: si es template string hay que calcular todas sus subexpresiones

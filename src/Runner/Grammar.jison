@@ -2,7 +2,7 @@
     const { Expression, ExpressionKind, 
     UnaryExpression, BinaryExpression, TernaryExpression, LiteralExpression, 
     IdentifierExpression, FunctionCallExpression, MemberAccessExpression, 
-    PropertyNode, ObjectLiteralExpression, ArrayLiteralExpression } = require('../Ast/Expression');
+    PropertyNode, ObjectLiteralExpression, ArrayLiteralExpression, TemplateString} = require('../Ast/Expression');
     const { MemberAccess, AccessKind, FunctionAccess, IndexAccess, AttributeAccess } = require('../Ast/MemberAccess');
     const { Statement, StatementKind, Block, 
             WhileStatement, DoWhileStatement, IfStatement, 
@@ -17,6 +17,8 @@
     const { FunctionDef, ParamNode } = require('../Ast/FunctionDef')
     const { MyError } = require('../Runner/MyError')
     //const {Literal} = require('../Expression/Literal');
+
+    const { templateStringHelperRun } = require('../TemplateStringParsing/Helper')
 %}
 
 %lex
@@ -99,7 +101,8 @@
 ([a-zA-Z_])[a-zA-Z0-9_ñÑ]*    return 'IDENTIFIER'
 //TODO: mejorar string, esta regex no acepta caracteres especiales como \n \t etc. pero si acepta saltos de linea y todo eso
 (\"[^"]*\")                   return 'STRING'
-(\'[^']*\')                    return 'STRING'
+(\'[^']*\')                   return 'STRING'
+(\`[^`]*\`)                   return 'TEMPLATE_STRING'
 
 /lex
 
@@ -668,10 +671,11 @@ Expression
     {
         $$ = new Expression(ExpressionKind.ARRAY_LITERAL, new ArrayLiteralExpression($2), @1.first_line, @1.first_column, @3.last_line, @3.last_column);
     }
-    // | templateString
-    // {
-
-    // }
+    | TEMPLATE_STRING
+    {
+        let stringTemplate = templateStringHelperRun($1);
+        $$ = new Expression(ExpressionKind.TEMPLATE_STRING, stringTemplate, @1.first_line, @1.first_column, @1.last_line, @1.last_column);
+    }
 ;
 
 PropertyList_

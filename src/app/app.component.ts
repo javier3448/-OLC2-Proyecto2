@@ -971,10 +971,9 @@ graficar_ts();
     }
 
     let testString = `
-    console.log(\`10 * 2 = \${ 10 * 2 } :| \`);
-    //console.log(\`This is a big old object\\n: \${{name:"Javier", number:10 + 3 * 4 ** 2}}\`);
+    console.log("hello: \\n Javier");
+    console.log(\`This is a big old object\\n: \${{name:"Javier", number:10 + 3 * 4 ** 2}}\`);
     `;
-
 
     this.sourceString = testString;
 

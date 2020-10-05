@@ -1054,3 +1054,11 @@
     //console.log(`\`This is a big old object:\\n \${{name:"Javier", n:10 + 3 * 4 ** 2}.n}\\n 10 + 1 * 2 ** 3 = \${10 + 1 * 2 ** 3}\``);
     //stringTemplateParser(`\`This is a big old object:\\n \${{name:"Javier", n:10 + 3 * 4 ** 2}.n}\\n 10 + 1 * 2 ** 3 = \${10 + 1 * 2 ** 3}\``);
 }
+
+
+//OLD BUG:
+//las secuencias de escape adentro del traductor no deberian de ser escapadas
+{
+	console.log("hello: \n Javier");
+    console.log(`This is a big old object\n: ${{name:"Javier", number:10 + 3 * 4 ** 2}}`);
+}

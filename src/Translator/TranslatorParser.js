@@ -551,11 +551,8 @@ case 104:
 break;
 case 105:
 
-        //TERRIBLE PERFORMANCE:
-        //The worst performance ever. You really should be ashamed of yourself :(
-        let s = $$[$0].slice(1, $$[$0].length - 1).replace(/\\n/g, "\n");
-        s = s.replace(/\\r/g, "\r");
-        s = s.replace(/\\t/g, "\t");
+        //En el traductor no necesitamos hacer replace a los caracteres de escape
+        let s = $$[$0].slice(1, $$[$0].length - 1);
         this.$ = new Expression(ExpressionKind.LITERAL, new LiteralExpression(new String(s)), _$[$0].first_line, _$[$0].first_column, _$[$0].last_line, _$[$0].last_column);
     
 break;
@@ -601,7 +598,7 @@ case 113:
 break;
 case 114:
 
-        let stringTemplate = stringTemplateParser($$[$0]);
+        let stringTemplate = templateStringHelperTranslate($$[$0]);
         this.$ = new Expression(ExpressionKind.TEMPLATE_STRING, stringTemplate, _$[$0].first_line, _$[$0].first_column, _$[$0].last_line, _$[$0].last_column);
     
 break;
@@ -903,7 +900,7 @@ _handle_error:
     const { MyError, MyErrorKind } = require('../Runner/MyError')
     //const {Literal} = require('../Expression/Literal');
 
-    const { stringTemplateParser } = require('../TemplateStringParsing/Helper')
+    const { templateStringHelperTranslate } = require('../TemplateStringParsing/Helper')
 
     let errors = [];
 
