@@ -19,9 +19,10 @@
     const { MyError, MyErrorKind } = require('../Runner/MyError')
     //const {Literal} = require('../Expression/Literal');
 
-    const templateStringParser = require("../TemplateStringParsing/TemplateStringParser");
+    const { stringTemplateParser } = require('../TemplateStringParsing/Helper')
 
     let errors = [];
+
 %}
 
 %lex
@@ -736,6 +737,11 @@ Expression
     | '[' ExpressionList_ ']'
     {
         $$ = new Expression(ExpressionKind.ARRAY_LITERAL, new ArrayLiteralExpression($2), @1.first_line, @1.first_column, @3.last_line, @3.last_column);
+    }
+    | TEMPLATE_STRING
+    {
+        let stringTemplate = stringTemplateParser($1);
+        $$ = new Expression(ExpressionKind.TEMPLATE_STRING, stringTemplate, @1.first_line, @1.first_column, @1.last_line, @1.last_column);
     }
 ;
 

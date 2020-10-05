@@ -1,5 +1,8 @@
 import { digraph, Digraph, attribute, INode, toDot } from "ts-graphviz";
-import { Expression, ExpressionKind, LiteralExpression, IdentifierExpression, BinaryExpression, UnaryExpression, TernaryExpression, MemberAccessExpression, FunctionCallExpression, ObjectLiteralExpression, PropertyNode, ArrayLiteralExpression } from "./Ast/Expression";
+import { Expression, ExpressionKind, LiteralExpression, 
+          IdentifierExpression, BinaryExpression, UnaryExpression, 
+          TernaryExpression, MemberAccessExpression, FunctionCallExpression, 
+          ObjectLiteralExpression, PropertyNode, ArrayLiteralExpression, TemplateString} from "./Ast/Expression";
 import { Statement, WhileStatement, Block, StatementKind, IfStatement, ForStatement, ForInStatement, ForOfStatement, SwitchStatement, DoWhileStatement  } from "./Ast/Statement";
 import { AstNode } from "./Ast/AstNode";
 
@@ -371,6 +374,27 @@ export function graphExpression(g:Digraph, expr:Expression):INode{
             g.createEdge([result, argsNode]);
         }
         break;
+
+        case ExpressionKind.TEMPLATE_STRING:
+        {
+            const templateString = expr.specification as TemplateString;
+            for (const templateChunk of templateString.values){
+                let chunkNode:INode;
+                if(templateChunk instanceof String){
+                    chunkNode = g.createNode(`function_name${AstNode.getNextAstNodeId()}`, {
+                        [attribute.label]: `String chunk\n${templateChunk.toString()}`,
+                        [attribute.shape]: 'box',
+                    });
+                }
+                else if(templateChunk instanceof Expression){
+                    chunkNode = graphExpression(g, templateChunk);
+                }
+                            if(chunkNode === undefined){
+                                console.log("lol");
+                            }
+                g.createEdge([result, chunkNode]);
+            }
+        }
         
         //No children
         case ExpressionKind.IDENTIFIER:
@@ -576,6 +600,9 @@ function expressionToLabel(expr:Expression):string{
 
         case ExpressionKind.TERNARY:
             return ".. ? .. : ..";
+
+        case ExpressionKind.TEMPLATE_STRING:
+            return "TemplateString";
         default:
             throw Error(`expressionToLabel no tiene implementacion para expression kind: ${expr.expressionKind}`)
     }

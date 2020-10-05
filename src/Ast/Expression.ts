@@ -39,6 +39,9 @@ export enum ExpressionKind{
     FUNCTION_CALL = 'FUNCTION_CALL',
     OBJECT_LITERAL = 'OBJECT_LITERAL',
     ARRAY_LITERAL = 'ARRAY_LITERAL',
+
+    //template string
+    TEMPLATE_STRING = 'TEMPLATE_STRING'
 }
 
 export class UnaryExpression{
@@ -98,7 +101,7 @@ export class PropertyNode{
 }
 
 export class TemplateString{
-    constructor(public values:(String | Expression)){  }
+    public values:(String | Expression)[] = [];
 }
 
 export class Expression {
@@ -108,7 +111,7 @@ export class Expression {
     public expressionKind: ExpressionKind;
     public specification: (UnaryExpression | BinaryExpression | TernaryExpression | 
                            IdentifierExpression | LiteralExpression | MemberAccessExpression | 
-                           ObjectLiteralExpression | ArrayLiteralExpression);
+                           ObjectLiteralExpression | ArrayLiteralExpression | TemplateString);
 
 
     //Huge bodge. 
@@ -181,12 +184,17 @@ export class Expression {
             break;
             case ExpressionKind.OBJECT_LITERAL:
                 if(!(specification instanceof ObjectLiteralExpression)){
-                    throw new Error(`Assertion Error: expressionKind ${expressionKind.toString()} must be type MemberAccessExpression instead of ${(specification)}`);
+                    throw new Error(`Assertion Error: expressionKind ${expressionKind.toString()} must be type ObjectLiteralExpression instead of ${(specification)}`);
                 }
             break;
             case ExpressionKind.ARRAY_LITERAL:
                 if(!(specification instanceof ArrayLiteralExpression)){
-                    throw new Error(`Assertion Error: expressionKind ${expressionKind.toString()} must be type MemberAccessExpression instead of ${(specification)}`);
+                    throw new Error(`Assertion Error: expressionKind ${expressionKind.toString()} must be type ArrayLiteralExpression instead of ${(specification)}`);
+                }
+            break;
+            case ExpressionKind.TEMPLATE_STRING:
+                if(!(specification instanceof TemplateString)){
+                    throw new Error(`Assertion Error: expressionKind ${expressionKind.toString()} must be type TemplateString instead of ${(specification)}`);
                 }
             break;
             //Solo para que no se nos olvide incluir todos los operadores posibles en este switch

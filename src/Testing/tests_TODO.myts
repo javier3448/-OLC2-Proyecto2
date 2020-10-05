@@ -997,11 +997,9 @@
     foo1();
 }
 
-//BUG: we didnt even do anything about templateString
-
 {
-    console.log(`${`${{name:"Javier", number:10 + 3 * 4 ** 2}}`}`);
     console.log(`${ 10 * 2 }`);
+    console.log(`This is a big old object\n: ${{name:"Javier", number:10 + 3 * 4 ** 2}}`);
 }
 
 //la llamada a la funcion anidada solo tiene acceso a las variables declaradas en el 
@@ -1018,4 +1016,41 @@
             child();
         }
     }
+}
+
+//BUG: there cannot be templated strings inside one another. because we tokenize the first pair of `
+//     with a regex
+{
+    console.log(`${`${10}`}`);
+}
+
+//BUG: no pueden venir comillas dentro de un string, aunque se use el caracter de escape \
+//BUG: no pueden venir tildes (`) dentro de un string template aunque se use el caracter de escape \
+//BUG: no pueden venir $ dentro de un string template aunque se use el caracter de escape \
+{
+    let a = `
+    console.log(\`\${ 10 * 2 }\`);
+    console.log(\`This is a big old object\n: \${{name:"Javier", number:10 + 3 * 4 ** 2}}\`);
+    `;
+}
+
+
+//MIGHT BE A FUTURE BUG: si el ` que cierra el string template creo que crashea todo o solo dios sabe que pasa;
+// deberia de tirar error sintactico
+{
+    //let b = `\`;
+}
+
+//BUG: if there are braces inside and expression that its inside a comment we completely fuck 
+//     our brace counter we use to build the string that will be passed to the expressionParser.
+{
+    console.log(`Hello this is a string template ${/* evil characters: ` { */ 10}`);
+    console.log(`Hello this is a string template ${//Even more evilness: ` {
+                10}`);
+}
+
+//Unit tests for the stringParserFunction
+{
+    //console.log(`\`This is a big old object:\\n \${{name:"Javier", n:10 + 3 * 4 ** 2}.n}\\n 10 + 1 * 2 ** 3 = \${10 + 1 * 2 ** 3}\``);
+    //stringTemplateParser(`\`This is a big old object:\\n \${{name:"Javier", n:10 + 3 * 4 ** 2}.n}\\n 10 + 1 * 2 ** 3 = \${10 + 1 * 2 ** 3}\``);
 }

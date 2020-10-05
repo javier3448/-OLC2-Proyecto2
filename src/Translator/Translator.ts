@@ -3,7 +3,7 @@ import { TypeDef } from 'src/Ast/TypeDef';
 import { Statement, StatementKind, WhileStatement, Block, IfStatement, ForStatement, ForInStatement, ForOfStatement, SwitchStatement, DoWhileStatement} from "../Ast/Statement";
 import { Expression, ExpressionKind, FunctionCallExpression, LiteralExpression, IdentifierExpression, 
          MemberAccessExpression, BinaryExpression, UnaryExpression, TernaryExpression, ObjectLiteralExpression, 
-         ArrayLiteralExpression } from '../Ast/Expression';
+         ArrayLiteralExpression, TemplateString } from '../Ast/Expression';
 import { AccessKind, AttributeAccess, FunctionAccess, IndexAccess, MemberAccess } from 'src/Ast/MemberAccess';
 import { Declaration } from 'src/Ast/Declaration';
 import { ArrayTypeNode, CustomTypeNode, MyTypeNode, MyTypeNodeKind } from 'src/Ast/MyTypeNode';
@@ -307,8 +307,11 @@ export function translateExpression(indent:string, expr:Expression, funcNamesToR
     else if(spec instanceof ArrayLiteralExpression){
         result = translateArrayLiteral(indent, spec, funcNamesToReplace);
     }
+    else if(spec instanceof TemplateString){
+        result = translateTemplateString(indent, spec, funcNamesToReplace);
+    }
     else{
-        let a = spec;
+        throw new Error(`TranslateExpression no implementado todavia para: ${spec}`);
     }
 
     if(expr.hasParenthesis){
@@ -390,6 +393,12 @@ export function translateObjectLiteral(indent:string, objectLiteral:ObjectLitera
 
 export function translateArrayLiteral(indent:string, arrayLiteral:ArrayLiteralExpression, funcNamesToReplace:FuncNamesToReplace):string{
     return "[" + trasnlateCommaSeparatedExpressions(indent, arrayLiteral.expressions, funcNamesToReplace) + "]";
+}
+
+export function translateTemplateString(indent:string, templateString:TemplateString, funcNamesToReplace:FuncNamesToReplace):string{
+    //@FixMe:
+    //AQUI AQUI AQUI
+    return "\" FIX ME  FIX ME  FIX ME  FIX ME  FIX ME  FIX ME  FIX ME  FIX ME  FIX ME  FIX ME \"";
 }
 
 export function trasnlateCommaSeparatedExpressions(indent:string, expressions:Expression[], funcNamesToReplace:FuncNamesToReplace):string{

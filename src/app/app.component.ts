@@ -816,6 +816,7 @@ console.log(potencia(30,5)); //24300000
     `;
     }
 
+    {
     let testString = `
 function tail(strs:string[]):string[]{
     let result = [];
@@ -966,6 +967,14 @@ console.log(replaceInListOfLists("Bicho", ":O", [["Pasta", "Ganar", "Bicho", "Bi
 
 graficar_ts();
     `;
+
+    }
+
+    let testString = `
+    console.log(\`10 * 2 = \${ 10 * 2 } :| \`);
+    //console.log(\`This is a big old object\\n: \${{name:"Javier", number:10 + 3 * 4 ** 2}}\`);
+    `;
+
 
     this.sourceString = testString;
 
