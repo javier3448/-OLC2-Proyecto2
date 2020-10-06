@@ -1162,7 +1162,7 @@ console.log(potencia(30,5)); //24300000
 
     }
 
-    //TODO: we cant do avl.ts yet because we dont havent template strings :(
+    //PASS 
     {
     let testString = `
 type AVLNode = {
@@ -1170,11 +1170,11 @@ type AVLNode = {
     right: AVLNode,
     height: number,
     value: number
-};
+}
 
 type AVLTree = {
     root: AVLNode
-};
+}
 
 function height(n: AVLNode): number {
     if (n == null) {
@@ -1214,23 +1214,23 @@ function insert(node: AVLNode, value: number) :AVLNode {
 
     // If this node becomes unbalanced, then there are 4 cases
     // Left Left Case
-    if (balance > 1 && value < node.left.value) {
+    if (balance > 1 AND value < node.left.value) {
         return rightRotate(node);
     }
 
     // Right Right Case
-    if (balance < -1 && value > node.right.value) {
+    if (balance < -1 AND value > node.right.value) {
         return leftRotate(node);
     }
 
     // Left Right Case
-    if (balance > 1 && value > node.left.value) {
+    if (balance > 1 AND value > node.left.value) {
         node.left = leftRotate(node.left);
         return rightRotate(node);
     }
 
     // Right Left Case
-    if (balance < -1 && value < node.right.value) {
+    if (balance < -1 AND value < node.right.value) {
         node.right = rightRotate(node.right);
         return leftRotate(node);
     }
@@ -1304,7 +1304,7 @@ function preOrder(root: AVLNode): void {
     }
 }
 
-function getDot(root: AVLNode): String {
+function getDot(root: AVLNode): string {
     if (root != null) {
         let ret = \`\${root.value}\n\`;
         let tmp = getDot(root.left);

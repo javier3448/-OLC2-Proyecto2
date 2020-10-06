@@ -1062,3 +1062,13 @@
 	console.log("hello: \n Javier");
     console.log(`This is a big old object\n: ${{name:"Javier", number:10 + 3 * 4 ** 2}}`);
 }
+
+
+//BUG:
+//Si hay error sintactico al final del archivo, ie llega a EOF antes de llegar a ';'
+{
+    //Abajo hay un error sintactico que no tiene ';' 
+    //console.*^*&
+}
+
+//[:think:] Talvez sea mejor que se recupere de errores en el globalInstruction en vez de Statement
