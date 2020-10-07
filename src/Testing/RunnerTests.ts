@@ -163,7 +163,6 @@ graficar_ts();
     
     //old bug: Every variable would be anonymous before the bug fix
     {
-
       let testString = `
       // bug: a should have type A not Anonymous
 type A = {
@@ -230,6 +229,24 @@ graficar_ts();
 //           estan por el nullify +/-
     `;
     }
+
+//TODO:
+//BUG: left value se iba a imponer sobre el rvalue y eso causa comportamientos
+//     bien raros
+{
+    type A ={
+        att:string;
+    }
+
+    type B ={
+        att:string;
+    }
+
+    let a:A = { att:"Hello"}
+    let b:B = a;
+
+    graficar_ts();//el tipo de a es B :(
+}
 
     {
     let testString = `
@@ -992,10 +1009,7 @@ console.log(potencia(30,5)); //24300000
     }
 
     //Ordenamiento.ts
-    //We kinda PASS 
-    //our Array behaviour with index outofbounds and not integer is pretty broken
-    //(this test is not affected by the broken behaviour tho)
-    //we throw a couple errors but recover and end up somehow sorting the array
+    //PASS 100%
     {
 
     let testString = `
@@ -1345,11 +1359,11 @@ preOrder(tree.root);
             right: AVLNode,
             height: number,
             value: number
-        };
+        }
         
         type AVLTree = {
             root: AVLNode
-        };
+        }
         
         function height(n: AVLNode): number {
             if (n == null) {
@@ -1389,23 +1403,23 @@ preOrder(tree.root);
         
             // If this node becomes unbalanced, then there are 4 cases
             // Left Left Case
-            if (balance > 1 && value < node.left.value) {
+            if (balance > 1 AND value < node.left.value) {
                 return rightRotate(node);
             }
         
             // Right Right Case
-            if (balance < -1 && value > node.right.value) {
+            if (balance < -1 AND value > node.right.value) {
                 return leftRotate(node);
             }
         
             // Left Right Case
-            if (balance > 1 && value > node.left.value) {
+            if (balance > 1 AND value > node.left.value) {
                 node.left = leftRotate(node.left);
                 return rightRotate(node);
             }
         
             // Right Left Case
-            if (balance < -1 && value < node.right.value) {
+            if (balance < -1 AND value < node.right.value) {
                 node.right = rightRotate(node.right);
                 return leftRotate(node);
             }
@@ -1479,7 +1493,7 @@ preOrder(tree.root);
             }
         }
         
-        function getDot(root: AVLNode): String {
+        function getDot(root: AVLNode): string {
             if (root != null) {
                 let ret = "" + root.value;
                 let tmp = getDot(root.left);

@@ -260,10 +260,10 @@ export function translateExpression(indent:string, expr:Expression, funcNamesToR
 
         switch (expr.expressionKind) {
             case ExpressionKind.UNARY_MINUS:
-                result += '-' + translateExpression(indent, spec.expr, funcNamesToReplace);
+                result += '- ' + translateExpression(indent, spec.expr, funcNamesToReplace);
                 break;
             case ExpressionKind.NEGATION:
-                result += 'NOT' + translateExpression(indent, spec.expr, funcNamesToReplace);
+                result += 'NOT ' + translateExpression(indent, spec.expr, funcNamesToReplace);
                 break;
             case ExpressionKind.POSTFIX_INC:
                 result += translateExpression(indent, spec.expr, funcNamesToReplace) + '++';
@@ -542,13 +542,13 @@ export function translateWhile(indent:string, whileStatement:WhileStatement, fun
 }
 
 export function translateDoWhile(indent:string, doWhileStatement:DoWhileStatement, funcNamesToReplace:FuncNamesToReplace):string{
-    let result = indent + "doWhile{\n";
+    let result = indent + "do{\n";
 
     const newIndent = indent + indentUnit;
     
     result += translateStatements(newIndent, doWhileStatement.statements, funcNamesToReplace);
     
-    result += indent + "}do(" + translateExpression(indent, doWhileStatement.expr, funcNamesToReplace) + ");\n";
+    result += indent + "}while(" + translateExpression(indent, doWhileStatement.expr, funcNamesToReplace) + ");\n";
 
     return result;
 }

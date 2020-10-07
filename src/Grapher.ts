@@ -560,7 +560,7 @@ function expressionToLabel(expr:Expression):string{
             return "**";
 
         case ExpressionKind.UNARY_MINUS:
-            return "Unary";
+            return "Unary minus";
         case ExpressionKind.NEGATION:
             return "NOT";
         case ExpressionKind.POSTFIX_INC:

@@ -23,7 +23,7 @@ export function compareMyTypes(type1:MyType, type2:MyType):boolean{
     //Caso especial: si es array
     if(type1.kind === MyTypeKind.ARRAY && type2.kind === MyTypeKind.ARRAY){
         let subType1 = type1.specification as MyType;
-        let subType2 = type1.specification as MyType;
+        let subType2 = type2.specification as MyType;
         return compareMyTypes(subType1, subType2);
     }
 
@@ -149,10 +149,10 @@ export class MyObj {
                 for (const pointer of myArray.array) {
                     result += pointer.myObj.myToString() + ", ";
                 }
-                result.slice(0, -2);
+                return result.slice(0, -2);
             }break;
             //this is just how typescript does it, not my fault if it is shitty
-            //it is kinda lame that we cant get the string that the console woud
+            //it is kinda lame that we cant get the string that the console would
             //print
             case MyTypeKind.MY_CONSOLE:
             case MyTypeKind.CUSTOM:

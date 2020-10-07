@@ -18,7 +18,7 @@
     const { MyError } = require('../Runner/MyError')
     //const {Literal} = require('../Expression/Literal');
 
-    const { templateStringHelperRun } = require('../TemplateStringParsing/Helper')
+    const { templateStringHelperRun, processScapeSequences } = require('../TemplateStringParsing/Helper')
 %}
 
 %lex
@@ -632,11 +632,9 @@ Expression
     }
     | STRING
     {
-        //TERRIBLE PERFORMANCE:
-        //The worst performance ever. You really should be ashamed of yourself :(
-        let s = $1.slice(1, $1.length - 1).replace(/\\n/g, "\n");
-        s = s.replace(/\\r/g, "\r");
-        s = s.replace(/\\t/g, "\t");
+        //BAD PERFORMANCE:
+        //we are basically doing the lexing two times for every string 
+        let s = processScapeSequences($1.slice(1, $1.length - 1));
         $$ = new Expression(ExpressionKind.LITERAL, new LiteralExpression(new String(s)), @1.first_line, @1.first_column, @1.last_line, @1.last_column);
     }
     | TRUE

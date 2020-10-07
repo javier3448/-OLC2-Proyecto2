@@ -51,6 +51,7 @@ export class MyFunction{
                 }else{
                     resultString = resultString + func.returnType.myToString();
                 }
+                return resultString;
             }break;
             default:
                 throw new Error(`MyFunction.getTypeStirng no implementado para ${this.kind}`);

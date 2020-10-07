@@ -87,7 +87,7 @@
 
     //undefined
     console.log("******************undefined******************");
-    let _undefined = undefined;;
+    let _undefined = undefined;
     let i = _undefined + "s";
     console.log(i);
     let j = "s" + _undefined
@@ -1059,7 +1059,7 @@
 //OLD BUG:
 //las secuencias de escape adentro del traductor no deberian de ser escapadas
 {
-	console.log("hello: \n Javier");
+    console.log("hello: \n Javier");
     console.log(`This is a big old object\n: ${{name:"Javier", number:10 + 3 * 4 ** 2}}`);
 }
 
@@ -1072,3 +1072,25 @@
 }
 
 //[:think:] Talvez sea mejor que se recupere de errores en el globalInstruction en vez de Statement
+
+
+//OLD BUG: no da error de tipos en let a:Array<string> = [10];
+//     cuando se concatena un array con un string no hace bien la concatenacion, 
+//     el toString del array retorna undefined o algo asi
+{
+    //Array
+    console.log("*******************Array********************");
+    let myArray:Array<string> = [10];
+    let m = myArray + "s";//string
+    console.log(m);
+    let n = "s" + myArray;//string
+    console.log(n);
+
+    //EmptyArray
+    console.log("****************EmptyArray*****************");
+    let myEmptyArray:Array<string> = [];
+    let q = myEmptyArray + "s";//string
+    console.log(q);
+    let r = "s" + myEmptyArray;//string
+    console.log(r);
+}
