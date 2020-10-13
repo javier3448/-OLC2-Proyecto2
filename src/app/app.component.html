@@ -300,29 +300,36 @@
 <table style="width: 100%; table-layout: fixed;">
 <thead>
   <tr>
-    <th></th>
-    <th>
+    <th colspan="2">
+      <div class="d-flex justify-content-center">
         <button class="btn btn-primary btn-sm" (click)="traducir(textBoxSource)">Traducir</button>
+      </div>
     </th>
-    <th>
+    <th colspan="2">
+      <div class="d-flex justify-content-center">
         <button class="btn btn-primary btn-sm" (click)="ejecutar(textBoxSource)">Ejecutar</button>
+      </div>
     </th>
-    <th></th>
+    <th colspan="2">
+      <div class="d-flex justify-content-center">
+        <button class="btn btn-primary btn-sm" (click)="test(textBoxSource)">Test</button>
+      </div>
+    </th>
   </tr>
 
   <tr>
     <th></th>
     <th></th>
-    <th>
-        <button class="btn btn-primary btn-sm" (click)="test(textBoxSource)">Test</button>
-    </th>
+    <th></th>
+    <th></th>
+    <th></th>
     <th></th>
   </tr>
 
 </thead>
 <tbody>
   <tr>
-    <td colspan="2" style="width: 50%">
+    <td colspan="6">
         <!-- DEBUGGING ONLY: for the this [(ngModel)] -->
         <ngx-codemirror #textBoxSource [(ngModel)]="sourceString"
             [options]="{
@@ -332,7 +339,19 @@
             }"
         ></ngx-codemirror>
     </td>
-    <td colspan="2" style="width: 50%">
+  </tr>
+  <tr>
+    <td colspan="3">
+        <!-- DEBUGGING ONLY: for the this [(ngModel)] -->
+        <ngx-codemirror #textBoxSource [(ngModel)]="sourceString"
+            [options]="{
+                lineNumbers: true,
+                theme: 'material',
+                mode: 'javascript'
+            }"
+        ></ngx-codemirror>
+    </td>
+    <td colspan="3">
         <ngx-codemirror #textBoxJs [(ngModel)]="runtimeInterface.translation"
             [options]="{
                 lineNumbers: true,
@@ -343,7 +362,7 @@
     </td>
   </tr>
   <tr style>
-    <td colspan="4">
+    <td colspan="6">
         <mat-tab-group>
           <mat-tab label="Consola">
             <ngx-codemirror #textBoxJs [(ngModel)]="runtimeInterface.myConsole"
