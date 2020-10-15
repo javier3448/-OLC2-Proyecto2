@@ -8,7 +8,7 @@
   "files": [
     "src/main.ts",
     "src/Grapher.ts",
-    "src/Runner/Runner.ts",
+    "src/Compiler/Compiler.ts",
     "src/Ast/Expression.ts",
     "src/Ast/MemberAccess.ts",
     "src/Ast/Statement.ts",
@@ -16,11 +16,10 @@
     "src/Ast/Declaration.ts",
     "src/Ast/AstNode.ts",
     "src/Ast/MyTypeNode.ts",
-    "src/Ast/GlobalInstructionsRunner.ts",
-    "src/Ast/GlobalInstructionsTranslator.ts",
+    "src/Ast/GlobalInstructions.ts",
     "src/Ast/FunctionDefTranslator.ts",
     "src/polyfills.ts",
-    "src/TemplateStringParsing/Helper.ts",
+    "src/Compiler/ParserHelper.ts",
   ],
   "include": [
     "src/**/*.d.ts"

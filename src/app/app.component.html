@@ -302,12 +302,12 @@
   <tr>
     <th colspan="2">
       <div class="d-flex justify-content-center">
-        <button class="btn btn-primary btn-sm" (click)="traducir(textBoxSource)">Traducir</button>
+        <button class="btn btn-primary btn-sm" (click)="compilar(textBoxSource)">Compilar</button>
       </div>
     </th>
     <th colspan="2">
       <div class="d-flex justify-content-center">
-        <button class="btn btn-primary btn-sm" (click)="ejecutar(textBoxSource)">Ejecutar</button>
+        <button class="btn btn-primary btn-sm" (click)="optimizar(textBoxSource)">Optimizar</button>
       </div>
     </th>
     <th colspan="2">
@@ -335,7 +335,8 @@
             [options]="{
                 lineNumbers: true,
                 theme: 'material',
-                mode: 'javascript'
+                mode: 'javascript',
+                indentUnit: 4
             }"
         ></ngx-codemirror>
     </td>
@@ -343,20 +344,22 @@
   <tr>
     <td colspan="3">
         <!-- DEBUGGING ONLY: for the this [(ngModel)] -->
-        <ngx-codemirror #textBoxSource [(ngModel)]="sourceString"
+        <ngx-codemirror #textBoxSource [(ngModel)]="runtimeInterface.intermediateRepresentation"
             [options]="{
                 lineNumbers: true,
                 theme: 'material',
-                mode: 'javascript'
+                mode: 'null',
+                indentUnit: 4
             }"
         ></ngx-codemirror>
     </td>
     <td colspan="3">
-        <ngx-codemirror #textBoxJs [(ngModel)]="runtimeInterface.translation"
+        <ngx-codemirror #textBoxJs [(ngModel)]="runtimeInterface.optimizedIntermediateRepresentation"
             [options]="{
                 lineNumbers: true,
                 theme: 'material',
-                mode: 'javascript'
+                mode: 'null',
+                indentUnit: 4
             }"
         ></ngx-codemirror>
     </td>
@@ -364,15 +367,16 @@
   <tr style>
     <td colspan="6">
         <mat-tab-group>
-          <mat-tab label="Consola">
-            <ngx-codemirror #textBoxJs [(ngModel)]="runtimeInterface.myConsole"
+          <mat-tab label="AST Ejecucion dot">
+            <ngx-codemirror #textBoxJs [(ngModel)]="runtimeInterface.dotSourceAst"
                 [options]="{
-                    lineNumbers: false,
+                    lineNumbers: true,
                     theme: 'material',
-                    mode: 'null',
-                    readOnly: 'true'
+                    mode: 'javascript'
                 }"
             ></ngx-codemirror>
+          </mat-tab>
+          <mat-tab label="AST Ejecucion png">
           </mat-tab>
           <mat-tab label="Errores">
             <table class="table">
@@ -394,24 +398,6 @@
                 </tbody>
             </table>
         </mat-tab>
-          <mat-tab label="AST Traduccion">
-            <ngx-codemirror #textBoxJs [(ngModel)]="runtimeInterface.dotSourceTranslator"
-                [options]="{
-                    lineNumbers: true,
-                    theme: 'material',
-                    mode: 'javascript'
-                }"
-            ></ngx-codemirror>
-          </mat-tab>
-          <mat-tab label="AST Ejecucion">
-            <ngx-codemirror #textBoxJs [(ngModel)]="runtimeInterface.dotSourceRunner"
-                [options]="{
-                    lineNumbers: true,
-                    theme: 'material',
-                    mode: 'javascript'
-                }"
-            ></ngx-codemirror>
-          </mat-tab>
           <mat-tab label="Tabla de simbolos">
             <table class="table">
                 <thead>
@@ -443,4 +429,4 @@
 </table>
 
 <!-- <div id="astTranslator"></div> -->
-<div id="astRunner"></div>
+<div id="ast"></div>

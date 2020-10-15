@@ -2,33 +2,20 @@ import { digraph, Digraph, attribute, INode, toDot } from "ts-graphviz";
 import { Expression, ExpressionKind, LiteralExpression, 
           IdentifierExpression, BinaryExpression, UnaryExpression, 
           TernaryExpression, MemberAccessExpression, FunctionCallExpression, 
-          ObjectLiteralExpression, PropertyNode, ArrayLiteralExpression, TemplateString} from "./Ast/Expression";
+          ObjectLiteralExpression, PropertyNode, ArrayLiteralExpression } from "./Ast/Expression";
 import { Statement, WhileStatement, Block, StatementKind, IfStatement, ForStatement, ForInStatement, ForOfStatement, SwitchStatement, DoWhileStatement  } from "./Ast/Statement";
 import { AstNode } from "./Ast/AstNode";
 
-import { parser as parserTranslator } from "./Translator/TranslatorParser.js";
-import { parser as parserRunner } from "./Runner/RunnerParser.js";
 import { Declaration } from './Ast/Declaration';
 import { Assignment } from './Ast/Assignment';
 import { ArrayTypeNode, CustomTypeNode, MyTypeNode, MyTypeNodeKind } from './Ast/MyTypeNode';
 import { MemberAccess, AccessKind, FunctionAccess, IndexAccess, AttributeAccess } from './Ast/MemberAccess';
-import { GlobalInstructionsRunner } from './Ast/GlobalInstructionsRunner';
+import { GlobalInstructions } from './Ast/GlobalInstructions';
 import { AttributeNode, TypeDef } from './Ast/TypeDef';
 import { FunctionDef, ParamNode } from './Ast/FunctionDef';
-import { GlobalInstructionsTranslator } from './Ast/GlobalInstructionsTranslator';
 import { FunctionDefTranslator } from './Ast/FunctionDefTranslator';
 
-export function testTranslatorGraph(root:GlobalInstructionsTranslator):string{
-    const g = digraph('G');
-
-    graphGlobalInstructionsTranslator(g, root);
-
-    let dot = toDot(g);
-
-    return dot;
-}
-
-export function testRunnerGraph(root:GlobalInstructionsRunner):string{
+export function graphAst(root:GlobalInstructions):string{
     const g = digraph('G');
 
     graphGlobalInstructions(g, root);
@@ -38,7 +25,7 @@ export function testRunnerGraph(root:GlobalInstructionsRunner):string{
     return dot;
 }
 
-export function graphGlobalInstructions(g:Digraph, globalInstructions:GlobalInstructionsRunner):INode{
+export function graphGlobalInstructions(g:Digraph, globalInstructions:GlobalInstructions):INode{
 
     let result = g.createNode(`globalInstructions${globalInstructions.astNode.getId()}`, {
         [attribute.label]: 'Global',
@@ -52,30 +39,6 @@ export function graphGlobalInstructions(g:Digraph, globalInstructions:GlobalInst
     g.createEdge([result, typeDefsNode]);
     g.createEdge([result, functionDefsNode]);
     g.createEdge([result, stmtsNode]);
-
-    return result;
-}
-
-export function graphGlobalInstructionsTranslator(g:Digraph, globalInstructions:GlobalInstructionsTranslator):INode{
-
-    let result = g.createNode(`globalInstructions${globalInstructions.astNode.getId()}`, {
-        [attribute.label]: 'Global',
-        [attribute.shape]: 'box',
-    });
-
-    for (const instruction of globalInstructions.instructions) {
-        let instructionNode:INode;
-        if(instruction instanceof FunctionDefTranslator){
-            instructionNode = graphFunctionDefTranslator(g, instruction);
-        }
-        else if(instruction instanceof TypeDef){
-            instructionNode = graphTypeDef(g, instruction);
-        }
-        else{//must be statement
-            instructionNode = graphStatement(g, instruction);
-        }
-        g.createEdge([result, instructionNode]);
-    }
 
     return result;
 }
@@ -375,27 +338,6 @@ export function graphExpression(g:Digraph, expr:Expression):INode{
         }
         break;
 
-        case ExpressionKind.TEMPLATE_STRING:
-        {
-            const templateString = expr.specification as TemplateString;
-            for (const templateChunk of templateString.values){
-                let chunkNode:INode;
-                if(templateChunk instanceof String){
-                    chunkNode = g.createNode(`function_name${AstNode.getNextAstNodeId()}`, {
-                        [attribute.label]: `String chunk\n${templateChunk.toString()}`,
-                        [attribute.shape]: 'box',
-                    });
-                }
-                else if(templateChunk instanceof Expression){
-                    chunkNode = graphExpression(g, templateChunk);
-                }
-                            if(chunkNode === undefined){
-                                console.log("lol");
-                            }
-                g.createEdge([result, chunkNode]);
-            }
-        }
-        
         //No children
         case ExpressionKind.IDENTIFIER:
         case ExpressionKind.LITERAL:
@@ -601,8 +543,6 @@ function expressionToLabel(expr:Expression):string{
         case ExpressionKind.TERNARY:
             return ".. ? .. : ..";
 
-        case ExpressionKind.TEMPLATE_STRING:
-            return "TemplateString";
         default:
             throw Error(`expressionToLabel no tiene implementacion para expression kind: ${expr.expressionKind}`)
     }

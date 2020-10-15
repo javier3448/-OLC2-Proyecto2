@@ -39,9 +39,6 @@ export enum ExpressionKind{
     FUNCTION_CALL = 'FUNCTION_CALL',
     OBJECT_LITERAL = 'OBJECT_LITERAL',
     ARRAY_LITERAL = 'ARRAY_LITERAL',
-
-    //template string
-    TEMPLATE_STRING = 'TEMPLATE_STRING'
 }
 
 export class UnaryExpression{
@@ -57,7 +54,7 @@ export class TernaryExpression{
 }
 
 export class LiteralExpression{
-    constructor(public literal:(String | Number | Boolean | undefined | null)){ 
+    constructor(public literal:(String | Number | Boolean | null)){ 
 
     }
 }
@@ -100,10 +97,6 @@ export class PropertyNode{
     
 }
 
-export class TemplateString{
-    public values:(String | Expression)[] = [];
-}
-
 export class Expression {
     //Common AST attributes
     public astNode: AstNode;
@@ -111,12 +104,7 @@ export class Expression {
     public expressionKind: ExpressionKind;
     public specification: (UnaryExpression | BinaryExpression | TernaryExpression | 
                            IdentifierExpression | LiteralExpression | MemberAccessExpression | 
-                           ObjectLiteralExpression | ArrayLiteralExpression | TemplateString);
-
-
-    //Huge bodge. 
-    //its only useful when this Expression is being in a translation AST
-    public hasParenthesis: boolean;
+                           ObjectLiteralExpression | ArrayLiteralExpression);
 
     constructor(expressionKind:ExpressionKind, specification:(UnaryExpression | BinaryExpression | TernaryExpression | IdentifierExpression | LiteralExpression | MemberAccessExpression | ObjectLiteralExpression | ArrayLiteralExpression),
                 firstLine:number, firstColumn:number, lastLine:number, lastColumn:number){
@@ -192,11 +180,6 @@ export class Expression {
                     throw new Error(`Assertion Error: expressionKind ${expressionKind.toString()} must be type ArrayLiteralExpression instead of ${(specification)}`);
                 }
             break;
-            case ExpressionKind.TEMPLATE_STRING:
-                if(!(specification instanceof TemplateString)){
-                    throw new Error(`Assertion Error: expressionKind ${expressionKind.toString()} must be type TemplateString instead of ${(specification)}`);
-                }
-            break;
             //Solo para que no se nos olvide incluir todos los operadores posibles en este switch
             default:
                 throw new Error(`[!!!] No se ha implementado todavia el operador ${expressionKind}`);
@@ -204,6 +187,5 @@ export class Expression {
 
         this.expressionKind = expressionKind;
         this.specification = specification;
-        this.hasParenthesis = false;
     }
 }
