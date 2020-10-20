@@ -34,8 +34,8 @@ export enum ExpressionKind{
 
     //Atomic
     MEMBER_ACCESS = 'MemberAccess',
-    LITERAL = 'LITERAL',
     IDENTIFIER = 'IDENTIFIER',
+    LITERAL = 'LITERAL',
     FUNCTION_CALL = 'FUNCTION_CALL',
     OBJECT_LITERAL = 'OBJECT_LITERAL',
     ARRAY_LITERAL = 'ARRAY_LITERAL',

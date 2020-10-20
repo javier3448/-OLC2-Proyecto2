@@ -31,7 +31,7 @@ export class Variable{
         public isConst:boolean,
         public type:MyType,
         //The value of a variable is always a stack frame offset
-        public value:number
+        public offset:number
     ){   }
 }
 
@@ -51,7 +51,7 @@ export enum ScopeKind{
 //          (define what the p pointer does and all that)
 
 // The current scope and all previous ones
-// all variables in a Scope must be in a stack frame
+// ALL VARIABLES IN A SCOPE MUST BE IN STACK FRAME
 export class Scope{
     //we need the total size of all variables in a stack frame
     //so we can do the stackframe change before calling a diferent function
@@ -162,15 +162,19 @@ export module Env{
     //[throws_MyError]
     //Atrapa si ya exite el id en el current scope
     //[!] Can't do type checking
-    export function addVariable(id:string, isConst:boolean, type:MyType, val:number){
+    export function addVariable(id:string, isConst:boolean, type:MyType):Number{
         //ver si ya existe en el current scope
 
         if(current.myVariables[id] !== undefined){
             throw new MyError(`No se agregar una variable con el nombre '${id}' porque existe un variable con el mismo nomber en el mismo scope`);
         }
 
-        current.myVariables[id] = new Variable(isConst, type, val);
-        current.size++;
+        //WE DONT NEED TO GET THE OFFSET OF THE VARIABLE FROM OUTSIDE THIS
+        //METHOD BECAUSE IT ONLY DEPENDS ON CURRENT SIZE OF THIS SCOPE
+        let varOffset = current.size
+        current.myVariables[id] = new Variable(isConst, type, varOffset);
+        current.size += 1;
+        return varOffset
     }
 
     //MEJORA: better name
@@ -184,7 +188,7 @@ export module Env{
         ){   } 
     }
 
-    //if null is returned there is no variable with the that id in the stack frame or the global variables
+    //if null is returned there is no variable with that id in the stack frame or the global variables
     //in the current scope or the previous ones (we stop searching once we find the first)
     //i.e. ReturnValue can only be Pointer of NullInstance
     //only returns variables in the same stack frame so we can

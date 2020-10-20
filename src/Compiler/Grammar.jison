@@ -1,3 +1,4 @@
+//TODO: AGREGAR RECUPERACION DE ERRORES SINTACTICOS
 %{
     const { Expression, ExpressionKind, 
     UnaryExpression, BinaryExpression, TernaryExpression, LiteralExpression, 
@@ -10,7 +11,7 @@
             SwitchStatement, SwitchCase, SwitchDefault, 
             SwitchInstructions } = require('../Ast/Statement');
     const { AssignmentNode } = require('../Ast/AssignmentNode');
-    const { Declaration, DeclarationModifier } = require('../Ast/Declaration');
+    const { Declaration } = require('../Ast/Declaration');
     const { MyTypeNode, MyTypeNodeKind } = require('../Ast/MyTypeNode');
     const { GlobalInstructions } = require('../Ast/GlobalInstructions')
     const { TypeDef, AttributeNode } = require('../Ast/TypeDef')
@@ -480,19 +481,19 @@ Block
 Declaration
     : LET IDENTIFIER ':' Type '=' Expression
     {
-        $$ = new Declaration(DeclarationModifier.LET, $2, $4, $6, @1.first_line, @1.first_column, @6.last_line, @6.last_column);
+        $$ = new Declaration(false, $2, $4, $6, @1.first_line, @1.first_column, @6.last_line, @6.last_column);
     }
     | LET IDENTIFIER ':' Type
     {
-        $$ = new Declaration(DeclarationModifier.LET, $2, $4, null, @1.first_line, @1.first_column, @4.last_line, @4.last_column);
+        $$ = new Declaration(false, $2, $4, null, @1.first_line, @1.first_column, @4.last_line, @4.last_column);
     }
     | CONST IDENTIFIER ':' Type '=' Expression
     {
-        $$ = new Declaration(DeclarationModifier.CONST, $2, $4, $6, @1.first_line, @1.first_column, @6.last_line, @6.last_column);
+        $$ = new Declaration(true, $2, $4, $6, @1.first_line, @1.first_column, @6.last_line, @6.last_column);
     }
     | CONST IDENTIFIER ':' Type
     {
-        $$ = new Declaration(DeclarationModifier.CONST, $2, $4, null, @1.first_line, @1.first_column, @4.last_line, @4.last_column);
+        $$ = new Declaration(true, $2, $4, null, @1.first_line, @1.first_column, @4.last_line, @4.last_column);
     }
 ;
 

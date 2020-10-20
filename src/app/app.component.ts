@@ -43,7 +43,6 @@ export class RuntimeInterface {
 export class AppComponent implements OnInit{
   title = 'Proyecto1';
 
-  
   //No podemos hacer que la rutime interface sea estatica porque los ngmodules
   //no funcionan 
   runtimeInterface: RuntimeInterface = new RuntimeInterface();
@@ -58,8 +57,27 @@ export class AppComponent implements OnInit{
 `;
     }
   
+    {
     let testString = `true AND true OR false AND false AND false OR NOT true;
 //lastT = 1;
+`;
+    }
+
+    //TODO: verificar que el stack este bien en esta prueba
+    {
+    let testString = `let a:number = (((3 * 3) + 4) - 80 + 40.00 * 2 + 358.50 - (29 / 14.50)) - (0.50) + ((5750 * 2) - 11800 + 1.0);
+let b:number; //0
+const c:number;//Error
+const d:number = 10; //SymbolTable must have this variable with .isConst == true
+//stack[0] == 70;
+//stack[1] == 0;
+//stack[2] == 10;
+`;
+    }
+
+    let testString = `let a:number = 10;
+a = 0;
+//stack[0] == 0;
 `;
 
     this.sourceString = testString;

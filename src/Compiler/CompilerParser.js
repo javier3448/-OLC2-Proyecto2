@@ -326,22 +326,22 @@ case 66:
 break;
 case 67:
 
-        this.$ = new Declaration(DeclarationModifier.LET, $$[$0-4], $$[$0-2], $$[$0], _$[$0-5].first_line, _$[$0-5].first_column, _$[$0].last_line, _$[$0].last_column);
+        this.$ = new Declaration(false, $$[$0-4], $$[$0-2], $$[$0], _$[$0-5].first_line, _$[$0-5].first_column, _$[$0].last_line, _$[$0].last_column);
     
 break;
 case 68:
 
-        this.$ = new Declaration(DeclarationModifier.LET, $$[$0-2], $$[$0], null, _$[$0-3].first_line, _$[$0-3].first_column, _$[$0].last_line, _$[$0].last_column);
+        this.$ = new Declaration(false, $$[$0-2], $$[$0], null, _$[$0-3].first_line, _$[$0-3].first_column, _$[$0].last_line, _$[$0].last_column);
     
 break;
 case 69:
 
-        this.$ = new Declaration(DeclarationModifier.CONST, $$[$0-4], $$[$0-2], $$[$0], _$[$0-5].first_line, _$[$0-5].first_column, _$[$0].last_line, _$[$0].last_column);
+        this.$ = new Declaration(true, $$[$0-4], $$[$0-2], $$[$0], _$[$0-5].first_line, _$[$0-5].first_column, _$[$0].last_line, _$[$0].last_column);
     
 break;
 case 70:
 
-        this.$ = new Declaration(DeclarationModifier.CONST, $$[$0-2], $$[$0], null, _$[$0-3].first_line, _$[$0-3].first_column, _$[$0].last_line, _$[$0].last_column);
+        this.$ = new Declaration(true, $$[$0-2], $$[$0], null, _$[$0-3].first_line, _$[$0-3].first_column, _$[$0].last_line, _$[$0].last_column);
     
 break;
 case 71:
@@ -731,7 +731,7 @@ parse: function parse(input) {
             SwitchStatement, SwitchCase, SwitchDefault, 
             SwitchInstructions } = require('../Ast/Statement');
     const { AssignmentNode } = require('../Ast/AssignmentNode');
-    const { Declaration, DeclarationModifier } = require('../Ast/Declaration');
+    const { Declaration } = require('../Ast/Declaration');
     const { MyTypeNode, MyTypeNodeKind } = require('../Ast/MyTypeNode');
     const { GlobalInstructions } = require('../Ast/GlobalInstructions')
     const { TypeDef, AttributeNode } = require('../Ast/TypeDef')

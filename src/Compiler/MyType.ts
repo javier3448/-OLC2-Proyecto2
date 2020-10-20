@@ -116,7 +116,21 @@ export class MyType
             default:
                 throw new Error(`MyType.getName no implementado para ${this.kind}`);
         }
+    }
 
+    public getDefaultVal():Number{
+        switch (this.kind) {
+            case MyTypeKind.NUMBER:
+            case MyTypeKind.BOOLEAN:
+                return 0;
+            case MyTypeKind.STRING:
+            case MyTypeKind.ARRAY:
+            case MyTypeKind.CUSTOM:
+                //MEJORA?: Que nullPointer se una constante global o algo asi
+                return -1;//null pointer
+            default:
+                throw new Error(`MyType.getDefaultValue no implementado para ${this.kind}`);
+        }
     }
 
     //TODO: un typeSignature de String con las funciones nativas
@@ -139,5 +153,47 @@ export class MyType
     //TODO: un typeSignature de Array con las funciones nativas de array
     public static makeArrayType(subType:MyType):MyType{
         return new MyType(MyTypeKind.ARRAY, subType);
+    }
+
+    //[ !!! ] compareTypes(A, B) != compareTypes(B, A)
+    //Intended use: para declaraciones y asignaciones de variables: 
+    //left: varType, right: exprType
+    public static compareTypes(leftType:MyType, rightType:MyType):boolean{
+        switch (leftType.kind) {
+            case MyTypeKind.NUMBER:
+            {
+                return rightType.kind === MyTypeKind.NUMBER;
+            }break;
+
+            case MyTypeKind.BOOLEAN:
+            {
+                return rightType.kind === MyTypeKind.BOOLEAN;
+            }break;
+
+            case MyTypeKind.STRING:
+            {
+                throw new Error(`compareTypes no implementado para leftType: ${leftType}`)
+            }break;
+
+            case MyTypeKind.ARRAY:
+            {
+                throw new Error(`compareTypes no implementado para leftType: ${leftType}`)
+            }break;
+
+            case MyTypeKind.CUSTOM:
+            {
+                throw new Error(`compareTypes no implementado para leftType: ${leftType}`)
+            }break;
+
+            case MyTypeKind.MY_CONSOLE:
+            {
+                throw new Error(`compareTypes no implementado para leftType: ${leftType}`)
+            }break;
+
+        
+            default:
+                throw new Error(`compareTypes no implementado para leftType: ${leftType}`)
+                break;
+        }
     }
 }

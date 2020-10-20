@@ -1,0 +1,4 @@
+throw MyError.makeMyError(
+    MyErrorKind.TYPE_ERROR, 
+    `No se puede realizar la operacion: '${expr.expressionKind}' con los tipos: '${leftResult.myType.getName()} y '${rightResult.myType.getName()}'`
+);

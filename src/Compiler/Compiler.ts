@@ -20,8 +20,12 @@ import { GlobalInstructions } from 'src/Ast/GlobalInstructions';
 import { TypeDef, AttributeNode } from "../Ast/TypeDef";
 import { FunctionDef, ParamNode } from "../Ast/FunctionDef";
 import { ExprResult } from "./ExprResult"
-import { ArithOp, Assignment, _3AddrAssignment, Cond_goto, C_ir_instruction, c_ir_instructions_toString, Goto, Label, LabelDeclaration, RelOp } from './C_ir_instruction';
+import { LValueResult } from "./LValueResult"
+import { ArithOp, Assignment, _3AddrAssignment, Cond_goto, C_ir_instruction, c_ir_instructions_toString, Goto, Label, LabelDeclaration, RelOp, Mem } from './C_ir_instruction';
 import { AssignmentNode } from 'src/Ast/AssignmentNode';
+
+//TODO: agregar un comentario con el c_ir deseado en todos 
+//      los lugares en los que generamos c_ir
 
 //Casi siempre que retornemos un string asi nadamas significa que estamos retorna
 //el C_IR generado por algun lang construct
@@ -65,6 +69,7 @@ export function graficar_ts(){
 
 export function resetRuntimeInterface(){
     runtimeInterface.tsDataSet = [];
+    runtimeInterface.errorDataSet = [];
     runtimeInterface.intermediateRepresentation = "";
 }
 // END: IO functions
@@ -83,6 +88,14 @@ function getNextLabel():String{
     labelCount += 1;
     return new String("L" + labelCount);
 }
+
+//MEJORA?: escribir porque son const string 
+//kinda similar to special purpose regs is x86
+
+//pointer the beggining of the current stackframe
+export const P_REG:String = new String("p");
+//pointer the fist free position in the heap
+export const H_REG:String = new String("h");
 
 function construct_c_ir_header():string{
     //El primer numero entero que un IEEE754 no puede 
@@ -212,6 +225,8 @@ export function compileTypeDef(typeDef:TypeDef){
     throw new Error("Not implemented yet!");
 }
 
+//MEDIO CHAPUZ
+//retorna empty c_ir_instruction si occurio un error
 export function compileStatement(statement:Statement):C_ir_instruction[]{
 
     try {
@@ -234,7 +249,7 @@ export function compileStatement(statement:Statement):C_ir_instruction[]{
             }
             console.log(myError);
             runtimeInterface.errorDataSet.push(myError);
-            return;
+            return [];
         }else{
             throw myError;
         }
@@ -257,6 +272,44 @@ export function compileExpression(expr:Expression):ExprResult{
 
         if(expr.specification instanceof BinaryExpression){
 
+            //Casos especiales de binary expression
+            if(expr.expressionKind === ExpressionKind.ASSIGNMENT){
+                let lvalue = compileLValue(expr.specification.left);
+                let rvalue = compileExpression(expr.specification.right);
+
+                //check types:
+                if(!MyType.compareTypes(lvalue.myType, rvalue.myType)){
+                    throw MyError.makeMyError(
+                        MyErrorKind.TYPE_ERROR, 
+                        `No se puede realizar la operacion: '${expr.expressionKind}' con los tipos: '${lvalue.myType.getName()} y '${rvalue.myType.getName()}'`
+                    );
+                }
+
+                let temp = getNextTemp();
+
+                let c_ir:C_ir_instruction[] = new Array();
+
+                //generamos el mem access (depende de si el lvalue esta en el stack o el heap)
+                let mem:Mem;
+                if(lvalue.isInStack){
+                    mem = Mem.stackAccess(lvalue.addr);
+                }
+                else{
+                    mem = Mem.heapAccess(lvalue.addr);
+                }
+                
+                c_ir = c_ir.concat(
+                    lvalue.c_ir, 
+                    rvalue.c_ir,
+                   [new Assignment(mem, rvalue.val)]
+                );
+
+                return new ExprResult(lvalue.myType, false, temp, c_ir);
+            }
+            
+
+            //De este punto en adelante siempre vamos compilar ambos lados
+            //de la expression de la misma manera
             let leftResult = compileExpression(expr.specification.left);
             let rightResult = compileExpression(expr.specification.right);
 
@@ -328,16 +381,10 @@ export function compileExpression(expr:Expression):ExprResult{
                     }
                 }break;
 
-                case ExpressionKind.POWER :
+                case ExpressionKind.POWER:
                 {
                     throw new Error(`operacion binaria: ${expr.expressionKind} no implementada todavia`);
                 }break;
-
-                case ExpressionKind.ASSIGNMENT:
-                {
-                    throw new Error(`operacion binaria: ${expr.expressionKind} no implementada todavia`);
-                }break;
-
 
                 //LOGICAS
                 case ExpressionKind.AND:
@@ -413,7 +460,7 @@ export function compileExpression(expr:Expression):ExprResult{
                             new Assignment(temp, new Number(0)),
                             new LabelDeclaration(end_label)]
                         )
-                        return new ExprResult(MyType.BOOLEAN, false, false, temp, c_ir);
+                        return new ExprResult(MyType.BOOLEAN, false, temp, c_ir);
                     }
                     else{
                         throw MyError.makeMyError(MyErrorKind.TYPE_ERROR, 
@@ -455,11 +502,11 @@ export function compileExpression(expr:Expression):ExprResult{
                     throw new Error(`expression literal no implementado para: string todavia`);
                 }
                 else if(lit.literal instanceof Number){
-                    return new ExprResult(MyType.NUMBER, true, false, lit.literal.valueOf(), []);
+                    return new ExprResult(MyType.NUMBER, true, lit.literal.valueOf(), []);
                 }
                 else if(lit.literal instanceof Boolean){
                     let val = (lit.literal.valueOf() ? 1 : 0);
-                    return new ExprResult(MyType.BOOLEAN, true, false, val, []);
+                    return new ExprResult(MyType.BOOLEAN, true, val, []);
                 }
                 else{
                     throw new Error(`expression literal no implementado para: ${lit.literal}`);
@@ -484,6 +531,47 @@ export function compileExpression(expr:Expression):ExprResult{
     }
 }
 
+function compileLValue(expr:Expression):LValueResult{
+    if(expr.expressionKind === ExpressionKind.IDENTIFIER){
+        let identExp = expr.specification as IdentifierExpression;
+        //We get the value from the symbol table
+        let getVarResult = Env.getVariable(identExp.name);
+        if(getVarResult === null){
+            throw new MyError(`No existe una variable con el nombre: '${identExp.name}' en este entorno`);
+        }
+        let isGlobal = getVarResult.isGlobal;
+        let variable = getVarResult.variable;
+
+        //Generamos c_ir diferente dependiendo de si es global
+        //local
+        if(isGlobal){
+
+            let temp = getNextTemp();
+            let c_ir:C_ir_instruction[] = [
+                new Assignment(temp, variable.offset)
+            ]
+
+            return new LValueResult(variable.type, variable.isConst, true, temp, c_ir);
+        }
+        else{
+            let temp = getNextTemp();
+            let c_ir:C_ir_instruction[] = [
+                new _3AddrAssignment(temp, P_REG, ArithOp.ADDITION, variable.offset)
+            ];
+
+            return new LValueResult(variable.type, variable.isConst, true, temp, c_ir);
+        }
+
+    }
+    else if(expr.expressionKind === ExpressionKind.MEMBER_ACCESS){
+        //tenemos que tener el typeSignature antes de hacer esta parte
+        throw new Error(`compileLValue no implementado para member access todavia`);
+    }
+    else{
+        throw new MyError(`Not an lvalue`);
+    }
+}
+
 // devuelbe el ExprResult de hacer una expresion binaria en C_IR entre leftResult y rightResult
 // intended use: + - * / % entre 2 numbers. porque se genera C_IR practicamente identico para esos casos
 // this would an inlined func in c
@@ -502,7 +590,7 @@ function generateSimpleArithExprResult(left_c_ir:C_ir_instruction[], left_val:(S
         [new _3AddrAssignment(temp, left_val, arithOp, right_val)]
     );
 
-    return new ExprResult(MyType.NUMBER, false, false, temp, c_ir);
+    return new ExprResult(MyType.NUMBER, false, temp, c_ir);
 }
 
 function generateAndExprResult(left_c_ir:C_ir_instruction[], left_val:(String | Number), right_c_ir:C_ir_instruction[], right_val:(String | Number)):ExprResult{
@@ -555,7 +643,7 @@ function generateAndExprResult(left_c_ir:C_ir_instruction[], left_val:(String | 
         new LabelDeclaration(end_label)
     );
 
-    return new ExprResult(MyType.BOOLEAN, false, false, temp, c_ir);
+    return new ExprResult(MyType.BOOLEAN, false, temp, c_ir);
 }
 
 function generateOrExprResult(left_c_ir:C_ir_instruction[], left_val:(String | Number), right_c_ir:C_ir_instruction[], right_val:(String | Number)):ExprResult{
@@ -597,9 +685,120 @@ function generateOrExprResult(left_c_ir:C_ir_instruction[], left_val:(String | N
         new LabelDeclaration(end_label)
     );
 
-    return new ExprResult(MyType.BOOLEAN, false, false, temp, c_ir);;
+    return new ExprResult(MyType.BOOLEAN, false, temp, c_ir);;
 }
 
-export function compileDeclaration(declaration:Declaration):C_ir_instruction{
-    //AQUI AQUI AQUI   
+export function compileDeclaration(declaration:Declaration):C_ir_instruction[]{
+
+    let varType = compileTypeNode(declaration.myTypeNode);
+    let exprResult:(ExprResult | null);
+    if(declaration.expression !== null){
+        exprResult = compileExpression(declaration.expression);
+
+        //we must check types
+        if(!MyType.compareTypes(varType, exprResult.myType)){
+            throw MyError.makeMyError(
+                MyErrorKind.TYPE_ERROR, 
+                `Tipos no compatibles: '${varType.getName()} y '${exprResult.myType.getName()}'`
+            );
+        }
+
+        //MEJORA: explicar porque no importa que trae la expression
+        //We dont have to know if the expr is a pointer to a heap or whatever
+        //if it is a pointer to the heap, we still have to store that pointer in the stack
+        //If it is an imm we have to store the value itself in the stack
+        //If it is a temp that doesnt have a pointer we copy still have to copy the value of the temp
+        //exactly the same as if it were a temp with a pointer
+        //"the expr deals with the allocation and we know the meaning of its T with the type"
+
+        //we try to add the variable into the symboltable this might 
+        //throw an exception that will be caught at compileStatement
+        let id = declaration.identifier;
+        let myType = varType;
+        let varOffset = Env.addVariable(id, declaration.isConst, myType);
+
+        //[!!!] once we add the variable the Env we MUST generate code
+        //      because otherwise the code generated and the Env would 
+        //      contradict eachother
+        //      i.e. from this point on we cant throw any MyError
+
+        //we need to put the value of the variable in stack[p+varOffset]
+        //but c_ir doesnt only allows stack[temp|imm] so we must put 
+        //p+varOffset in a temp
+        let varPointerTemp = getNextTemp();
+
+        let c_ir:C_ir_instruction[] = new Array();
+
+        c_ir = c_ir.concat(
+            exprResult.c_ir,
+           [new _3AddrAssignment(varPointerTemp, P_REG, ArithOp.ADDITION, varOffset),
+            new Assignment(Mem.stackAccess(varPointerTemp), exprResult.val)],
+        );
+
+        return c_ir;
+    }
+    else{
+        //we check if it is const, if so error
+        if(declaration.isConst){
+            throw new MyError(`Declaraciones con 'const' deben de ser inicializadas`);
+        }
+        //otherwise just get the default value of the type
+
+         //we try to add the variable into the symboltable this might 
+        //throw an exception that will be caught at compileStatement
+        let id = declaration.identifier;
+        let myType = varType;
+        let varOffset = Env.addVariable(id, false, myType);
+
+        //[!!!] once we add the variable the Env we MUST generate code
+        //      because otherwise the code generated and the Env would 
+        //      contradict eachother
+        //      i.e. from this point on we cant throw any MyError
+
+        //we need to put the value of the variable in stack[p+varOffset]
+        //but c_ir doesnt only allows stack[temp|imm] so we must put 
+        //p+varOffset in a temp
+        let varPointerTemp = getNextTemp();
+
+        //varType.getDefaultVal only works if the defaultVal of every possible type
+        //doesnt need generate c_ir code AND all types in have the same size
+        //or are pointers
+        let c_ir:C_ir_instruction[] = [
+            new _3AddrAssignment(varPointerTemp, P_REG, ArithOp.ADDITION, varOffset),
+            new Assignment(Mem.stackAccess(varPointerTemp), varType.getDefaultVal())
+        ];
+
+        return c_ir;
+    }
+    
+}
+
+export function compileTypeNode(myTypeNode:MyTypeNode):MyType{
+    if(myTypeNode.kind === MyTypeNodeKind.CUSTOM){
+        // let customTypeNode = myTypeNode.spec as CustomTypeNode;
+        // let myType = Env.global.myTypeSignatures[customTypeNode.name];
+        // if(myType === undefined){
+        //     throw new MyError(`No existe el tipo: '${customTypeNode.name}'.`);
+        // }
+        // return myType;
+        throw new Error(`compileTypeNode no implementado para typenode: ${myTypeNode.kind}`)
+    }
+    if(myTypeNode.kind === MyTypeNodeKind.GENERIC_ARRAY || myTypeNode.kind === MyTypeNodeKind.BOXY_ARRAY){
+        // let arrayTypeNode = myTypeNode.spec as ArrayTypeNode;
+        // It is very important that we dont call runPropertyMyTypeNode. Here. If we do we will get a pretty nasty bug
+        // return MyType.makeArrayType(runNonPropertyMyTypeNode(arrayTypeNode.subType));
+        throw new Error(`compileTypeNode no implementado para typenode: ${myTypeNode.kind}`)
+    }
+
+    //it must be primitive
+    switch (myTypeNode.kind) {
+        case MyTypeNodeKind.NUMBER:
+            return MyType.NUMBER;
+        case MyTypeNodeKind.STRING:
+            return MyType.STRING;
+        case MyTypeNodeKind.BOOLEAN:
+            return MyType.BOOLEAN;
+        default:
+            throw new Error(`compileMyTypeNode no implementado para ${myTypeNode.kind}`);
+    }
 }

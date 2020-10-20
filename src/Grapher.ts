@@ -6,7 +6,7 @@ import { Expression, ExpressionKind, LiteralExpression,
 import { Statement, WhileStatement, Block, StatementKind, IfStatement, ForStatement, ForInStatement, ForOfStatement, SwitchStatement, DoWhileStatement  } from "./Ast/Statement";
 import { AstNode } from "./Ast/AstNode";
 
-import { Declaration, declModToString } from './Ast/Declaration';
+import { Declaration } from './Ast/Declaration';
 import { AssignmentNode } from './Ast/AssignmentNode';
 import { ArrayTypeNode, CustomTypeNode, MyTypeNode, MyTypeNodeKind } from './Ast/MyTypeNode';
 import { MemberAccess, AccessKind, FunctionAccess, IndexAccess, AttributeAccess } from './Ast/MemberAccess';
@@ -616,7 +616,7 @@ export function graphDeclaration(g:Digraph, decl:Declaration):INode{
     });
 
     const modifierNode = g.createNode(`Modifier${AstNode.getNextAstNodeId()}`, {
-        [attribute.label]: declModToString(decl.modifier),
+        [attribute.label]: (decl.isConst ? "const" : "let"),
         [attribute.shape]: 'box',
     });
     g.createEdge([result, modifierNode]);

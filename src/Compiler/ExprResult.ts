@@ -1,9 +1,7 @@
 import { C_ir_instruction } from './C_ir_instruction';
 import { MyType, MyTypeKind } from "./MyType";
 
-//CONVENCION: un myType NULL va a tener un number 0
-//            quisiera que fuera 0xffffffff (-1) pero 
-//            eso no se puede en typescript :(
+//CONVENCION: un myType NULL va a tener un number -1
 export class ExprResult {
     constructor(
         public myType:MyType,
@@ -11,7 +9,6 @@ export class ExprResult {
         //Por convencion y para facilitarnos la vida un poco:
         //solo los myType number y boolean pueden ser const expr
         public isConstExpr:boolean,
-        public isLValue:boolean,
         //val es string con el nombre del temp si:
         //  *constExpr es false
         //  O

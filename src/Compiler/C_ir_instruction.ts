@@ -138,36 +138,42 @@ export enum MemKind{
     STACK
 }
 
-export namespace MemKind{
-    export function toString(memKind:MemKind){
-        switch (memKind) {
-            case MemKind.STACK:
-                return "STACK";
-            case MemKind.HEAP:
-                return "HEAP";
-        
-            default:
-                break;
-        }
+export function memKindToString(memKind:MemKind){
+    switch (memKind) {
+        case MemKind.STACK:
+            return "STACK";
+        case MemKind.HEAP:
+            return "HEAP";
+    
+        default:
+            break;
     }
 }
 
 //Accesso a memoria en la forma stack/heap[imm | temp]
 //no podemos hacer operaciones adentro de []
 export class Mem{
-    constructor(
+    private constructor(
         public kind:MemKind,
         //offset can be a Temp or a immediate
         public offset:(String | Number)
     ) {   }
 
+    public static stackAccess(offset:(String | Number)){
+        return new Mem(MemKind.STACK, offset);
+    }
+
+    public static heapAccess(offset:(String | Number)){
+        return new Mem(MemKind.HEAP, offset);
+    }
+
     public toString():string{
 
         switch (this.kind) {
             case MemKind.STACK:
-                return `STACK[${this.offset.toString()}]`
+                return `stack[(int)${this.offset.toString()}]`
             case MemKind.HEAP:
-                return `heap[${this.offset.toString()}]`
+                return `heap[(int)${this.offset.toString()}]`
             default:
                 throw new Error(`Mem.toString no implementado para MemKind ${this.kind}!`);
         }
