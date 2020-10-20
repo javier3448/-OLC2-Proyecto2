@@ -12,7 +12,7 @@
     "src/Ast/Expression.ts",
     "src/Ast/MemberAccess.ts",
     "src/Ast/Statement.ts",
-    "src/Ast/Assignment.ts",
+    "src/Ast/AssignmentNode.ts",
     "src/Ast/Declaration.ts",
     "src/Ast/AstNode.ts",
     "src/Ast/MyTypeNode.ts",

@@ -9,8 +9,8 @@
             ForStatement, ForOfStatement, ForInStatement, 
             SwitchStatement, SwitchCase, SwitchDefault, 
             SwitchInstructions } = require('../Ast/Statement');
-    const { Assignment } = require('../Ast/Assignment');
-    const { Declaration } = require('../Ast/Declaration');
+    const { AssignmentNode } = require('../Ast/AssignmentNode');
+    const { Declaration, DeclarationModifier } = require('../Ast/Declaration');
     const { MyTypeNode, MyTypeNodeKind } = require('../Ast/MyTypeNode');
     const { GlobalInstructions } = require('../Ast/GlobalInstructions')
     const { TypeDef, AttributeNode } = require('../Ast/TypeDef')
@@ -79,7 +79,7 @@
 "]"                           return ']'
 
 "let"                         return 'LET'
-"const"                       return 'LET'//TODO TODO TODO: HACER EL CONST DE VERDAD!!!!!
+"const"                       return 'CONST'
 "number"                      return 'NUMBER'
 "string"                      return 'STRING'
 "boolean"                     return 'BOOLEAN'
@@ -478,21 +478,21 @@ Block
 ;
 
 Declaration
-    : LET IDENTIFIER '=' Expression
+    : LET IDENTIFIER ':' Type '=' Expression
     {
-        $$ = new Declaration($2, null, $4, @1.first_line, @1.first_column, @4.last_line, @4.last_column);
-    }
-    | LET IDENTIFIER ':' Type '=' Expression
-    {
-        $$ = new Declaration($2, $4, $6, @1.first_line, @1.first_column, @6.last_line, @6.last_column);
+        $$ = new Declaration(DeclarationModifier.LET, $2, $4, $6, @1.first_line, @1.first_column, @6.last_line, @6.last_column);
     }
     | LET IDENTIFIER ':' Type
     {
-        $$ = new Declaration($2, $4, null, @1.first_line, @1.first_column, @4.last_line, @4.last_column);
+        $$ = new Declaration(DeclarationModifier.LET, $2, $4, null, @1.first_line, @1.first_column, @4.last_line, @4.last_column);
     }
-    | LET IDENTIFIER 
+    | CONST IDENTIFIER ':' Type '=' Expression
     {
-        $$ = new Declaration($2, null, null, @1.first_line, @1.first_column, @2.last_line, @2.last_column);
+        $$ = new Declaration(DeclarationModifier.CONST, $2, $4, $6, @1.first_line, @1.first_column, @6.last_line, @6.last_column);
+    }
+    | CONST IDENTIFIER ':' Type
+    {
+        $$ = new Declaration(DeclarationModifier.CONST, $2, $4, null, @1.first_line, @1.first_column, @4.last_line, @4.last_column);
     }
 ;
 
@@ -583,7 +583,7 @@ Expression
     }
     | 'NOT' Expression %prec NOT
     {
-        $$ = new Expression(ExpressionKind.NEGATION, new UnaryExpression($2), @1.first_line, @1.first_column, @2.last_line, @2.last_column);
+        $$ = new Expression(ExpressionKind.NOT, new UnaryExpression($2), @1.first_line, @1.first_column, @2.last_line, @2.last_column);
     }
     | '-' Expression %prec UNARY_MINUS
     {

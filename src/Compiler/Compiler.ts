@@ -20,12 +20,18 @@ import { GlobalInstructions } from 'src/Ast/GlobalInstructions';
 import { TypeDef, AttributeNode } from "../Ast/TypeDef";
 import { FunctionDef, ParamNode } from "../Ast/FunctionDef";
 import { ExprResult } from "./ExprResult"
+import { ArithOp, Assignment, _3AddrAssignment, Cond_goto, C_ir_instruction, c_ir_instructions_toString, Goto, Label, LabelDeclaration, RelOp } from './C_ir_instruction';
+import { AssignmentNode } from 'src/Ast/AssignmentNode';
 
 //Casi siempre que retornemos un string asi nadamas significa que estamos retorna
 //el C_IR generado por algun lang construct
 //Convension: poner primero el C_IR en el retorno, ejemplo: [string, AlgoMasQueNecesitemos]
 
 // REGION: 
+
+//CLEAN-UP: uso confuso de la global runtimeInterfaces:
+//El hecho que la pasamos como parametro en compile(...), el hecho que tenemos un
+//metodo resetRuntimeInterface
 let runtimeInterface:RuntimeInterface;
 
 export function graficar_ts(){
@@ -34,12 +40,13 @@ export function graficar_ts(){
     let iter = Env.current;
     let count = 0;
 
+    //type signatures
+    for (const key in Env.typeSignatures) {
+        let typeSignature = Env.typeSignatures[key];
+        runtimeInterface.tsDataSet.push(new TsEntry("top-"+count.toString(), key, "-", typeSignature.getName()));
+    }
+
     while(iter != null){
-        //type signatures
-        for (const key in iter.myTypeSignatures) {
-            let typeSignature = iter.myTypeSignatures[key];
-            runtimeInterface.tsDataSet.push(new TsEntry("top-"+count.toString(), key, "-", typeSignature.getName()));
-        }
         //Function signatures
         for (const key in iter.myFunctions) {
             let funcSignature = iter.myFunctions[key];
@@ -48,7 +55,7 @@ export function graficar_ts(){
         //Variables:
         for (const key in iter.myVariables) {
             let variable = iter.myVariables[key];
-            //@Fix-me
+            //@FIXME
             //runtimeInterface.tsDataSet.push(new TsEntry("top-"+count.toString(), key, variable.myType.getName(), variable.myObj.toPrintableString()));
         }
         iter = iter.previous;
@@ -67,9 +74,14 @@ export function resetRuntimeInterface(){
 export let tempCount = 0;
 export let labelCount = 0;
 
-function getNextTemp():string{
+function getNextTemp():String{
     tempCount += 1;
-    return "T" + tempCount;
+    return new String("T" + tempCount);
+}
+
+function getNextLabel():String{
+    labelCount += 1;
+    return new String("L" + labelCount);
 }
 
 function construct_c_ir_header():string{
@@ -131,14 +143,15 @@ export function compile(root:GlobalInstructions, _runtimeInterface:RuntimeInterf
     let global_c_ir = compileGlobalInstructions(root);
 
     runtimeInterface.intermediateRepresentation = construct_c_ir_header();
-    runtimeInterface.intermediateRepresentation += global_c_ir.statements_c_ir;
+    //Que lo pasa a string con un foreach C_ir_instruction.toString
+    runtimeInterface.intermediateRepresentation += c_ir_instructions_toString(global_c_ir.statements_c_ir);
     runtimeInterface.intermediateRepresentation += construct_c_ir_foot();
 }
 
 export function compileGlobalInstructions(globalInstructions:GlobalInstructions):Global_c_ir{
 
     let funcs_c_ir = "";
-    let statements_c_ir = "";
+    let statements_c_ir:C_ir_instruction[] = new Array();
 
     for (const typeDef of globalInstructions.typeDefs) {
         try {
@@ -154,8 +167,8 @@ export function compileGlobalInstructions(globalInstructions:GlobalInstructions)
         }
     }
     //revisamos si quedo algun tipo sin definir
-    for (const key in Env.global.myTypeSignatures) {
-        let myType = Env.global.myTypeSignatures[key]
+    for (const key in Env.typeSignatures) {
+        let myType = Env.typeSignatures[key]
         if(myType.kind === MyTypeKind.WAITING){
             let myError = new MyError(`No se encontro definicion para el tipo: '${key}'. Se definira con {} para continuar la ejecucion`);
             //This error doesnt have a location
@@ -181,9 +194,10 @@ export function compileGlobalInstructions(globalInstructions:GlobalInstructions)
         }
     }
 
+    //MEJORA: reserve a statements_c_ir (no se como hacer eso en typescript, talvez no sea posible)
     for (const statement of globalInstructions.statements) {
         let result = compileStatement(statement);
-        statements_c_ir += result;
+        statements_c_ir = statements_c_ir.concat(result);
     }
 
     return new Global_c_ir(funcs_c_ir, statements_c_ir);
@@ -198,17 +212,18 @@ export function compileTypeDef(typeDef:TypeDef){
     throw new Error("Not implemented yet!");
 }
 
-export function compileStatement(statement:Statement):string{
+export function compileStatement(statement:Statement):C_ir_instruction[]{
 
     try {
         let child = statement.child;
 
         switch (statement.statementKind) {
             case StatementKind.ExpressionKind:
-                // No retornamos lo de expression porque no es posible que 
-                // expression retorne jumper
-                
                 return compileExpression(child as Expression).c_ir;
+
+            case StatementKind.DeclarationKind:
+                return compileDeclaration(child as Declaration);
+
             default:
                 throw new Error(`runStatment no implementado para myTypeNode: ${statement.statementKind}`);
         }
@@ -241,6 +256,7 @@ export function compileExpression(expr:Expression):ExprResult{
     function compileExpressionImp(exp:Expression):ExprResult{
 
         if(expr.specification instanceof BinaryExpression){
+
             let leftResult = compileExpression(expr.specification.left);
             let rightResult = compileExpression(expr.specification.right);
 
@@ -255,14 +271,7 @@ export function compileExpression(expr:Expression):ExprResult{
                     else if(leftResult.myType.kind === MyTypeKind.NUMBER  &&
                             rightResult.myType.kind === MyTypeKind.NUMBER){
 
-                        //generamos el c_ir y retornamos el ExprResult
-                        let temp = getNextTemp();
-
-                        let c_ir = leftResult.c_ir +
-                                   rightResult.c_ir +
-                                   `${temp} = ${leftResult.derefVal()} + ${rightResult.derefVal()};\n`;
-
-                        return new ExprResult(MyType.numberTypeInstance, false, false, temp, c_ir);
+                        return generateSimpleArithExprResult(leftResult.c_ir, leftResult.val, ArithOp.ADDITION, rightResult.c_ir, rightResult.val);
                     }
                     else{
                         throw MyError.makeMyError(MyErrorKind.TYPE_ERROR, 
@@ -275,14 +284,7 @@ export function compileExpression(expr:Expression):ExprResult{
                     if(leftResult.myType.kind === MyTypeKind.NUMBER  &&
                             rightResult.myType.kind === MyTypeKind.NUMBER){
 
-                        //generamos el c_ir y retornamos el ExprResult
-                        let temp = getNextTemp();
-
-                        let c_ir = leftResult.c_ir +
-                                   rightResult.c_ir +
-                                   `${temp} = ${leftResult.derefVal()} - ${rightResult.derefVal()};\n`;
-
-                        return new ExprResult(MyType.numberTypeInstance, false, false, temp, c_ir);
+                        return generateSimpleArithExprResult(leftResult.c_ir, leftResult.val, ArithOp.SUBSTRACTION, rightResult.c_ir, rightResult.val);
                     }
                     else{
                         throw MyError.makeMyError(MyErrorKind.TYPE_ERROR, 
@@ -294,14 +296,7 @@ export function compileExpression(expr:Expression):ExprResult{
                     if(leftResult.myType.kind === MyTypeKind.NUMBER  &&
                             rightResult.myType.kind === MyTypeKind.NUMBER){
 
-                        //generamos el c_ir y retornamos el ExprResult
-                        let temp = getNextTemp();
-
-                        let c_ir = leftResult.c_ir +
-                                   rightResult.c_ir +
-                                   `${temp} = ${leftResult.derefVal()} * ${rightResult.derefVal()};\n`;
-
-                        return new ExprResult(MyType.numberTypeInstance, false, false, temp, c_ir);
+                        return generateSimpleArithExprResult(leftResult.c_ir, leftResult.val, ArithOp.MULTIPLICATION, rightResult.c_ir, rightResult.val);
                     }
                     else{
                         throw MyError.makeMyError(MyErrorKind.TYPE_ERROR, 
@@ -313,14 +308,7 @@ export function compileExpression(expr:Expression):ExprResult{
                     if(leftResult.myType.kind === MyTypeKind.NUMBER  &&
                             rightResult.myType.kind === MyTypeKind.NUMBER){
 
-                        //generamos el c_ir y retornamos el ExprResult
-                        let temp = getNextTemp();
-
-                        let c_ir = leftResult.c_ir +
-                                   rightResult.c_ir +
-                                   `${temp} = ${leftResult.derefVal()} % ${rightResult.derefVal()};\n`;
-
-                        return new ExprResult(MyType.numberTypeInstance, false, false, temp, c_ir);
+                        return generateSimpleArithExprResult(leftResult.c_ir, leftResult.val, ArithOp.MODULUS, rightResult.c_ir, rightResult.val);
                     }
                     else{
                         throw MyError.makeMyError(MyErrorKind.TYPE_ERROR, 
@@ -332,29 +320,51 @@ export function compileExpression(expr:Expression):ExprResult{
                     if(leftResult.myType.kind === MyTypeKind.NUMBER  &&
                             rightResult.myType.kind === MyTypeKind.NUMBER){
 
-                        //generamos el c_ir y retornamos el ExprResult
-                        let temp = getNextTemp();
-
-                        let c_ir = leftResult.c_ir +
-                                   rightResult.c_ir +
-                                   `${temp} = ${leftResult.derefVal()} / ${rightResult.derefVal()};\n`;
-
-                        return new ExprResult(MyType.numberTypeInstance, false, false, temp, c_ir);
+                        return generateSimpleArithExprResult(leftResult.c_ir, leftResult.val, ArithOp.DIVISION, rightResult.c_ir, rightResult.val);
                     }
                     else{
                         throw MyError.makeMyError(MyErrorKind.TYPE_ERROR, 
                                           `No se puede realizar la operacion: '${expr.expressionKind}' con los tipos: '${leftResult.myType.getName()} y '${rightResult.myType.getName()}'`);
                     }
                 }break;
+
                 case ExpressionKind.POWER :
                 {
                     throw new Error(`operacion binaria: ${expr.expressionKind} no implementada todavia`);
                 }break;
+
                 case ExpressionKind.ASSIGNMENT:
                 {
                     throw new Error(`operacion binaria: ${expr.expressionKind} no implementada todavia`);
                 }break;
-            
+
+
+                //LOGICAS
+                case ExpressionKind.AND:
+                {
+                    if(leftResult.myType.kind === MyTypeKind.BOOLEAN  &&
+                            rightResult.myType.kind === MyTypeKind.BOOLEAN){
+
+                        return generateAndExprResult(leftResult.c_ir, leftResult.val, rightResult.c_ir, rightResult.val);
+                    }
+                    else{
+                        throw MyError.makeMyError(MyErrorKind.TYPE_ERROR, 
+                                          `No se puede realizar la operacion: '${expr.expressionKind}' con los tipos: '${leftResult.myType.getName()} y '${rightResult.myType.getName()}'`);
+                    }
+        
+                }break;
+                case ExpressionKind.OR:
+                {
+                    if(leftResult.myType.kind === MyTypeKind.BOOLEAN  &&
+                            rightResult.myType.kind === MyTypeKind.BOOLEAN){
+
+                        return generateOrExprResult(leftResult.c_ir, leftResult.val, rightResult.c_ir, rightResult.val);
+                    }
+                    else{
+                        throw MyError.makeMyError(MyErrorKind.TYPE_ERROR, 
+                                          `No se puede realizar la operacion: '${expr.expressionKind}' con los tipos: '${leftResult.myType.getName()} y '${rightResult.myType.getName()}'`);
+                    }
+                }break;
 
                 default:
                     throw new Error(`operacion binaria: ${expr.expressionKind} no implementada todavia`);
@@ -362,8 +372,7 @@ export function compileExpression(expr:Expression):ExprResult{
         }
         else if(expr.specification instanceof UnaryExpression){
             let unaryExpr = expr.specification as UnaryExpression;
-            //El valor a aplicar la operacion unaria
-            let operand = compileExpression(unaryExpr.expr);//we dont do the .getObj() because we might need the pointer for some operations
+            let operand = compileExpression(unaryExpr.expr);
             let operandType = operand.myType;
 
             //At this point we know that expr.kind must be UNARY_MINUS, NEGATION, POSTFIX_INC, POSTFIX_DEC
@@ -377,9 +386,40 @@ export function compileExpression(expr:Expression):ExprResult{
                         throw MyError.makeMyError(MyErrorKind.TYPE_ERROR, `Operador '${expr.expressionKind}' no acepta los tipos: '${operandType.kind}'`);
                     }
                 }break;
-                case ExpressionKind.NEGATION:
-                    throw new Error(`compileExpr de ${expr.expressionKind} no implementado todavia`);
-                    break;
+                case ExpressionKind.NOT:
+                {
+                    if(operand.myType.kind === MyTypeKind.BOOLEAN){
+                        let temp = getNextTemp();
+
+                        let false_label = new Label(getNextLabel());
+                        let end_label = new Label(getNextLabel());
+
+                        let c_ir = new Array();
+                        /*
+                            ...operand.c_ir...
+                            if (operand.val == 1) goto L1;
+                            T1 = 1;
+                            goto END;
+                            L1:
+                            T1=0;
+                            END:
+                        */
+                        c_ir = c_ir.concat(
+                            operand.c_ir,
+                           [new Cond_goto(operand.val, RelOp.EQUAL_EQUAL, new Number(1), false_label),
+                            new Assignment(temp, new Number(1)),
+                            new Goto(end_label),
+                            new LabelDeclaration(false_label),
+                            new Assignment(temp, new Number(0)),
+                            new LabelDeclaration(end_label)]
+                        )
+                        return new ExprResult(MyType.BOOLEAN, false, false, temp, c_ir);
+                    }
+                    else{
+                        throw MyError.makeMyError(MyErrorKind.TYPE_ERROR, 
+                                          `No se puede realizar la operacion: '${expr.expressionKind}' con el tipo: '${operand.myType.getName()}'`);
+                    }
+                }break;
                 case ExpressionKind.POSTFIX_INC:
                     throw new Error(`compileExpr de ${expr.expressionKind} no implementado todavia`);
                     break;
@@ -415,11 +455,11 @@ export function compileExpression(expr:Expression):ExprResult{
                     throw new Error(`expression literal no implementado para: string todavia`);
                 }
                 else if(lit.literal instanceof Number){
-                    return new ExprResult(MyType.numberTypeInstance, true, false, lit.literal.valueOf(), "");
+                    return new ExprResult(MyType.NUMBER, true, false, lit.literal.valueOf(), []);
                 }
                 else if(lit.literal instanceof Boolean){
                     let val = (lit.literal.valueOf() ? 1 : 0);
-                    return new ExprResult(MyType.booleanTypeInstance, true, false, val, "");
+                    return new ExprResult(MyType.BOOLEAN, true, false, val, []);
                 }
                 else{
                     throw new Error(`expression literal no implementado para: ${lit.literal}`);
@@ -442,4 +482,124 @@ export function compileExpression(expr:Expression):ExprResult{
                 throw new Error(`runExpression no implementado para expressionKind: '${expr.expressionKind}'`);
         }
     }
+}
+
+// devuelbe el ExprResult de hacer una expresion binaria en C_IR entre leftResult y rightResult
+// intended use: + - * / % entre 2 numbers. porque se genera C_IR practicamente identico para esos casos
+// this would an inlined func in c
+function generateSimpleArithExprResult(left_c_ir:C_ir_instruction[], left_val:(String | Number), arithOp:ArithOp, right_c_ir:C_ir_instruction[], right_val:(String | Number)):ExprResult{
+
+    //generamos el c_ir y retornamos el ExprResult
+    let temp = getNextTemp();
+
+    //TERRIBLE: perf. tiene que exister una manera 
+    //     de evitar hacer tantos nuevos arreglos
+    let c_ir:C_ir_instruction[] = new Array();
+
+    c_ir = c_ir.concat(
+        left_c_ir,
+        right_c_ir,
+        [new _3AddrAssignment(temp, left_val, arithOp, right_val)]
+    );
+
+    return new ExprResult(MyType.NUMBER, false, false, temp, c_ir);
+}
+
+function generateAndExprResult(left_c_ir:C_ir_instruction[], left_val:(String | Number), right_c_ir:C_ir_instruction[], right_val:(String | Number)):ExprResult{
+
+    //generamos el c_ir y retornamos el ExprResult
+    let temp = getNextTemp();
+
+    let runRightCir_label= new Label(getNextLabel());
+    let true_label = new Label(getNextLabel());
+    let false_label = new Label(getNextLabel());
+    let end_label = new Label(getNextLabel());
+
+    //TERRIBLE: perf. tiene que exister una manera 
+    //     de evitar hacer tantos nuevos arreglos
+    let c_ir:C_ir_instruction[] = new Array();
+
+    //MEJORA?: no tenemos ifFalse pero si tenemos if foo.val==0 goto L_FOO
+    //         Talvez usando logica negativa podemos simplificar este c_ir
+    //         Pensaria que al menos deberia de queder tan bien como el OR
+    /*
+        ...left_cir...
+        if left.value==1 goto RUN_R_CIR;
+        goto FALSE
+
+        RUN_R_CIR:
+        ...right_cir...
+        if right.value==1 goto TRUE;
+
+        FALSE:
+        TN = 0;
+        goto END;
+
+        TRUE:
+        TN = 1;
+
+        END:
+    */
+    c_ir = c_ir.concat(
+        left_c_ir,
+       [new Cond_goto(left_val, RelOp.EQUAL_EQUAL, new Number(1), runRightCir_label),
+        new Goto(false_label),
+        new LabelDeclaration(runRightCir_label)],
+        right_c_ir,
+       [new Cond_goto(right_val, RelOp.EQUAL_EQUAL, new Number(1), true_label),
+        new LabelDeclaration(false_label),
+        new Assignment(temp, new Number(0)),
+        new Goto(end_label),
+        new LabelDeclaration(true_label),
+        new Assignment(temp, new Number(1))],
+        new LabelDeclaration(end_label)
+    );
+
+    return new ExprResult(MyType.BOOLEAN, false, false, temp, c_ir);
+}
+
+function generateOrExprResult(left_c_ir:C_ir_instruction[], left_val:(String | Number), right_c_ir:C_ir_instruction[], right_val:(String | Number)):ExprResult{
+
+    //generamos el c_ir y retornamos el ExprResult
+    let temp = getNextTemp();
+
+    let true_label = new Label(getNextLabel());
+    let end_label = new Label(getNextLabel());
+
+    //TERRIBLE: perf. tiene que exister una manera 
+    //     de evitar hacer tantos nuevos arreglos
+    let c_ir:C_ir_instruction[] = new Array();
+
+    /*
+        ...left_cir...
+        if left.value==1 goto TRUE;
+
+        ...right_cir...
+        if right.value==1 goto TRUE;
+
+        TN = 0;
+        goto END;
+
+        TRUE:
+        TN = 1;
+
+        END:
+    */
+    c_ir = c_ir.concat(
+        left_c_ir,
+       [new Cond_goto(left_val, RelOp.EQUAL_EQUAL, new Number(1), true_label)],
+        right_c_ir,
+       [new Cond_goto(right_val, RelOp.EQUAL_EQUAL, new Number(1), true_label),
+        new Assignment(temp, new Number(0)),
+        new Goto(end_label),
+        new LabelDeclaration(true_label),
+        new Assignment(temp, new Number(1))],
+        new LabelDeclaration(end_label)
+    );
+
+    return new ExprResult(MyType.BOOLEAN, false, false, temp, c_ir);;
+}
+
+export function compileDeclaration(declaration:Declaration):C_ir_instruction{
+    //AQUI AQUI AQUI   
 }

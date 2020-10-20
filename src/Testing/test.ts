@@ -53,7 +53,6 @@ import { Expression, ExpressionKind } from "../Ast/Expression";
 // //R: solo escribe uno, no tira exception ni aviasa de ninguna manera
 */
 
-//AQUI AQUI AQUI
 //Why the fuck doesnt .getNodeId() work fucking anywhere. not even 
 //from fukcing piece of shit jison
 {

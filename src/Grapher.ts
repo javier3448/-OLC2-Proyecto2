@@ -6,8 +6,8 @@ import { Expression, ExpressionKind, LiteralExpression,
 import { Statement, WhileStatement, Block, StatementKind, IfStatement, ForStatement, ForInStatement, ForOfStatement, SwitchStatement, DoWhileStatement  } from "./Ast/Statement";
 import { AstNode } from "./Ast/AstNode";
 
-import { Declaration } from './Ast/Declaration';
-import { Assignment } from './Ast/Assignment';
+import { Declaration, declModToString } from './Ast/Declaration';
+import { AssignmentNode } from './Ast/AssignmentNode';
 import { ArrayTypeNode, CustomTypeNode, MyTypeNode, MyTypeNodeKind } from './Ast/MyTypeNode';
 import { MemberAccess, AccessKind, FunctionAccess, IndexAccess, AttributeAccess } from './Ast/MemberAccess';
 import { GlobalInstructions } from './Ast/GlobalInstructions';
@@ -272,7 +272,7 @@ export function graphExpression(g:Digraph, expr:Expression):INode{
         case ExpressionKind.UNARY_MINUS:
         case ExpressionKind.POSTFIX_INC:
         case ExpressionKind.POSTFIX_DEC:
-        case ExpressionKind.NEGATION:
+        case ExpressionKind.NOT:
         {
             const unaryExpr = expr.specification as UnaryExpression;
             let childExpression = graphExpression(g, unaryExpr.expr);
@@ -497,13 +497,13 @@ function expressionToLabel(expr:Expression):string{
         case ExpressionKind.MODULUS:
             return "%";
         case ExpressionKind.ASSIGNMENT:
-            return "Assignment";
+            return "AssignmentNode";
         case ExpressionKind.POWER:
             return "**";
 
         case ExpressionKind.UNARY_MINUS:
             return "Unary minus";
-        case ExpressionKind.NEGATION:
+        case ExpressionKind.NOT:
             return "NOT";
         case ExpressionKind.POSTFIX_INC:
             return "Post\n++";
@@ -607,6 +607,7 @@ export function graphMyTypeNode(g:Digraph, myType:MyTypeNode):INode{
     return result;
 }
 
+//TODO: test if it shows the modifier
 export function graphDeclaration(g:Digraph, decl:Declaration):INode{
 
     const result = g.createNode(`Declaration${decl.astNode.getId()}`, {
@@ -614,16 +615,20 @@ export function graphDeclaration(g:Digraph, decl:Declaration):INode{
         [attribute.shape]: 'box',
     });
 
+    const modifierNode = g.createNode(`Modifier${AstNode.getNextAstNodeId()}`, {
+        [attribute.label]: declModToString(decl.modifier),
+        [attribute.shape]: 'box',
+    });
+    g.createEdge([result, modifierNode]);
+
     const identifierNode = g.createNode(`Identifier${AstNode.getNextAstNodeId()}`, {
         [attribute.label]: "Id\n" + decl.identifier,
         [attribute.shape]: 'box',
     });
     g.createEdge([result, identifierNode]);
             
-    if(decl.myTypeNode){
-        let typeNode = graphMyTypeNode(g, decl.myTypeNode);
-        g.createEdge([result, typeNode]);
-    }
+    let typeNode = graphMyTypeNode(g, decl.myTypeNode);
+    g.createEdge([result, typeNode]);
 
     if(decl.expression){
         let exprNode = graphExpression(g, decl.expression);
@@ -633,7 +638,7 @@ export function graphDeclaration(g:Digraph, decl:Declaration):INode{
     return result;
 }
 
-export function graphAssignment(g:Digraph, assignment:Assignment):INode{
+export function graphAssignment(g:Digraph, assignment:AssignmentNode):INode{
 
     const result = g.createNode(`assignment${assignment.astNode.getId()}`, {
         [attribute.label]: "Assignment",

@@ -1,3 +1,4 @@
+import { C_ir_instruction } from './C_ir_instruction';
 import { MyType, MyTypeKind } from "./MyType";
 
 //CONVENCION: un myType NULL va a tener un number 0
@@ -15,9 +16,11 @@ export class ExprResult {
         //  *constExpr es false
         //  O
         //  *myType no es boolean 
-        public val:(number | string | null),
-        public c_ir:string,// algunas expressiones va a tener c_ir vacio
-                           // ejemplo: `null`, `413`
+        //MEJORA:Talvez sea mejor solo guardar el numero del temporal 
+        //       en vez de su string "T1234"
+        public val:(Number | String | null),
+        public c_ir:C_ir_instruction[],// algunas expressiones va a tener c_ir vacio
+                                       // ejemplo: `null`, `413`
     ){  }
 
     //bad name :/

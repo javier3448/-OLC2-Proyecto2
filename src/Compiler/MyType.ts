@@ -114,15 +114,17 @@ export class MyType
                 throw new Error("kind: WAITING NO TIENE METODO TO STRING!!!");
 
             default:
-                throw new Error(`MyType.myToString no implementado para ${this.kind}`);
+                throw new Error(`MyType.getName no implementado para ${this.kind}`);
         }
 
     }
 
-    public static stringTypeInstance = new MyType(MyTypeKind.STRING, null);
-    public static numberTypeInstance = new MyType(MyTypeKind.NUMBER, null);
-    public static booleanTypeInstance = new MyType(MyTypeKind.BOOLEAN, null);
-    public static nullTypeInstance = new MyType(MyTypeKind.NULL, null);
+    //TODO: un typeSignature de String con las funciones nativas
+    //MEJORA?: estos nombres se confunden el MyTypeKind
+    public static STRING = new MyType(MyTypeKind.STRING, null);
+    public static NUMBER = new MyType(MyTypeKind.NUMBER, null);
+    public static BOOLEAN = new MyType(MyTypeKind.BOOLEAN, null);
+    public static NULL = new MyType(MyTypeKind.NULL, null);
 
     public static consoleTypeInstance = new MyType(MyTypeKind.MY_CONSOLE, null);
 
@@ -134,6 +136,7 @@ export class MyType
         return new MyType(MyTypeKind.WAITING, null);
     }
 
+    //TODO: un typeSignature de Array con las funciones nativas de array
     public static makeArrayType(subType:MyType):MyType{
         return new MyType(MyTypeKind.ARRAY, subType);
     }

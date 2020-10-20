@@ -52,8 +52,14 @@ export class AppComponent implements OnInit{
 
   ngOnInit(): void {
 
+    {
     let testString = `(((3 * 3) + 4) - 80 + 40.00 * 2 + 358.50 - (29 / 14.50)) - (0.50) + ((5750 * 2) - 11800 + 1.0);
 //lastT == 70
+`;
+    }
+  
+    let testString = `true AND true OR false AND false AND false OR NOT true;
+//lastT = 1;
 `;
 
     this.sourceString = testString;

@@ -6,54 +6,146 @@ import { MyType, MyTypeKind, TypeSignature } from "./MyType";
 import { MyError } from './MyError';
 import { compileExpression, compileStatement, graficar_ts } from './Compiler';
 
+//WHY THE FUCK DONT WE HAVE A FUCKING HASHTABLE IN FUCKING TYPESCRIPT!!!!!!!
 export class SymbolTableVariables{
-    [key: string]: [MyType, number];
+    [key: string]: Variable;
 }
 export class SymbolTableFunctions{
     [key: string]: MyFunction;
 }
-//BIG TODO: pensar donde poner el string con el nombre del tipo
+//ERROR PRONE: necesitamos que la clase MyType tenga el nombre del tipo para
+//             hacer mejores reportes de errores pero no se como hacer en typescript para hacer
+//             una hashtable si tener que hacer un key, value pair.
+//             Entonces vamos a tener el nombre del tipo como indice en SymbolTalbeTypeSignatures y 
+//             como attributo en MyType y tenemos que asegurar la invariante que ambos strings deben 
+//             ser identicos
 //Si symbolTableTypeSignature[key] return undefined it means there is no entry
-//for that key. IF IT RETURNS NULL it means the key is "waiting" (i.e someone 
-//reference that typebut it hasnt been defined yet)
+//for that key. IF IT RETURNS myType with kind WAITING it means the key 
+//is "waiting" (i.e someone reference that typebut it hasnt been defined yet)
 export class SymbolTableTypeSignatures{
     [key: string]: MyType;
 }
 
+export class Variable{
+    constructor(
+        public isConst:boolean,
+        public type:MyType,
+        //The value of a variable is always a stack frame offset
+        public value:number
+    ){   }
+}
+
+export enum ScopeKind{
+    FUNCTION_SCOPE,
+    IF,
+    WHILE,
+    FOR,
+    GLOBAL,
+    BLOCK, //a plain old {}
+}
+
+//TODO: todo next project: dont use a link list for the scopes.
+//      a dynamic array has better perf and its not that hard to implement if you
+//      put tags in each scope to not search after outside the 'stack frame' (outside the function)
+//BIG TODO: document the definition of stack frame in our lang 
+//          (define what the p pointer does and all that)
+
 // The current scope and all previous ones
+// all variables in a Scope must be in a stack frame
 export class Scope{
+    //we need the total size of all variables in a stack frame
+    //so we can do the stackframe change before calling a diferent function
+    //example:
+    //p = p + (sizeof all allocated stack vars before the func call)
+    //call func
+    //p = p - (sizeof all allocated stack vars before the func call)
+    //we could use myVariables.length but typescript is stupid and the
+    //only way to get the length of myVariables is to iterate thru it
+    public size:number;
+
+    public kind:ScopeKind;
+    //TODO: Assert the following invariant in the constructor or something
+    //null para todo scopeKind excepto function
+    public name:(string | null);
+
     public myVariables:SymbolTableVariables;
     public myFunctions:SymbolTableFunctions;
-    public myTypeSignatures:SymbolTableTypeSignatures;
 
     public previous:(Scope | null);
 
-    constructor(previous:(Scope | null)) {
+    private constructor(size:number, kind:ScopeKind, name:string, previous:(Scope | null)) {
+        this.size = size;
+        this.kind = kind;
+        this.name = name;
         this.myVariables = new SymbolTableVariables();
         this.myFunctions = new SymbolTableFunctions();
-        this.myTypeSignatures = new SymbolTableTypeSignatures(); 
 
         this.previous = previous;
+    }
+
+    public static makeGlobal(){
+        return new Scope(0, ScopeKind.GLOBAL, null, null);
+    }
+
+    public static makeWhile(previous:Scope){
+        return new Scope(0, ScopeKind.WHILE, null, previous);
+    }
+
+    public static makeIf(previous:Scope){
+        return new Scope(0, ScopeKind.IF, null, previous);
+    }
+
+    //TODO: static make of all the other ScopeKinds
+
+    //TODO:
+    // public static makeFunctionScope(previous:Scope, myFunctionSignature:MyFunctionSignature){
+    //     //[!]: Remember that the size depends on the return 
+    //     //value and params inside the functionSignature. same with the name
+    //     //return new Scope(
+    // }
+    
+
+    public getName():string{
+        switch (this.kind) {
+            case ScopeKind.FUNCTION_SCOPE:
+                return "Function_scope"
+            case ScopeKind.IF:
+                return "If"
+            case ScopeKind.WHILE:
+                return "While"
+            case ScopeKind.FOR:
+                return "For"
+            case ScopeKind.GLOBAL:
+                return "Global"
+        
+            default:
+                throw new Error(`Scope.getName() no implementado para: ${this.kind} todavia!`);
+        }
     }
 }
 
 export module Env{
+
+    //Como no se pueden definir tipos adentro de un scope o adentro del cuerpo
+    //la tabla de simbolos de tipos es global y no va estar dentro de la clase
+    //Scope
+    export let typeSignatures:SymbolTableTypeSignatures = new SymbolTableTypeSignatures();
 
     export let global:Scope;
     export let current:Scope;
 
     // clears the Environment and adds the default functions and variables
     export function initEnvironment():void{
-        global = new Scope(null);
+        global = Scope.makeGlobal();
 
-        global.myVariables
+        global.myVariables;
 
         //Inicializamos los tipos primitivos y Cosole
         //FOR DEBUG ONLY:
-        global.myTypeSignatures["string"] = MyType.stringTypeInstance;
-        global.myTypeSignatures["number"] = MyType.numberTypeInstance;
-        global.myTypeSignatures["boolean"] = MyType.booleanTypeInstance;
-        global.myTypeSignatures["null"] = MyType.nullTypeInstance;
+        typeSignatures["string"] = MyType.STRING;
+        typeSignatures["number"] = MyType.NUMBER;
+        typeSignatures["boolean"] = MyType.BOOLEAN;
+        typeSignatures["null"] = MyType.NULL;
 
         // global.myTypeSignatures["Console"] = MyType.consoleTypeInstance;
 
@@ -64,49 +156,76 @@ export module Env{
         current = global;
     }
 
-    /*
     //REGION: Funciones y variables nativas
     //END: Funciones y variables nativas
 
     //[throws_MyError]
     //Atrapa si ya exite el id en el current scope
-    export function addVariable(id:string, val:MyObj){
+    //[!] Can't do type checking
+    export function addVariable(id:string, isConst:boolean, type:MyType, val:number){
         //ver si ya existe en el current scope
 
         if(current.myVariables[id] !== undefined){
             throw new MyError(`No se agregar una variable con el nombre '${id}' porque existe un variable con el mismo nomber en el mismo scope`);
         }
 
-        current.myVariables[id] = Pointer.makeMyObjectPointer(val);
+        current.myVariables[id] = new Variable(isConst, type, val);
+        current.size++;
     }
 
-    //[?] do we need a assignVariable to go with the addVariable?
+    //MEJORA: better name
+    //The purpose of this class is to be the type tha getVariable returns.
+    //getVariable must tell its caller if the returned variable is in the global scope
+    //because if it is it doesnt map to stack[p + variable.val] it maps to stack[variable.val]
+    export class ResultingVariable{
+        constructor(
+            public isGlobal:boolean,
+            public variable:Variable,
+        ){   } 
+    }
 
-    //Retorna undefined si no existe el id en niguno de los scopes
-    //if ReturnValue is not a pointer then it means the variable doesnt exist
-    //in the current scope or the previous ones
+    //if null is returned there is no variable with the that id in the stack frame or the global variables
+    //in the current scope or the previous ones (we stop searching once we find the first)
     //i.e. ReturnValue can only be Pointer of NullInstance
-    export function getVariable(id:string):ReturnValue{
+    //only returns variables in the same stack frame so we can
+    //safely assume its number is an offset of the current p
+    //stack[p+Variable.value]
+    export function getVariable(id:string):(ResultingVariable | null){
 
         let iter:(Scope | null) = current;
-        let myVariable:Pointer;
+        let variable:Variable;
 
-        // we traverse the stack of scopes until we find the first 
-        // function to have the same name
+        //MEJORAR: Porfavor mejorar todo este flujo de busqueda :/
+
+        //search all the scopes in the stack frame of Env.current and return the first variable with that id
+        //if we find no coincidences we check the globalScope and set a special flag in the returned
+        //value
+        //if we dont find a variable with that id we return null
         while(iter !== null){
-            myVariable = iter.myVariables[id];
-            if(myVariable !== undefined){
-                return ReturnValue.makePointerReturn(myVariable);
+            variable = iter.myVariables[id];
+            if(variable !== undefined){
+                let isGlobal = iter.kind === ScopeKind.GLOBAL;
+                return new ResultingVariable(isGlobal, variable);
             }
             iter = iter.previous;
-        }
-        if(myVariable === undefined){
-            return ReturnValue.makeUndefinedReturn();
+
+            if(iter.kind === ScopeKind.FUNCTION_SCOPE){
+                //if we reach a function_scope our last hope is that 
+                //the variable is in the global scope
+                variable = global.myVariables[id];
+                if(variable !== undefined){
+                    return new ResultingVariable(true, variable);
+                }
+                else{
+                    return null;
+                }
+            }
         }
 
-        return ReturnValue.makePointerReturn(myVariable);
+        return null;
     }
 
+    /*
     //[throws_MyError]
     //Atrapa si no exite el id en ningun scope
     //Atrapa si el numero de parametros es diferente

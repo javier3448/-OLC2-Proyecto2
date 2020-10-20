@@ -25,7 +25,7 @@ export enum ExpressionKind{
 
     //unary
     UNARY_MINUS = 'UNARY_MINUS',
-    NEGATION = 'NOT',
+    NOT = 'NOT',
     POSTFIX_INC = '++',
     POSTFIX_DEC = '--',
 
@@ -138,7 +138,7 @@ export class Expression {
             case ExpressionKind.UNARY_MINUS:
             case ExpressionKind.POSTFIX_INC:
             case ExpressionKind.POSTFIX_DEC:
-            case ExpressionKind.NEGATION:
+            case ExpressionKind.NOT:
                 if(!(specification instanceof UnaryExpression)){
                     throw new Error(`Assertion Error: Operator ${expressionKind.toString()} must be type UnaryExpression instead of ${(specification)}`);
                 }
