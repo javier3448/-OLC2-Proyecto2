@@ -52,20 +52,22 @@ export class AppComponent implements OnInit{
   ngOnInit(): void {
 
     {
-    let testString = `(((3 * 3) + 4) - 80 + 40.00 * 2 + 358.50 - (29 / 14.50)) - (0.50) + ((5750 * 2) - 11800 + 1.0);
+    let testString = `
+(((3 * 3) + 4) - 80 + 40.00 * 2 + 358.50 - (29 / 14.50)) - (0.50) + ((5750 * 2) - 11800 + 1.0);
 //lastT == 70
 `;
     }
   
     {
-    let testString = `true AND true OR false AND false AND false OR NOT true;
+    let testString = `
+true AND true OR false AND false AND false OR NOT true;
 //lastT = 1;
 `;
     }
 
-    //TODO: verificar que el stack este bien en esta prueba
     {
-    let testString = `let a:number = (((3 * 3) + 4) - 80 + 40.00 * 2 + 358.50 - (29 / 14.50)) - (0.50) + ((5750 * 2) - 11800 + 1.0);
+    let testString = `
+let a:number = (((3 * 3) + 4) - 80 + 40.00 * 2 + 358.50 - (29 / 14.50)) - (0.50) + ((5750 * 2) - 11800 + 1.0);
 let b:number; //0
 const c:number;//Error
 const d:number = 10; //SymbolTable must have this variable with .isConst == true
@@ -75,10 +77,65 @@ const d:number = 10; //SymbolTable must have this variable with .isConst == true
 `;
     }
 
-    let testString = `let a:number = 10;
-a = 0;
-//stack[0] == 0;
+    {
+    let testString = `
+let a:number = 10;
+a = 1;
+//stack[0] == 1;
 `;
+    }
+
+    {
+  let testString = `
+let acc:number = 1;
+while(true){
+  let inc:number = 1;
+  acc = acc + inc;
+  //console.log(acc);
+}
+  `;
+    }
+
+  //testear las 5 condiciones de declaracion; (estan en una foto del cuaderno en el celular)
+  {
+  let testString = `
+let a:number = true;//should be an error bu we should still reserve the space for a
+//console.log(a);//tiene que ser 0
+//stack[0] = 0
+  `;
+  }
+
+  //fail: the stack is as we wanted but it doesnt throw an error on let a:number = b;
+  let testString = `
+let a:number = b;//should be an error but we should still reserve the space for a
+let b:number = 20;
+//console.log(a);//tiene que ser 0
+//stack[0] = 0;
+//stack[1] = 20;
+  `;
+  //PENDING
+  {
+    //TODO: write it well, and we have to implement functions first!
+    let testString = `
+a();
+func a(){
+  b=1;//shouldnt be an error!
+}
+let b = 10;
+    `;
+  }
+  {
+    let testString = `
+let a:number = 20;
+let a:number = 10;//should be an error and this statement should deleted in the first pass!
+    `;
+  }
+  {
+    //TODO: write it well, and we have to implement typedef first!
+    let testString = `
+let a:aNonExistantCustomType = 1;//should be an error and this statement should be deleted in the first pass!
+    `;
+  }
 
     this.sourceString = testString;
     wasmFolder('https:cdn.jsdelivr.net/npm/@hpcc-js/wasm@0.3.13/dist');

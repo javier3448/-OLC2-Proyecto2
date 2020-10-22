@@ -1,41 +1,27 @@
 import { RuntimeInterface, TsEntry } from "../app/app.component";
-import { Env, Scope } from "./Environment";
+import { Env, Variable} from "./Environment";
 import { Global_c_ir } from "./Global_c_ir";
 
-import { Statement, StatementKind, WhileStatement, Block, 
-         IfStatement, ForStatement, ForInStatement, ForOfStatement, 
-         SwitchStatement, DoWhileStatement} from "../Ast/Statement";
+import { Statement, StatementKind, WhileStatement } from "../Ast/Statement";
 
 import { MyType, MyTypeKind, TypeSignature } from "./MyType";
-import { MyFunction, MyFunctionKind, GraficarTs, Parameter, MyNonNativeFunction } from "./MyFunction";
 import { MyError, MyErrorKind } from './MyError';
 
-import { Expression, ExpressionKind, FunctionCallExpression, LiteralExpression, 
-         IdentifierExpression, MemberAccessExpression, BinaryExpression, UnaryExpression, 
-         TernaryExpression, ObjectLiteralExpression, ArrayLiteralExpression } from '../Ast/Expression';
-import { Declaration } from '../Ast/Declaration';
-import { AccessKind, AttributeAccess, FunctionAccess, IndexAccess } from 'src/Ast/MemberAccess';
-import { ArrayTypeNode, CustomTypeNode, MyTypeNode, MyTypeNodeKind } from 'src/Ast/MyTypeNode';
+import { Expression, ExpressionKind, LiteralExpression, 
+         IdentifierExpression, BinaryExpression, UnaryExpression } from '../Ast/Expression';
+import { Declaration,  UnprocessedDeclData, ProcessedDeclData } from '../Ast/Declaration';
+import { MyTypeNode, MyTypeNodeKind } from 'src/Ast/MyTypeNode';
 import { GlobalInstructions } from 'src/Ast/GlobalInstructions';
-import { TypeDef, AttributeNode } from "../Ast/TypeDef";
-import { FunctionDef, ParamNode } from "../Ast/FunctionDef";
+import { TypeDef } from "../Ast/TypeDef";
+import { FunctionDef } from "../Ast/FunctionDef";
 import { ExprResult } from "./ExprResult"
 import { LValueResult } from "./LValueResult"
 import { ArithOp, Assignment, _3AddrAssignment, Cond_goto, C_ir_instruction, c_ir_instructions_toString, Goto, Label, LabelDeclaration, RelOp, Mem } from './C_ir_instruction';
-import { AssignmentNode } from 'src/Ast/AssignmentNode';
+import { CompileSummaryKind } from '@angular/compiler';
 
 //TODO: agregar un comentario con el c_ir deseado en todos 
 //      los lugares en los que generamos c_ir
 
-//Casi siempre que retornemos un string asi nadamas significa que estamos retorna
-//el C_IR generado por algun lang construct
-//Convension: poner primero el C_IR en el retorno, ejemplo: [string, AlgoMasQueNecesitemos]
-
-// REGION: 
-
-//CLEAN-UP: uso confuso de la global runtimeInterfaces:
-//El hecho que la pasamos como parametro en compile(...), el hecho que tenemos un
-//metodo resetRuntimeInterface
 let runtimeInterface:RuntimeInterface;
 
 export function graficar_ts(){
@@ -72,7 +58,6 @@ export function resetRuntimeInterface(){
     runtimeInterface.errorDataSet = [];
     runtimeInterface.intermediateRepresentation = "";
 }
-// END: IO functions
 
 //Tienen el ultimo temp que fue utilizado
 //Si estan en 0 es porque no se utilizo ningun temp o label
@@ -104,10 +89,10 @@ function construct_c_ir_header():string{
     //For double, 9,007,199,254,740,993 (2^53 + 1).
     let header = `#include <stdio.h> 
 //TODO: Ver que tamano de stack es mejor (deberia ser mucho mas pequenno que el heap)
-float heap[0xfffff];
-float stack[0xfffff];
-float p = 0;
-float h = 0;
+double heap[0xfffff];
+double stack[0xfffff];
+double p = 0;
+double h = 0;
 `;
 
     let temps = "";
@@ -119,7 +104,7 @@ float h = 0;
     }
     //Quitamos la ultima coma
     if(temps.length > 2){
-        temps = "float " + temps.slice(0, temps.length - 2) + ';\n';
+        temps = "double " + temps.slice(0, temps.length - 2) + ';\n';
     }
 
     header += temps + `\nint main(){\n`;
@@ -166,7 +151,30 @@ export function compileGlobalInstructions(globalInstructions:GlobalInstructions)
     let funcs_c_ir = "";
     let statements_c_ir:C_ir_instruction[] = new Array();
 
-    for (const typeDef of globalInstructions.typeDefs) {
+    compileTypeDefs(globalInstructions.typeDefs);
+
+    //Para que las funciones puedan acceder a las variable globales debemos 
+    //reserva el espacio de dichas variables antes de generar el codigo
+    //intermedio de las funciones.
+    //Sin embargo no podemos asegurar que la declaracion de una variable
+    //este antes en el codigo que la definicion de una funcion que la use
+    //Por eso debemos hacer una pasada solo para reservar el espacio de todas las variables
+    //globales
+    declarationsPrepass(globalInstructions.statements);
+
+    compileFunctionDefs(globalInstructions.functionDefs);
+
+    //MEJORA: reserve a statements_c_ir (no se como hacer eso en typescript, talvez no sea posible)
+    for (const statement of globalInstructions.statements) {
+        let result = compileStatement(statement);
+        statements_c_ir = statements_c_ir.concat(result);
+    }
+
+    return new Global_c_ir(funcs_c_ir, statements_c_ir);
+}
+
+export function compileTypeDefs(typeDefs:TypeDef[]){
+    for (const typeDef of typeDefs) {
         try {
             compileTypeDef(typeDef);
         } catch (error) {
@@ -192,8 +200,90 @@ export function compileGlobalInstructions(globalInstructions:GlobalInstructions)
         }
             
     }
+}
 
-    for (const functionDef of globalInstructions.functionDefs) {
+//MEJORA: desde el parser hacer una lista de declaraciones
+//        para que aqui no tengamos que ir por todos los 
+//        statements
+//[!] puede remover elementos de la lista statements
+//    cambia los el .myType de cada elemento
+export function declarationsPrepass(statements:Statement[]):void{
+
+    //Vamos a quitar los statements con errores que implican que no
+    //se puede hacer el reservado de espacio
+
+    //Vamos a usar un array auxiliar para ir quitando los nodos que tengan error
+    //MEJORA: reserve
+    let tempStatements:Statement[] = new Array();
+
+    for (const stmt of statements) {
+        //AQUI AQUI AQUI
+        //*hacer los chequeos de compilacion
+        //*quitar los que produscan errores
+        //*cambiar el compileDeclaration para que no haga lo del myTypeNode
+        //*cambias el compileDeclaration para que cuando de error de tipo la expression inicialice la variable
+        //con un default
+        //*que la variable pueda indicas;df asd;f j VER CUADERNO!
+        if(stmt.statementKind !== StatementKind.DeclarationKind){
+            continue;
+        }
+
+        let decl = stmt.child as Declaration;
+        let unprocessedDeclData = decl.data as UnprocessedDeclData;
+
+        //we check that if it has const modifier it cant have .expr set to null
+        if(unprocessedDeclData.isConst){
+            //reportamos el error
+            //MEJORA: better error message and better error kind
+            let myError = MyError.makeMyError(MyErrorKind.TYPE_ERROR, "Variables const deben ser inicializadas");
+            myError.setLocation(stmt.astNode);
+            console.log(myError);
+            runtimeInterface.errorDataSet.push(myError);
+            continue;
+        }
+
+        //We check errors
+        let myType:MyType;
+
+        try{
+            myType = compileTypeNode(unprocessedDeclData.myTypeNode);
+        }catch(myError){
+            if (myError instanceof MyError){
+                //reportamos el error
+                myError.setLocation(stmt.astNode);
+                console.log(myError);
+                runtimeInterface.errorDataSet.push(myError);
+                continue;
+            }
+            throw myError;
+        }
+
+        //Revisamos que no exista otra var con el mismo nombre
+        let variable:Variable;
+        try{
+            variable = Env.reserveVariable(unprocessedDeclData.identifier, unprocessedDeclData.isConst, myType);
+        }catch(myError){
+            if (myError instanceof MyError){
+                //reportamos el error
+                myError.setLocation(stmt.astNode);
+                console.log(myError);
+                runtimeInterface.errorDataSet.push(myError);
+                continue;
+            }
+            throw myError;
+        }
+        
+        
+        //si no hubo erorres cambiamos el .data de decl
+        //ese stmt en el nuevo array
+        decl.data = new ProcessedDeclData(variable);
+        tempStatements.push(stmt);
+    }
+
+}
+
+export function compileFunctionDefs(functionDefs:FunctionDef[]){
+    for (const functionDef of functionDefs) {
         try {
             compileFunctionDef(functionDef);
         } catch (error) {
@@ -206,14 +296,6 @@ export function compileGlobalInstructions(globalInstructions:GlobalInstructions)
             }
         }
     }
-
-    //MEJORA: reserve a statements_c_ir (no se como hacer eso en typescript, talvez no sea posible)
-    for (const statement of globalInstructions.statements) {
-        let result = compileStatement(statement);
-        statements_c_ir = statements_c_ir.concat(result);
-    }
-
-    return new Global_c_ir(funcs_c_ir, statements_c_ir);
 }
 
 export function compileFunctionDef(functionDefNode:FunctionDef){
@@ -238,6 +320,9 @@ export function compileStatement(statement:Statement):C_ir_instruction[]{
 
             case StatementKind.DeclarationKind:
                 return compileDeclaration(child as Declaration);
+
+            case StatementKind.WhileKind:
+                return compileWhile(child as WhileStatement);
 
             default:
                 throw new Error(`runStatment no implementado para myTypeNode: ${statement.statementKind}`);
@@ -321,8 +406,10 @@ export function compileExpression(expr:Expression):ExprResult{
                        rightResult.myType.kind === MyTypeKind.STRING){
                         throw new Error("implementacion de suma con strings no implementado todavia!");
                     }
-                    else if(leftResult.myType.kind === MyTypeKind.NUMBER  &&
-                            rightResult.myType.kind === MyTypeKind.NUMBER){
+                    //se pueden operar booleans con numbers
+                    else if((leftResult.myType.kind === MyTypeKind.NUMBER  && rightResult.myType.kind === MyTypeKind.NUMBER) ||
+                            (leftResult.myType.kind === MyTypeKind.BOOLEAN  && rightResult.myType.kind === MyTypeKind.NUMBER) ||
+                            (leftResult.myType.kind === MyTypeKind.NUMBER  && rightResult.myType.kind === MyTypeKind.BOOLEAN)){
 
                         return generateSimpleArithExprResult(leftResult.c_ir, leftResult.val, ArithOp.ADDITION, rightResult.c_ir, rightResult.val);
                     }
@@ -486,7 +573,42 @@ export function compileExpression(expr:Expression):ExprResult{
             }break;
             case ExpressionKind.IDENTIFIER:
             {
-                throw new Error(`compileExpr de ${expr.expressionKind} no implementado todavia`);
+                //conseguir la variable de la tabla de simbolos y tener en cuenta el isGlobal
+                let identExp = expr.specification as IdentifierExpression;
+                //We get the value from the symbol table
+                let getVarResult = Env.getVariable(identExp.name);
+                if(getVarResult === null){
+                    throw new MyError(`No existe una variable con el nombre: '${identExp.name}' en este entorno`);
+                }
+                //FIXME: 
+                //TODO: Cuando tengamos funciones anidadas para a tener que hacer un caso especial para las variables 
+                //      que estan definidas en alguna funcion ancestro
+                let isGlobal = getVarResult.isGlobal;
+                let variable = getVarResult.variable;
+
+                //Generamos c_ir diferente dependiendo de si es global
+                //local
+                if(isGlobal){
+
+                    let temp = getNextTemp();
+                    let globalAccess = Mem.stackAccess(variable.offset);
+                    let c_ir:C_ir_instruction[] = [
+                        new Assignment(temp, globalAccess)
+                    ]
+
+                    return new ExprResult(variable.type, false, temp, c_ir);
+                }
+                else{
+                    let temp = getNextTemp();
+                    let stackFrameAcessTemp = getNextTemp();//p+offset
+                    let globalAccess = Mem.stackAccess(stackFrameAcessTemp);
+                    let c_ir:C_ir_instruction[] = [
+                        new _3AddrAssignment(stackFrameAcessTemp, P_REG, ArithOp.ADDITION, variable.offset),
+                        new Assignment(temp, globalAccess)
+                    ];
+
+                    return new ExprResult(variable.type, false, temp, c_ir);
+                }
             }break;
             //The way we traverse member access is kinda weird because the way the AST is shaped
             //but we wont bother to describe it in a comment :/
@@ -539,6 +661,9 @@ function compileLValue(expr:Expression):LValueResult{
         if(getVarResult === null){
             throw new MyError(`No existe una variable con el nombre: '${identExp.name}' en este entorno`);
         }
+        //FIXME: 
+        //TODO: Cuando tengamos funciones anidadas para a tener que hacer un caso especial para las variables 
+        //      que estan definidas en alguna funcion ancestro
         let isGlobal = getVarResult.isGlobal;
         let variable = getVarResult.variable;
 
@@ -573,7 +698,7 @@ function compileLValue(expr:Expression):LValueResult{
 }
 
 // devuelbe el ExprResult de hacer una expresion binaria en C_IR entre leftResult y rightResult
-// intended use: + - * / % entre 2 numbers. porque se genera C_IR practicamente identico para esos casos
+// intended use: + - * / entre 2 numbers. porque se genera C_IR practicamente identico para esos casos
 // this would an inlined func in c
 function generateSimpleArithExprResult(left_c_ir:C_ir_instruction[], left_val:(String | Number), arithOp:ArithOp, right_c_ir:C_ir_instruction[], right_val:(String | Number)):ExprResult{
 
@@ -690,89 +815,145 @@ function generateOrExprResult(left_c_ir:C_ir_instruction[], left_val:(String | N
 
 export function compileDeclaration(declaration:Declaration):C_ir_instruction[]{
 
-    let varType = compileTypeNode(declaration.myTypeNode);
-    let exprResult:(ExprResult | null);
-    if(declaration.expression !== null){
-        exprResult = compileExpression(declaration.expression);
+    let variable:Variable;
+    if(declaration.data instanceof UnprocessedDeclData){
+        //No importa si compileTypeNode o addVariable tirar MyError porque 
+        //un .data tipo UnprocessedDeclData quiere decir que no hemos reservado espacio para
+        //esa variable. Entonces podemos tirar error y saltarnos el statement sin que pase 
+        //nada malo
+        let varType = compileTypeNode(declaration.data.myTypeNode);
+        let varName = declaration.data.identifier;
+        let isConst = declaration.data.isConst;
 
-        //we must check types
-        if(!MyType.compareTypes(varType, exprResult.myType)){
-            throw MyError.makeMyError(
-                MyErrorKind.TYPE_ERROR, 
-                `Tipos no compatibles: '${varType.getName()} y '${exprResult.myType.getName()}'`
-            );
-        }
-
-        //MEJORA: explicar porque no importa que trae la expression
-        //We dont have to know if the expr is a pointer to a heap or whatever
-        //if it is a pointer to the heap, we still have to store that pointer in the stack
-        //If it is an imm we have to store the value itself in the stack
-        //If it is a temp that doesnt have a pointer we copy still have to copy the value of the temp
-        //exactly the same as if it were a temp with a pointer
-        //"the expr deals with the allocation and we know the meaning of its T with the type"
-
-        //we try to add the variable into the symboltable this might 
-        //throw an exception that will be caught at compileStatement
-        let id = declaration.identifier;
-        let myType = varType;
-        let varOffset = Env.addVariable(id, declaration.isConst, myType);
-
-        //[!!!] once we add the variable the Env we MUST generate code
-        //      because otherwise the code generated and the Env would 
-        //      contradict eachother
-        //      i.e. from this point on we cant throw any MyError
-
-        //we need to put the value of the variable in stack[p+varOffset]
-        //but c_ir doesnt only allows stack[temp|imm] so we must put 
-        //p+varOffset in a temp
-        let varPointerTemp = getNextTemp();
-
-        let c_ir:C_ir_instruction[] = new Array();
-
-        c_ir = c_ir.concat(
-            exprResult.c_ir,
-           [new _3AddrAssignment(varPointerTemp, P_REG, ArithOp.ADDITION, varOffset),
-            new Assignment(Mem.stackAccess(varPointerTemp), exprResult.val)],
-        );
-
-        return c_ir;
+        variable = Env.addVariable(varName, isConst, varType);
     }
     else{
-        //we check if it is const, if so error
-        if(declaration.isConst){
-            throw new MyError(`Declaraciones con 'const' deben de ser inicializadas`);
+        variable = declaration.data.variable;
+    }
+    //[!!!] DE ESTE PUNTO EN ADELANTEa AGREGAMOS LA VARIABLE SIN IMPORTAR EL RESULTADO 
+    //      DE declaration.expr LO QUE QUIERE DECIR QUE MANIPULAMOS LA TABLA DE SIMBOLOS. 
+    //      ENTONCES DE AQUI EN ADELANTE SI OCURRE UNA EXCEPTION LA TENEMOS QUE ATRAPARA 
+    //      PARA QUE PODAMOS GENERAR C_IR *SIEMPRE*
+
+    let exprVal:(String | Number);
+    let exprC_ir:C_ir_instruction[];
+    if(declaration.expression !== null){
+        let exprResult:ExprResult;
+        try{
+            exprResult = compileExpression(declaration.expression);
+        }catch(myError){
+            //reportamos el error de expresion 
+            //Y reportamos un error adicional en esta declaracion pero no 
+            //descartamos la declaracion
+            if(myError instanceof MyError){
+                console.log(myError);
+                runtimeInterface.errorDataSet.push(myError);
+                //creamos el error de esta declaracion
+                let declError = MyError.makeMyError(
+                    MyErrorKind.TYPE_ERROR, 
+                    `No se puede declarar una variable con valor: 'ERROR'. Se utilizara el valor default del tipo: '${variable.type.getName()}'`
+                );
+                declError.setLocation(declaration.astNode);
+                console.log(declError);
+                runtimeInterface.errorDataSet.push(declError);
+
+                //generamos el temp y el c_ir para un valor default del tipo de la variable
+                exprVal = getNextTemp();
+                exprC_ir = [
+                    new Assignment(exprVal, variable.type.getDefaultVal())
+                ];
+                return generateDeclaration_c_ir(exprVal, exprC_ir, variable);
+            }else{
+                throw myError;
+            }
         }
-        //otherwise just get the default value of the type
 
-         //we try to add the variable into the symboltable this might 
-        //throw an exception that will be caught at compileStatement
-        let id = declaration.identifier;
-        let myType = varType;
-        let varOffset = Env.addVariable(id, false, myType);
+        //we must check types
+        if(!MyType.compareTypes(variable.type, exprResult.myType)){
+            //reportamos el error de tipos e indicamos que vamos a usar el valor default del tipo.
+            let error = MyError.makeMyError(
+                MyErrorKind.TYPE_ERROR, 
+                `Tipos no compatibles en declaracion: '${variable.type.getName()} y '${exprResult.myType.getName()}'. Se utilizara el valor default del tipo: ${variable.type.getName()}`
+            );
+            error.setLocation(declaration.astNode);
+            console.log(error);
+            runtimeInterface.errorDataSet.push(error);
 
-        //[!!!] once we add the variable the Env we MUST generate code
-        //      because otherwise the code generated and the Env would 
-        //      contradict eachother
-        //      i.e. from this point on we cant throw any MyError
+            //generamos el temp y el c_ir para un valor default del tipo de la variable
+            exprVal = getNextTemp();
+            exprC_ir = [
+                new Assignment(exprVal, variable.type.getDefaultVal())
+            ];
+            return generateDeclaration_c_ir(exprVal, exprC_ir, variable);
+        }
 
-        //we need to put the value of the variable in stack[p+varOffset]
-        //but c_ir doesnt only allows stack[temp|imm] so we must put 
-        //p+varOffset in a temp
-        let varPointerTemp = getNextTemp();
-
-        //varType.getDefaultVal only works if the defaultVal of every possible type
-        //doesnt need generate c_ir code AND all types in have the same size
-        //or are pointers
-        let c_ir:C_ir_instruction[] = [
-            new _3AddrAssignment(varPointerTemp, P_REG, ArithOp.ADDITION, varOffset),
-            new Assignment(Mem.stackAccess(varPointerTemp), varType.getDefaultVal())
+        exprVal = exprResult.val;
+        exprC_ir = exprResult.c_ir;
+        return generateDeclaration_c_ir(exprVal, exprC_ir, variable);
+    }
+    else{
+        //siempre tenemos que generar el defaul
+        exprVal = getNextTemp();
+        exprC_ir = [
+            new Assignment(exprVal, variable.type.getDefaultVal())
         ];
-
-        return c_ir;
+        return generateDeclaration_c_ir(exprVal, exprC_ir, variable);
     }
     
+    //MEJORA: explicar porque no importa que trae la expression
+    //We dont have to know if the expr is a pointer to a heap or whatever
+    //if it is a pointer to the heap, we still have to store that pointer in the stack
+    //If it is an imm we have to store the value itself in the stack
+    //If it is a temp that doesnt have a pointer we copy still have to copy the value of the temp
+    //exactly the same as if it were a temp with a pointer
+    //"the expr deals with the allocation and we know the meaning of its T with the type"
+
+    //we need to put the value of the variable in stack[p+varOffset]
+    //but c_ir doesnt only allows stack[temp|imm] so we must put 
+    //p+varOffset in a temp
+    let varPointerTemp = getNextTemp();
+
+    let c_ir:C_ir_instruction[] = new Array();
+
+    c_ir = c_ir.concat(
+        exprC_ir,
+       [new _3AddrAssignment(varPointerTemp, P_REG, ArithOp.ADDITION, variable.offset),
+        new Assignment(Mem.stackAccess(varPointerTemp), exprVal)],
+    );
+
+    return c_ir;
 }
 
+//dado un temp con el valor de la expresion derecha y una variable
+//genera el c_ir de una declaracion sirve para simplificar un poco el flujo de
+//compileDeclaration
+export function generateDeclaration_c_ir(exprVal:(String | Number), exprC_ir:C_ir_instruction[], variable:Variable):C_ir_instruction[]{
+
+    //MEJORA: explicar porque no importa que trae la expression
+    //We dont have to know if the expr is a pointer to a heap or whatever
+    //if it is a pointer to the heap, we still have to store that pointer in the stack
+    //If it is an imm we have to store the value itself in the stack
+    //If it is a temp that doesnt have a pointer we copy still have to copy the value of the temp
+    //exactly the same as if it were a temp with a pointer
+    //"the expr deals with the allocation and we know the meaning of its T with the type"
+
+    //we need to put the value of the variable in stack[p+varOffset]
+    //but c_ir doesnt only allows stack[temp|imm] so we must put 
+    //p+varOffset in a temp
+    let varPointerTemp = getNextTemp();
+
+    let c_ir:C_ir_instruction[] = new Array();
+
+    c_ir = c_ir.concat(
+        exprC_ir,
+       [new _3AddrAssignment(varPointerTemp, P_REG, ArithOp.ADDITION, variable.offset),
+        new Assignment(Mem.stackAccess(varPointerTemp), exprVal)],
+    );
+
+    return c_ir;
+}
+
+//[throws] myError if a custom type doesnt exist
 export function compileTypeNode(myTypeNode:MyTypeNode):MyType{
     if(myTypeNode.kind === MyTypeNodeKind.CUSTOM){
         // let customTypeNode = myTypeNode.spec as CustomTypeNode;
@@ -801,4 +982,42 @@ export function compileTypeNode(myTypeNode:MyTypeNode):MyType{
         default:
             throw new Error(`compileMyTypeNode no implementado para ${myTypeNode.kind}`);
     }
+}
+
+export function compileWhile(whileStatement:WhileStatement):C_ir_instruction[]{
+    //Tenemos que chequear los tipos antes de poder tocar el Env
+    //MEJORA: We could do the boolean expr evaluation optimizations described in the dragon
+    //        book near section 6.6.5
+    let condResult = compileExpression(whileStatement.expr);
+    if(!MyType.compareTypes(condResult.myType, MyType.BOOLEAN)){
+        throw new MyError(`La condicion de un statement while debe ser de tipo booleana, se encontro: ${condResult.myType.getName()}`);
+    }
+
+    let begLabel = new Label(getNextLabel());
+    let endLabel = new Label(getNextLabel());
+
+    //[!!!] Important we tell the Env that it has started generating instructions
+    //      inside a a while
+    
+    Env.pushWhileScope(begLabel, endLabel);
+
+    //MEJORA: hacer un reserve
+    let statements_c_ir:C_ir_instruction[] = new Array();
+    for (const statement of whileStatement.statements) {
+        statements_c_ir = statements_c_ir.concat(compileStatement(statement));
+    }
+
+    let c_ir:C_ir_instruction[] = new Array();
+    c_ir = c_ir.concat(
+       [new LabelDeclaration(begLabel)],
+        condResult.c_ir,
+       [new Cond_goto(condResult.val, RelOp.NOT_EQUAL, new Number(1), endLabel)],
+        statements_c_ir,
+       [new Goto(begLabel),
+        new LabelDeclaration(endLabel)]
+    );
+
+    Env.popScope();
+
+    return c_ir;
 }

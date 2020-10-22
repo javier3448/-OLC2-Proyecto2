@@ -6,7 +6,7 @@ import { Expression, ExpressionKind, LiteralExpression,
 import { Statement, WhileStatement, Block, StatementKind, IfStatement, ForStatement, ForInStatement, ForOfStatement, SwitchStatement, DoWhileStatement  } from "./Ast/Statement";
 import { AstNode } from "./Ast/AstNode";
 
-import { Declaration } from './Ast/Declaration';
+import { Declaration, UnprocessedDeclData } from './Ast/Declaration';
 import { AssignmentNode } from './Ast/AssignmentNode';
 import { ArrayTypeNode, CustomTypeNode, MyTypeNode, MyTypeNodeKind } from './Ast/MyTypeNode';
 import { MemberAccess, AccessKind, FunctionAccess, IndexAccess, AttributeAccess } from './Ast/MemberAccess';
@@ -616,18 +616,18 @@ export function graphDeclaration(g:Digraph, decl:Declaration):INode{
     });
 
     const modifierNode = g.createNode(`Modifier${AstNode.getNextAstNodeId()}`, {
-        [attribute.label]: (decl.isConst ? "const" : "let"),
+        [attribute.label]: ((decl.data as UnprocessedDeclData).isConst ? "const" : "let"),
         [attribute.shape]: 'box',
     });
     g.createEdge([result, modifierNode]);
 
     const identifierNode = g.createNode(`Identifier${AstNode.getNextAstNodeId()}`, {
-        [attribute.label]: "Id\n" + decl.identifier,
+        [attribute.label]: "Id\n" + (decl.data as UnprocessedDeclData).identifier,
         [attribute.shape]: 'box',
     });
     g.createEdge([result, identifierNode]);
             
-    let typeNode = graphMyTypeNode(g, decl.myTypeNode);
+    let typeNode = graphMyTypeNode(g, (decl.data as UnprocessedDeclData).myTypeNode);
     g.createEdge([result, typeNode]);
 
     if(decl.expression){

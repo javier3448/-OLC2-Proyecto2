@@ -62,3 +62,66 @@ import { Expression, ExpressionKind } from "../Ast/Expression";
     //Why are they making us write compilers in fucking piece of shit typescript of all things
     //Its fucking embarrassing
 }
+
+//Some of the challenges we will deal with when doing the
+//nested functions
+{
+    function lol(){
+        function lel(){
+            console.log(a);
+            console.log(b);
+        }
+        
+        let a = 10;
+        if(true == true){
+            lel();
+        }
+        let b = 1;
+    }
+
+    lol();
+
+    //tavez necesitemos hacer las declaraciones antes
+    //talvez nececsitemos hacer una especie de hoisting
+    //talvez necesitemos poner las declaraciones adentro de la tabla de simbolos desede antes
+    //y que la declaraciones no lo agregue a la tabla de simbolos
+
+    //seria como agarrar todas las declaraciones, ponerlas hasta arriba
+    //y convertir todas las declaraciones en asignaciones entonces la
+    //funcion anterior se veria asi:
+    function lol1(){
+        let a:number;
+        let b:number;//[ !!!! ] esto daria clavo con el const!!!
+                    //podriamos definir como UB acceder a una var const desde una nested function
+                    //antes de que haya sido inicializada
+        function lel(){
+            console.log(a);
+            console.log(b);
+        }
+        
+        a = 10;
+        if(true == true){
+            lel();
+        }
+        b = 1;
+    }
+    //tambien podriamos recorrer el arbol de manera que agarremos las declaraciones
+    //en una pasada y las ponemos en la tabla de simbolos y las marcamos como 
+    //uninitialized y luego cuando compile el nodo declaration y solicite un addVariable
+    //maneje el hecho que ya esta en la tabla de simbolos pero no esta inicializada
+
+    //[!] ERROR si la declaracion tira error :/. Pero podriamos cambiar nuestra estrategia de errores y tirar todo a la basura cuando haya error de compilacion
+
+    //Hacer todo lo demas antes de pensar en esto. Esos mens son capaces que quitan eso al final :(
+}
+
+
+//BUG: Esto en typescript es error de compilacion
+{
+    let a:number = 10;
+    {
+        console.log(a);
+        let a:number = 20;
+        console.log(a);
+    }
+}

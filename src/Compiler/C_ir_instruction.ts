@@ -3,9 +3,6 @@
 //el new hace bulto y quiero poder escribir mas de un constructor y typescript
 //no me deja
 
-import { getLocaleDayNames } from '@angular/common';
-import { ClassGetter } from '@angular/compiler/src/output/output_ast';
-
 //TODO HACER ESTE MERGE DE NAMESPACES PARA TODOS TUS ENUMS
 //asi el valor del enum como tal no tiene que tener su representacion en 
 //string y podemos llamar anEnum.toString comodamente
@@ -251,7 +248,13 @@ export function c_ir_instruction_toString(c_ir_ins:C_ir_instruction):string{
     else if(c_ir_ins instanceof _3AddrAssignment){
         //        [Temp|Mem] = [Temp|Mem|imm] OP [Temp|Mem|imm];
         //Example:  T1 = stack[T2] + 10;
-        return `${c_ir_ins.dest.toString()} = ${c_ir_ins.left.toString()} ${arithOpGetSymbol(c_ir_ins.arithOp)} ${c_ir_ins.right.toString()};\n`;
+        if(c_ir_ins.arithOp !== ArithOp.MODULUS){
+            return `${c_ir_ins.dest.toString()} = ${c_ir_ins.left.toString()} ${arithOpGetSymbol(c_ir_ins.arithOp)} ${c_ir_ins.right.toString()};\n`;
+        }
+        //MEDIO CHAPUZ 
+        else{//CASO ESPECIAL DEL MODULUS PORQUE REQUIERE CASTEO A (int)!
+            return `${c_ir_ins.dest.toString()} = (int)${c_ir_ins.left.toString()} ${arithOpGetSymbol(c_ir_ins.arithOp)} (int)${c_ir_ins.right.toString()};\n`;
+        }
     }
     else if(c_ir_ins instanceof Assignment){
         //        [Temp|Mem] = [Temp|Mem|imm]

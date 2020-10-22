@@ -5,6 +5,8 @@ import { MyFunction, MyFunctionKind, GraficarTs, MyNonNativeFunction } from "./M
 import { MyType, MyTypeKind, TypeSignature } from "./MyType";
 import { MyError } from './MyError';
 import { compileExpression, compileStatement, graficar_ts } from './Compiler';
+import { Label } from "./C_ir_instruction";
+import { variable } from '@angular/compiler/src/output/output_ast';
 
 //WHY THE FUCK DONT WE HAVE A FUCKING HASHTABLE IN FUCKING TYPESCRIPT!!!!!!!
 export class SymbolTableVariables{
@@ -29,6 +31,9 @@ export class SymbolTableTypeSignatures{
 export class Variable{
     constructor(
         public isConst:boolean,
+        //its useful when we are reserving the space for variables 
+        //in declarationsPrepass
+        public isUndeclared:boolean,
         public type:MyType,
         //The value of a variable is always a stack frame offset
         public offset:number
@@ -44,6 +49,41 @@ export enum ScopeKind{
     BLOCK, //a plain old {}
 }
 
+export class ReturnJumper{
+    constructor(
+        //puntero al tipo en la tabla de simbolos donde esta el function signature
+        //null significa que la func retorna null.
+        public myType:(MyType | null),
+        public label:Label
+    ) {   }
+}
+//indica las tags a las que hay que hacer el goto en caso de
+//encontrar un statement con:
+//*return;
+//*break;
+//*continue;
+//Se supone que solo hay que pasarlas entre statements (i.e. las expresiones no lo necesitan)
+//el bucle se encarga de mantenarla. prevJumpAdress + {nuevo break, nuevo continue} = al jumpAddress que se le va 
+//a pasar a todos sus statement
+// . . . 
+export class JumperSet{
+    constructor(
+        public continueJumper:(Label | null),
+        public breakJumper:(Label | null),
+        public returnJumper:(ReturnJumper | null),
+    ) {   }
+
+    isEmpty():boolean{
+        return this.continueJumper === null && 
+               this.breakJumper === null && 
+               this.returnJumper === null;
+    }
+
+    public static makeEmpty():JumperSet{
+        return new JumperSet(null, null, null);
+    }
+}
+
 //TODO: todo next project: dont use a link list for the scopes.
 //      a dynamic array has better perf and its not that hard to implement if you
 //      put tags in each scope to not search after outside the 'stack frame' (outside the function)
@@ -52,6 +92,9 @@ export enum ScopeKind{
 
 // The current scope and all previous ones
 // ALL VARIABLES IN A SCOPE MUST BE IN STACK FRAME
+// MEJORA?: talvez seria bueno separar la pila de scopes en diferentes
+//          pilas estilo DOD. Porque la mayoria de veces que iteramos a 
+//          travez de ella no necesitamos el todo lo que esta en el scope
 export class Scope{
     //we need the total size of all variables in a stack frame
     //so we can do the stackframe change before calling a diferent function
@@ -71,9 +114,13 @@ export class Scope{
     public myVariables:SymbolTableVariables;
     public myFunctions:SymbolTableFunctions;
 
+    //MEJORA:La mayoria de scopes van a tener esto en empty. Entonces es un buen candidato
+    //       para tener una lista separada para esto
+    public jumperSet:JumperSet;
+
     public previous:(Scope | null);
 
-    private constructor(size:number, kind:ScopeKind, name:string, previous:(Scope | null)) {
+    private constructor(size:number, kind:ScopeKind, jumperSet:JumperSet, name:string, previous:(Scope | null)) {
         this.size = size;
         this.kind = kind;
         this.name = name;
@@ -84,15 +131,15 @@ export class Scope{
     }
 
     public static makeGlobal(){
-        return new Scope(0, ScopeKind.GLOBAL, null, null);
+        return new Scope(0, ScopeKind.GLOBAL, JumperSet.makeEmpty(), null, null);
     }
 
-    public static makeWhile(previous:Scope){
-        return new Scope(0, ScopeKind.WHILE, null, previous);
+    public static makeWhile(previous:Scope, continueJumper:Label, breakJumper:Label){
+        return new Scope(0, ScopeKind.WHILE, new JumperSet(continueJumper, breakJumper, null), null, previous);
     }
 
     public static makeIf(previous:Scope){
-        return new Scope(0, ScopeKind.IF, null, previous);
+        return new Scope(0, ScopeKind.IF, JumperSet.makeEmpty(), null, previous);
     }
 
     //TODO: static make of all the other ScopeKinds
@@ -162,19 +209,53 @@ export module Env{
     //[throws_MyError]
     //Atrapa si ya exite el id en el current scope
     //[!] Can't do type checking
-    export function addVariable(id:string, isConst:boolean, type:MyType):Number{
+    export function addVariable(id:string, isConst:boolean, type:MyType):Variable{
+        //TODO: redo this whole thing
         //ver si ya existe en el current scope
+
+        //MEJORA: hacer la consulta a la hashtable solo una vez.
+        //        no lo hago asi porque no se si typescript devuelbe una copia o algo asi? :(
+        if(current.myVariables[id] === undefined){
+            let varOffset = current.size
+            current.myVariables[id] = new Variable(isConst, false, type, varOffset);
+            current.size += 1;
+            return current.myVariables[id];
+        }
+        else{
+            //We check if it is marked as undeclared, just mark it as declared and
+            //return the offset
+            if(current.myVariables[id].isUndeclared){
+                current.myVariables[id].isUndeclared = false;
+                return current.myVariables[id];
+            }
+            else{
+                throw new MyError(`No se agregar una variable con el nombre '${id}' porque existe un variable con el mismo nomber en el mismo scope`);
+            }
+        }
+
+    }
+
+    //[throws_MyError] 
+    //Atrapa si ya existe el id en el current scope
+    export function reserveVariable(id:string, isConst:boolean, myType:MyType):Variable{
+        //Assertion
+        //solo se puede usar en kind FUNCTION y GLOBAL porque son los unicos entornos
+        //que pueden tener definiciones de funciones adentro y necesitamos saber las posiciones
+        //de las variables que estan afuera de la funcion antes de generar el c_ir de la funcion
+        if(current.kind !== ScopeKind.FUNCTION_SCOPE && current.kind !== ScopeKind.GLOBAL){
+            throw new Error(`No se pues utlizar la funcion reserveVariable con el current.kind ${current.kind}`);
+        }
 
         if(current.myVariables[id] !== undefined){
             throw new MyError(`No se agregar una variable con el nombre '${id}' porque existe un variable con el mismo nomber en el mismo scope`);
         }
 
-        //WE DONT NEED TO GET THE OFFSET OF THE VARIABLE FROM OUTSIDE THIS
-        //METHOD BECAUSE IT ONLY DEPENDS ON CURRENT SIZE OF THIS SCOPE
         let varOffset = current.size
-        current.myVariables[id] = new Variable(isConst, type, varOffset);
+        let variable = new Variable(isConst, false, myType, varOffset);
+        current.myVariables[id] = variable;
         current.size += 1;
-        return varOffset
+
+        return variable;
     }
 
     //MEJORA: better name
@@ -208,10 +289,9 @@ export module Env{
         while(iter !== null){
             variable = iter.myVariables[id];
             if(variable !== undefined){
-                let isGlobal = iter.kind === ScopeKind.GLOBAL;
+                let isGlobal = (iter.kind === ScopeKind.GLOBAL);
                 return new ResultingVariable(isGlobal, variable);
             }
-            iter = iter.previous;
 
             if(iter.kind === ScopeKind.FUNCTION_SCOPE){
                 //if we reach a function_scope our last hope is that 
@@ -224,9 +304,22 @@ export module Env{
                     return null;
                 }
             }
+            iter = iter.previous;
         }
 
         return null;
+    }
+
+    //TODO: documentar las diferencias de pasar el size cuando pusheamos un scope
+    //      funcion a cuando pusheamos cualquier otro scope
+
+    export function pushWhileScope(continueJumper:Label, breakJumper:Label){
+        current = Scope.makeWhile(current, continueJumper, breakJumper);
+        current.size = current.previous.size;
+    }
+
+    export function popScope(){
+        current = current.previous;
     }
 
     /*
@@ -372,12 +465,5 @@ export module Env{
         }
     }
 
-    export function pushScope(){
-        current = new Scope(current);
-    }
-
-    export function popScope(){
-        current = current.previous;
-    }
     */
 }
