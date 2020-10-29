@@ -2,7 +2,7 @@ import { digraph, Digraph, attribute, INode, toDot } from "ts-graphviz";
 import { Expression, ExpressionKind, LiteralExpression, 
           IdentifierExpression, BinaryExpression, UnaryExpression, 
           TernaryExpression, MemberAccessExpression, FunctionCallExpression, 
-          ObjectLiteralExpression, PropertyNode, ArrayLiteralExpression } from "./Ast/Expression";
+          ObjectLiteralExpression, PropertyNode, ArrayLiteralExpression, StringLiteral } from "./Ast/Expression";
 import { Statement, WhileStatement, Block, StatementKind, IfStatement, ForStatement, ForInStatement, ForOfStatement, SwitchStatement, DoWhileStatement  } from "./Ast/Statement";
 import { AstNode } from "./Ast/AstNode";
 
@@ -522,8 +522,8 @@ function expressionToLabel(expr:Expression):string{
             else if(litExpr.literal instanceof Number){
                 return `Number\n${litExpr.literal}`;
             }
-            else if(litExpr.literal instanceof String){
-                return `String\n${litExpr.literal}`;
+            else if(litExpr.literal instanceof StringLiteral){
+                return `String\n${litExpr.literal.stringRepresentation}`;
             }
         }
         case ExpressionKind.OBJECT_LITERAL:

@@ -2,7 +2,7 @@ import { AstNode } from './AstNode';
 import { MyTypeNode } from './MyTypeNode';
 import { Expression } from './Expression';
 import { MyType } from 'src/Compiler/MyType';
-import { Variable } from '../Compiler/Environment';
+import { Variable } from '../Compiler/Variable';
 
 //Data before Compiler.prepassDeclarations
 export class UnprocessedDeclData{

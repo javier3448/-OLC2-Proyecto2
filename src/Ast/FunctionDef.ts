@@ -27,9 +27,10 @@ export class FunctionDef {
     //IF NULL IT MEANS IT RETURN VOID
     public returnType:(MyTypeNode | null);
 
+    public functionDefs:FunctionDef[];
     public statements:Statement[];
 
-    constructor(name:string, params:ParamNode[], returnType:MyTypeNode, statements:Statement[],
+    constructor(name:string, params:ParamNode[], returnType:MyTypeNode, functionDefs:FunctionDef[], statements:Statement[],
                 firstLine:number, firstColumn:number, lastLine:number, lastColumn:number){
 
         this.astNode = new AstNode(firstLine, firstColumn, lastLine, lastColumn);
@@ -37,6 +38,7 @@ export class FunctionDef {
         this.name = name;
         this.params = params;
         this.returnType = returnType;
+        this.functionDefs = functionDefs;
         this.statements = statements;
     }
 

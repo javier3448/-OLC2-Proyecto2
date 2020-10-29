@@ -1,3 +1,4 @@
+import { StringLiteralByte } from 'src/Compiler/StringLiteralByte';
 import { AstNode } from "./AstNode";
 import { MemberAccess } from './MemberAccess';
 
@@ -53,10 +54,19 @@ export class TernaryExpression{
     constructor(public left:Expression, public middle:Expression, public right:Expression){   }
 }
 
-export class LiteralExpression{
-    constructor(public literal:(String | Number | Boolean | null)){ 
+//The only Literal that is not just its type in typescript.
+//example: a numberLiteral is just Number in the ast
+export class StringLiteral{
+    constructor(
+        public stringRepresentation:string,
+        public numberArrayRespresentation:StringLiteralByte[],
+    ){   }
+}
 
-    }
+export class LiteralExpression{
+    constructor(
+        public literal:(StringLiteral | Number | Boolean | null)
+    ){   }
 }
 
 export class IdentifierExpression{

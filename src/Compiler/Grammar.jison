@@ -1,7 +1,7 @@
 //TODO: AGREGAR RECUPERACION DE ERRORES SINTACTICOS
 %{
     const { Expression, ExpressionKind, 
-    UnaryExpression, BinaryExpression, TernaryExpression, LiteralExpression, 
+    UnaryExpression, BinaryExpression, TernaryExpression, LiteralExpression, StringLiteral,
     IdentifierExpression, FunctionCallExpression, MemberAccessExpression, 
     PropertyNode, ObjectLiteralExpression, ArrayLiteralExpression } = require('../Ast/Expression');
     const { MemberAccess, AccessKind, FunctionAccess, IndexAccess, AttributeAccess } = require('../Ast/MemberAccess');
@@ -13,12 +13,13 @@
     const { AssignmentNode } = require('../Ast/AssignmentNode');
     const { Declaration } = require('../Ast/Declaration');
     const { MyTypeNode, MyTypeNodeKind } = require('../Ast/MyTypeNode');
-    const { GlobalInstructions } = require('../Ast/GlobalInstructions')
-    const { TypeDef, AttributeNode } = require('../Ast/TypeDef')
-    const { FunctionDef, ParamNode } = require('../Ast/FunctionDef')
-    const { MyError } = require('../Compiler/MyError')
-    const { processScapeSequences } = require('./ParserHelper')
+    const { GlobalInstructions } = require('../Ast/GlobalInstructions');
+    const { TypeDef, AttributeNode } = require('../Ast/TypeDef');
+    const { FunctionDef, ParamNode } = require('../Ast/FunctionDef');
+    const { MyError } = require('../Compiler/MyError');
+    const { toStringLiteralBytes } = require('./ParserHelper');
     //const {Literal} = require('../Expression/Literal');
+
 %}
 
 %lex
@@ -199,13 +200,32 @@ StatementList
 ;
 
 FunctionDef
-    : FUNCTION IDENTIFIER "(" ParamList_ ")" ":" Type "{" StatementList_ "}"
+    : FUNCTION IDENTIFIER "(" ParamList_ ")" ":" Type "{" FunctionInstructionList_ "}"
     {
-        $$ = new FunctionDef($2, $4, $7, $9, @1.first_line, @1.first_column, @2.last_line, @2.last_column);
+        $$ = new FunctionDef($2, $4, $7, $9.funcDefs, $9.statements, @1.first_line, @1.first_column, @2.last_line, @2.last_column);
     }
-    | FUNCTION IDENTIFIER "(" ParamList_ ")" ":" VOID "{" StatementList_ "}"
+    | FUNCTION IDENTIFIER "(" ParamList_ ")" ":" VOID "{" FunctionInstructionList_ "}"
     {
-        $$ = new FunctionDef($2, $4, null, $9, @1.first_line, @1.first_column, @2.last_line, @2.last_column);
+        $$ = new FunctionDef($2, $4, null, $9.funcDefs, $9.statements, @1.first_line, @1.first_column, @2.last_line, @2.last_column);
+    }
+;
+
+FunctionInstructionList_
+    : Statement FunctionInstructionList_
+    {
+        $$ = $2;
+        if($1 !== null){
+            $$.statements.unshift($1);
+        }
+    }
+    | FunctionDef FunctionInstructionList_
+    {
+        $$ = $2;
+        $$.funcDefs.unshift($1);
+    }
+    | /* empty */
+    {
+        $$ = { funcDefs:[], statements:[]};
     }
 ;
 
@@ -633,8 +653,8 @@ Expression
     {
         //BAD PERFORMANCE:
         //we are basically doing the lexing two times for every string 
-        let s = processScapeSequences($1.slice(1, $1.length - 1));
-        $$ = new Expression(ExpressionKind.LITERAL, new LiteralExpression(new String(s)), @1.first_line, @1.first_column, @1.last_line, @1.last_column);
+        let s = toStringLiteralBytes($1.slice(1, $1.length - 1));
+        $$ = new Expression(ExpressionKind.LITERAL, new LiteralExpression(new StringLiteral($1, s)), @1.first_line, @1.first_column, @1.last_line, @1.last_column);
     }
     | TRUE
     {

@@ -125,3 +125,13 @@ import { Expression, ExpressionKind } from "../Ast/Expression";
         console.log(a);
     }
 }
+
+//BUG from last proyect:
+//No revisa bien que una funcion no tenga params con el mismo nombre
+{
+    function hello(a:number, b:number, a:number):void{
+        console.log(`hello. a: ${a} b:${b} a:${a}`);
+    }
+    
+    hello(1,2,3);
+}

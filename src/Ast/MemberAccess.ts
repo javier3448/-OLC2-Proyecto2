@@ -1,3 +1,8 @@
+//TODO:
+//MEJORA: es bastante confuso como memberAcessExpression tiene un memberAccess
+//        que tiene un access que puede tener 3 tipos diferentes.
+
+
 import { AstNode } from "./AstNode";
 import { Expression } from "./Expression";
 

@@ -8,7 +8,8 @@ export enum MyErrorKind{
     SINTACTIC = 'Sintactico',
     TYPE_ERROR= 'TypeError',
     //Solo para mientras arreglamos el constructor de MyError:
-    UNDEF = 'UNDEF'
+    UNDEF = 'UNDEF',
+    DEFINITION = 'DEFINITION'// cuando algo como un tipo o una funcion no se pueden definir
 }
 
 export class MyError{

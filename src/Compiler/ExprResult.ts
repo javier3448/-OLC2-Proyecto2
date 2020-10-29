@@ -15,6 +15,7 @@ export class ExprResult {
         //  *myType no es boolean 
         //MEJORA:Talvez sea mejor solo guardar el numero del temporal 
         //       en vez de su string "T1234"
+        //val en null cuando myType es null (i.e. void)
         public val:(Number | String | null),
         public c_ir:C_ir_instruction[],// algunas expressiones va a tener c_ir vacio
                                        // ejemplo: `null`, `413`

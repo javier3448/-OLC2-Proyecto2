@@ -96,46 +96,125 @@ while(true){
   `;
     }
 
-  //testear las 5 condiciones de declaracion; (estan en una foto del cuaderno en el celular)
-  {
-  let testString = `
+    //testear las 5 condiciones de declaracion; (estan en una foto del cuaderno en el celular)
+    {
+    let testString = `
 let a:number = true;//should be an error bu we should still reserve the space for a
 //console.log(a);//tiene que ser 0
 //stack[0] = 0
-  `;
-  }
+    `;
+    }
 
-  //fail: the stack is as we wanted but it doesnt throw an error on let a:number = b;
-  let testString = `
+    {
+    let testString = `
 let a:number = b;//should be an error but we should still reserve the space for a
 let b:number = 20;
 //console.log(a);//tiene que ser 0
 //stack[0] = 0;
 //stack[1] = 20;
-  `;
-  //PENDING
-  {
-    //TODO: write it well, and we have to implement functions first!
-    let testString = `
+    `;
+    }
+    //PENDING
+    {
+      //TODO: write it well, and we have to implement functions first!
+      let testString = `
 a();
 func a(){
   b=1;//shouldnt be an error!
 }
 let b = 10;
     `;
-  }
-  {
-    let testString = `
+    }
+    {
+      let testString = `
 let a:number = 20;
 let a:number = 10;//should be an error and this statement should deleted in the first pass!
-    `;
-  }
-  {
-    //TODO: write it well, and we have to implement typedef first!
+      `;
+    }
+    {
+      //TODO: write it well, and we have to implement typedef first!
+      let testString = `
+  let a:aNonExistantCustomType = 1;//should be an error and this statement should be deleted in the first pass!
+      `;
+    }
+
+    {
     let testString = `
-let a:aNonExistantCustomType = 1;//should be an error and this statement should be deleted in the first pass!
+let a:string = "hello";
+console.log(a);
+let b:number = console.log(10) + 10;
     `;
+    }
+
+    {
+    let testString = `
+function print(a:number):number{
+  console.log(a + 20);
+}
+    `;
+    }
+
+    //PENDING: actually call the thing and use declarations
+    {
+    let testString = `
+function print(a:number):number{
+  console.log(a + 10);
+  function print(a:number):number{
+    console.log(a + 20);
+	function print(a:number):number{
+	  console.log(a + 30);
+  	}
   }
+  function pront(a:number):number{
+    console.log(a + 40);
+  }
+}
+    `;
+    }
+
+    {
+    let testString = `
+function print10times(s:string):void{
+  let count:number = 0;
+  while(count < 10){
+    console.log(s);
+    count = count + 1;
+  }
+} 
+function print10TimesAndReturn(s:string):number{
+  let count:number = 0;
+  while(count < 10){
+    console.log(s);
+    count = count + 1;
+  }
+}
+print10times("hello");
+    `;
+    }
+
+    let testString = `
+function print10times(s:string):void{
+  let count:number = 0;
+  while(count < 10){
+    console.log(s);
+    count = count + 1;
+   	break;
+  }
+} 
+
+function print10TimesAndReturn(s:string):number{
+  let count:number = 0;
+  while(count < 10){
+    console.log(s);
+    count = count + 1;
+  }
+  return 4141;
+} 
+
+print10times("hello");
+console.log(print10times("ERROR"));//shoud be an error
+console.log(print10TimesAndReturn("Javier"));
+    `;
 
     this.sourceString = testString;
     wasmFolder('https:cdn.jsdelivr.net/npm/@hpcc-js/wasm@0.3.13/dist');

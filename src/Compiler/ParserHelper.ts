@@ -1,26 +1,27 @@
+import { StringLiteralByte } from './StringLiteralByte'
 //Este archivo solo existe porque no se como poner
 //las funciones adentro del jison
 
-//works on any string. replaces \n \t \r for newline, tab, return 
-//example: javier \n alvarez => javier 
-// alvarez
+//returns a 0 terminated array of numbers with the ascii 'number' of each 
+//character of the source string
+//works on any string. replaces \n \t \r for ascii 'number' of newline, tab, return 
+//example: javier \n => 106 97 118 105 101 114 10 00
 //for any other \. (dot represents any char) it removes the \
-//example: javier \" => javier "
-export function processScapeSequences(source:string):string{
+//example: javier \" => 106 97 118 105 101 114 32 34 00
+export function toStringLiteralBytes(source:string):StringLiteralByte[]{
     let pointer = 0;
 
-    //we dont use the beg and end indices logic (like we did with exprBeg, exprEnd) here because the scape secuences:
-    //(\n\r\t...) are 2 chars that become just one. We could do some sort of buffer
-    //that flushes from beg to \ everytime we find the \ but that would be too much
-    //work and complexity. We will take the perf hit
-    let resultString = new String("");
+    //MEJORA: reserve
+    let stringLiteralBytes:StringLiteralByte[] = [];
 
     while(true){
         //i dont know if string's [] operator returns a byte a UTF-8 thingy or wahtever the fuck. oh well :/
         //so this could cause a bug someday, and because it returns a whole freaking string, its not performant at all
         let _char = source[pointer];
         if(pointer === source.length){
-            return resultString.toString();
+            //MEJORA: nos podemos ahorar este malloc
+            stringLiteralBytes.unshift(new StringLiteralByte(true, stringLiteralBytes.length));
+            return stringLiteralBytes;
         }
         else if(_char === '\\'){
             //the following if is a chapuz para evitar que un string que termine con 
@@ -32,26 +33,23 @@ export function processScapeSequences(source:string):string{
                 _char = source[pointer];
                 
                 if(_char === 'n'){
-                    resultString += '\n';
+                    stringLiteralBytes.push(new StringLiteralByte(false, '\n'.charCodeAt(0)));
                 }
                 else if(_char === 'r'){
-                    resultString += '\r';
+                    stringLiteralBytes.push(new StringLiteralByte(false, '\r'.charCodeAt(0)));
                 }
                 else if(_char === 't'){
-                    resultString += '\t';
+                    stringLiteralBytes.push(new StringLiteralByte(false, '\t'.charCodeAt(0)));
                 }
                 //anything else we dont need to add a special character, just the caracter
                 //that follows \
                 else{
-                    resultString += _char;
+                    stringLiteralBytes.push(new StringLiteralByte(false, _char.charCodeAt(0)));
                 }
-            }
-            else{
-                console.log("lol");
             }
         }
         else{
-            resultString += _char;
+            stringLiteralBytes.push(new StringLiteralByte(false, _char.charCodeAt(0)));
         }
         pointer++;
     }

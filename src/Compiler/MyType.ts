@@ -7,6 +7,7 @@ export enum MyTypeKind {
     NULL = 'NULL',
     ARRAY = 'ARRAY',
     CUSTOM = 'CUSTOM',
+    VOID = 'VOID',//Medio chapuz
     MY_CONSOLE = 'MY_CONSOLE',//Medio chapuz
 
     //chapuz porque typescript pv no tiene pointers
@@ -62,6 +63,7 @@ export class MyType
             case MyTypeKind.NULL:
             case MyTypeKind.MY_CONSOLE:
             case MyTypeKind.WAITING:
+            case MyTypeKind.VOID:
                 if(specification !== null){
                     throw new Error(`No se puede construir un MyType ${kind} con tipo no null`)
                 }
@@ -94,6 +96,7 @@ export class MyType
             case MyTypeKind.BOOLEAN:
             case MyTypeKind.NULL:
             case MyTypeKind.MY_CONSOLE:
+            case MyTypeKind.VOID:
                 return this.kind.toString();
             case MyTypeKind.ARRAY:
             {
@@ -128,6 +131,8 @@ export class MyType
             case MyTypeKind.CUSTOM:
                 //MEJORA?: Que nullPointer se una constante global o algo asi
                 return -1;//null pointer
+            case MyTypeKind.VOID:
+                throw new Error(`MyType.getDefaultValue no puede usarse para: ${this.kind}`);
             default:
                 throw new Error(`MyType.getDefaultValue no implementado para ${this.kind}`);
         }
@@ -139,8 +144,8 @@ export class MyType
     public static NUMBER = new MyType(MyTypeKind.NUMBER, null);
     public static BOOLEAN = new MyType(MyTypeKind.BOOLEAN, null);
     public static NULL = new MyType(MyTypeKind.NULL, null);
-
-    public static consoleTypeInstance = new MyType(MyTypeKind.MY_CONSOLE, null);
+    public static VOID = new MyType(MyTypeKind.VOID, null);
+    public static CONSOLE = new MyType(MyTypeKind.MY_CONSOLE, null);
 
     public static makeCustomType(typeSignature:TypeSignature):MyType{
         return new MyType(MyTypeKind.CUSTOM, typeSignature);
@@ -170,9 +175,14 @@ export class MyType
                 return rightType.kind === MyTypeKind.BOOLEAN;
             }break;
 
+            case MyTypeKind.VOID:
+            {
+                return rightType.kind === MyTypeKind.VOID;
+            }break;
+
             case MyTypeKind.STRING:
             {
-                throw new Error(`compareTypes no implementado para leftType: ${leftType}`)
+                return (rightType.kind === MyTypeKind.STRING || rightType.kind === MyTypeKind.NULL);
             }break;
 
             case MyTypeKind.ARRAY:
@@ -180,6 +190,7 @@ export class MyType
                 throw new Error(`compareTypes no implementado para leftType: ${leftType}`)
             }break;
 
+            
             case MyTypeKind.CUSTOM:
             {
                 throw new Error(`compareTypes no implementado para leftType: ${leftType}`)

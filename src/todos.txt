@@ -1,0 +1,51 @@
+MEJORA GENERAL: ver como hacer reserves de dynamic arrays en ts 
+                y aplicarlo donde sea posible
+
+MEJORA GENERAL: ver como evitar hacer
+                array = array.concat
+                para no hacer mallocs innecesarios
+
+MEJORA GENERAL: Todo lo que es codigo generado automaticamente (funciones 
+                nativas, temporales reservados, etc) lo deberiamos de meter en 
+                structs y arrays bonitos en vez de tenerlo todo en un string 
+                quemado que mantenemos a mano
+
+BIG TODO:
+MEJORA GENERAL: Que los errores de compilacion tengan mejor definidos los tipos
+                de errores que son posibles (ejemplo: error de tipos, const no inicializada, etc)
+
+
+BIG TODO
+BIG MEJORA GENERAL:
+    Los temps no tienen porque ser Strings, de veras, especialmente ahora que tenemos
+    que pasar por todas partes un owedTemps. Ahi hay DOS niveles de heap innecesario :(
+
+
+Tiene que existir una manera de resolver lo de los owed temps sin tener que 
+hacer montones de copias de arreglos bien similares
+
+
+MEJORA GENERAL: Que los MyType pueda tener void en la gramatica tambien y poner asserts para
+                asegurarnos de que las cosas que no puedan tener void tirar error si alguien
+                las trata de poner con void
+
+
+TODO: documentar el layout de los parametros para una nested function (que los primeros n parametros estan        
+      reservados para stackframes de ancestros)
+
+
+BIG BIG TODO: hacer un dibujito ASCII que muestre y explique exactamente el layout del los stack frame
+              con ejemplos y todo y que tenga en cuenta tambien los Scopes que NO son globales o function_scope
+
+TODO: un dibujo ascii que explique porque y como tienen que correr todas las declaraciones de una funcion o 
+      del scope global antes de poder generar mas c_ir
+
+
+BIG TODO SOON: it is getting out of hand. add c_ir comments where they are needed pls
+
+the biggest perfs hits (just a guess): the way we concant c_ir 
+                        the way we handle the owedTemps we make tons extra arrays
+                        using a linked list for the StackOfScopes
+
+
+TODO: limpear los comentarios y poner aqui los que se repiten mucho y son importantes

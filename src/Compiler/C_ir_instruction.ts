@@ -231,15 +231,32 @@ export class Cond_goto{
     ) {   }
 }
 
+//DEBUG: Basically cheating. For debuggin ONLY
+export class Debug_instruction{
+    constructor(
+        public ins:String,
+    ) {   }
+}
+
 export class FunctionCall{
     constructor(
         public funcName:string
     ) {   }
 }
 
+export class FuncOpening{
+    constructor(
+        public funcName:string
+    ){   }
+}
+
+export class FuncClose{
+
+}
+
 //TODO?: c_ir para printf?
 
-export type C_ir_instruction = (LabelDeclaration | Assignment | _3AddrAssignment | Goto | Cond_goto | FunctionCall);
+export type C_ir_instruction = (LabelDeclaration | Assignment | _3AddrAssignment | Goto | Cond_goto | FunctionCall | Debug_instruction | FuncOpening | FuncClose);
 
 export function c_ir_instruction_toString(c_ir_ins:C_ir_instruction):string{
     if(c_ir_ins instanceof LabelDeclaration){
@@ -271,6 +288,18 @@ export function c_ir_instruction_toString(c_ir_ins:C_ir_instruction):string{
         //POSSIBLE BUG: if we name a function with a C keyword this gets all messed up
         return `${c_ir_ins.funcName}();\n`;
     }
+    else if(c_ir_ins instanceof Debug_instruction){
+        //DEBUG: Basically cheating. For debuggin ONLY
+        return c_ir_ins.ins.toString();
+    }
+    else if(c_ir_ins instanceof FuncOpening){
+        //DEBUG: Basically cheating. For debuggin ONLY
+        return `void ${c_ir_ins.funcName}(){\n`;
+    }
+    else if(c_ir_ins instanceof FuncClose){
+        //DEBUG: Basically cheating. For debuggin ONLY
+        return `return;\n}\n`;
+    }
     else{
         throw new Error(`C_ir_instruction.toString no implementado para ${c_ir_ins}!`);
     }
@@ -291,6 +320,7 @@ export function c_ir_value_toString(val:(String | Mem | Number)):string{
     }
 }
 
+//DEBUG: Basically cheating. For debuggin ONLY
 export function c_ir_instructions_toString(c_ir_instructions:C_ir_instruction[]):string{
     //MEJORA: hacer un reserve o al menos usar un string buffer
     let result = "";

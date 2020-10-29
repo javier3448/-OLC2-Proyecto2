@@ -1,12 +1,11 @@
 //it might be better to convine Runner.ts and Envrionment.ts into a single file, idk
 
 import { Expression } from "../Ast/Expression"
-import { MyFunction, MyFunctionKind, GraficarTs, MyNonNativeFunction } from "./MyFunction";
+import { MyFunction } from "./MyFunction";
 import { MyType, MyTypeKind, TypeSignature } from "./MyType";
 import { MyError } from './MyError';
-import { compileExpression, compileStatement, graficar_ts } from './Compiler';
+import { Variable } from './Variable';
 import { Label } from "./C_ir_instruction";
-import { variable } from '@angular/compiler/src/output/output_ast';
 
 //WHY THE FUCK DONT WE HAVE A FUCKING HASHTABLE IN FUCKING TYPESCRIPT!!!!!!!
 export class SymbolTableVariables{
@@ -15,9 +14,10 @@ export class SymbolTableVariables{
 export class SymbolTableFunctions{
     [key: string]: MyFunction;
 }
+
 //ERROR PRONE: necesitamos que la clase MyType tenga el nombre del tipo para
 //             hacer mejores reportes de errores pero no se como hacer en typescript para hacer
-//             una hashtable si tener que hacer un key, value pair.
+//             una hashtable sin tener que hacer un key, value pair.
 //             Entonces vamos a tener el nombre del tipo como indice en SymbolTalbeTypeSignatures y 
 //             como attributo en MyType y tenemos que asegurar la invariante que ambos strings deben 
 //             ser identicos
@@ -26,18 +26,6 @@ export class SymbolTableFunctions{
 //is "waiting" (i.e someone reference that typebut it hasnt been defined yet)
 export class SymbolTableTypeSignatures{
     [key: string]: MyType;
-}
-
-export class Variable{
-    constructor(
-        public isConst:boolean,
-        //its useful when we are reserving the space for variables 
-        //in declarationsPrepass
-        public isUndeclared:boolean,
-        public type:MyType,
-        //The value of a variable is always a stack frame offset
-        public offset:number
-    ){   }
 }
 
 export enum ScopeKind{
@@ -52,8 +40,7 @@ export enum ScopeKind{
 export class ReturnJumper{
     constructor(
         //puntero al tipo en la tabla de simbolos donde esta el function signature
-        //null significa que la func retorna null.
-        public myType:(MyType | null),
+        public myType:MyType,
         public label:Label
     ) {   }
 }
@@ -95,6 +82,8 @@ export class JumperSet{
 // MEJORA?: talvez seria bueno separar la pila de scopes en diferentes
 //          pilas estilo DOD. Porque la mayoria de veces que iteramos a 
 //          travez de ella no necesitamos el todo lo que esta en el scope
+//MEJORA!: This whole class is a mess and it seems way bigger than it should
+//         be
 export class Scope{
     //we need the total size of all variables in a stack frame
     //so we can do the stackframe change before calling a diferent function
@@ -102,14 +91,18 @@ export class Scope{
     //p = p + (sizeof all allocated stack vars before the func call)
     //call func
     //p = p - (sizeof all allocated stack vars before the func call)
-    //we could use myVariables.length but typescript is stupid and the
-    //only way to get the length of myVariables is to iterate thru it
+    //[!!!!!] myVariables.length != size !!!! because the compiler adds additional
+    //parameters to nested function because we have to pass the stackframe pointers of their
+    //ancestors
     public size:number;
 
     public kind:ScopeKind;
     //TODO: Assert the following invariant in the constructor or something
+    //MEJORA?: seria mejor que esto solo fuera un puntero a la functionSignature
     //null para todo scopeKind excepto function
     public name:(string | null);
+    //null para todo scopeKind excepto FUNCTION_SCOPE y GLOBAL
+    public nestingDepth:(number | null);
 
     public myVariables:SymbolTableVariables;
     public myFunctions:SymbolTableFunctions;
@@ -120,10 +113,12 @@ export class Scope{
 
     public previous:(Scope | null);
 
-    private constructor(size:number, kind:ScopeKind, jumperSet:JumperSet, name:string, previous:(Scope | null)) {
+    private constructor(size:number, kind:ScopeKind, jumperSet:JumperSet, name:(string | null), nestingDepth:(number | null), previous:(Scope | null)) {
         this.size = size;
         this.kind = kind;
+        this.jumperSet = jumperSet;
         this.name = name;
+        this.nestingDepth = nestingDepth;
         this.myVariables = new SymbolTableVariables();
         this.myFunctions = new SymbolTableFunctions();
 
@@ -131,15 +126,19 @@ export class Scope{
     }
 
     public static makeGlobal(){
-        return new Scope(0, ScopeKind.GLOBAL, JumperSet.makeEmpty(), null, null);
+        return new Scope(0, ScopeKind.GLOBAL, JumperSet.makeEmpty(), null, -1, null);
     }
 
     public static makeWhile(previous:Scope, continueJumper:Label, breakJumper:Label){
-        return new Scope(0, ScopeKind.WHILE, new JumperSet(continueJumper, breakJumper, null), null, previous);
+        return new Scope(0, ScopeKind.WHILE, new JumperSet(continueJumper, breakJumper, null), null, null, previous);
+    }
+
+    public static makeFunction(previous:Scope, funcName:string, nestingDepth:number, returnType:MyType, returnLabel:Label){
+        return new Scope(0, ScopeKind.FUNCTION_SCOPE, new JumperSet(null, null, new ReturnJumper(returnType, returnLabel)), funcName, nestingDepth, previous);
     }
 
     public static makeIf(previous:Scope){
-        return new Scope(0, ScopeKind.IF, JumperSet.makeEmpty(), null, previous);
+        return new Scope(0, ScopeKind.IF, JumperSet.makeEmpty(), null, null, previous);
     }
 
     //TODO: static make of all the other ScopeKinds
@@ -185,20 +184,11 @@ export module Env{
     export function initEnvironment():void{
         global = Scope.makeGlobal();
 
-        global.myVariables;
-
-        //Inicializamos los tipos primitivos y Cosole
-        //FOR DEBUG ONLY:
-        typeSignatures["string"] = MyType.STRING;
-        typeSignatures["number"] = MyType.NUMBER;
-        typeSignatures["boolean"] = MyType.BOOLEAN;
-        typeSignatures["null"] = MyType.NULL;
-
-        // global.myTypeSignatures["Console"] = MyType.consoleTypeInstance;
-
         //Inicializamos las variables, funciones y definiciones nativas del scope global
-        global.myFunctions["graficar_ts"] = new MyFunction(MyFunctionKind.GRAFICAR_TS, new GraficarTs());
-        //global.myVariables["console"] = Pointer.makeMyObjectPointer(new MyObj(MyType.consoleTypeInstance, new MyConsole()));
+        //@Volatile @addVariable once we know its symbolo in myVariables is undefined
+        let varOffset = global.size
+        global.myVariables["console"] = new Variable(true, false, MyType.CONSOLE, varOffset);
+        global.size += 1;
 
         current = global;
     }
@@ -210,12 +200,10 @@ export module Env{
     //Atrapa si ya exite el id en el current scope
     //[!] Can't do type checking
     export function addVariable(id:string, isConst:boolean, type:MyType):Variable{
-        //TODO: redo this whole thing
-        //ver si ya existe en el current scope
-
         //MEJORA: hacer la consulta a la hashtable solo una vez.
         //        no lo hago asi porque no se si typescript devuelbe una copia o algo asi? :(
         if(current.myVariables[id] === undefined){
+            //@Volatile @addVariable once we know its symbol in myVariables is undefined
             let varOffset = current.size
             current.myVariables[id] = new Variable(isConst, false, type, varOffset);
             current.size += 1;
@@ -235,6 +223,35 @@ export module Env{
 
     }
 
+    //[throws_MyError]
+    //Atrapa si ya exite el id en el current scope
+    //retorna el c_ir_name generado
+    export function addFuncSignature(level:number, name:string, paramTypes:MyType[], returnType:MyType):string{
+        //ASSERTION:
+        //solo se pueden agrear funcSignatures a Scopes con kind: GLOBAL o FUNCTION_SCOPE.
+        if(current.kind !== ScopeKind.GLOBAL && current.kind !== ScopeKind.FUNCTION_SCOPE){
+            throw new Error("solo se pueden agrear funcSignatures a Scopes con kind: GLOBAL o FUNCTION_SCOPE.");
+        }
+
+        //MEJORA: hacer la consulta a la hashtable solo una vez.
+        //        no lo hago asi porque no se si typescript devuelbe una copia o algo asi? :(
+        if(current.myFunctions[name] !== undefined){
+            throw new MyError(`No se agregar una funcion con el nombre '${name}' porque existe una funcion con el mismo nomber en el mismo scope`);
+        }
+
+        let varOffset = current.size
+        let c_ir_name = getFunc_c_ir_name(name);
+        current.myFunctions[name] = new MyFunction(level, c_ir_name, paramTypes, returnType);
+        return c_ir_name;
+    }
+
+    let funcNameCount:number = 1;
+    function getFunc_c_ir_name(programmerName:string):string{
+        let result = "_" + funcNameCount + "_" + programmerName;
+        funcNameCount += 1;
+        return result;
+    }
+
     //[throws_MyError] 
     //Atrapa si ya existe el id en el current scope
     export function reserveVariable(id:string, isConst:boolean, myType:MyType):Variable{
@@ -250,8 +267,8 @@ export module Env{
             throw new MyError(`No se agregar una variable con el nombre '${id}' porque existe un variable con el mismo nomber en el mismo scope`);
         }
 
-        let varOffset = current.size
-        let variable = new Variable(isConst, false, myType, varOffset);
+        let varOffset = current.size;
+        let variable = new Variable(isConst, true, myType, varOffset);
         current.myVariables[id] = variable;
         current.size += 1;
 
@@ -276,7 +293,6 @@ export module Env{
     //safely assume its number is an offset of the current p
     //stack[p+Variable.value]
     export function getVariable(id:string):(ResultingVariable | null){
-
         let iter:(Scope | null) = current;
         let variable:Variable;
 
@@ -294,6 +310,8 @@ export module Env{
             }
 
             if(iter.kind === ScopeKind.FUNCTION_SCOPE){
+                //FIXME!!!!!!!!!!!!!!!!!!!!!. because of nested functions
+                //     now we can go thru function_scopes
                 //if we reach a function_scope our last hope is that 
                 //the variable is in the global scope
                 variable = global.myVariables[id];
@@ -310,12 +328,56 @@ export module Env{
         return null;
     }
 
+    //if null is returned there is no function with that name in the scopestack
+    export function getFunction(funcName:string):(MyFunction | null){
+
+        let iter:(Scope | null) = current;
+        let myFunction:MyFunction;
+
+        //search all the scopes in the stack frame of Env.current and return the first function with that name
+        //if we find no coincidences we check the globalScope and set a special flag in the returned
+        //value
+        //if we dont find a variable with that id we return null
+        while(iter !== null){
+            myFunction = iter.myFunctions[funcName];
+            if(myFunction !== undefined){
+                return myFunction;
+            }
+
+            iter = iter.previous;
+        }
+
+        return null;
+    }
+
+    export function getCallerNestingDepth():number{
+        let iter:(Scope | null) = current;
+
+        //search all the scopes in the scope stack, return the nesting depth of the first FUNCTION_SCOPE
+        //or GLOBAL we find
+        while(iter !== null){
+            if(iter.kind === ScopeKind.FUNCTION_SCOPE || iter.kind === ScopeKind.GLOBAL){
+                return iter.nestingDepth;
+            }
+
+            iter = iter.previous;
+        }
+
+        throw new Error("Assert failed: No existe FUNCTION_SCOPE ni GLOBAL_SCOPE en el stack de scopes (esto es imposible porque siempre tendria que existir el global scope hasta el fondo)");
+    }
+
     //TODO: documentar las diferencias de pasar el size cuando pusheamos un scope
     //      funcion a cuando pusheamos cualquier otro scope
 
     export function pushWhileScope(continueJumper:Label, breakJumper:Label){
         current = Scope.makeWhile(current, continueJumper, breakJumper);
         current.size = current.previous.size;
+    }
+
+    export function pushFuncScope(funcName:string, nestingDepth:number, returnType:MyType, returnLabel:Label,){
+        current = Scope.makeFunction(current, funcName, nestingDepth, returnType, returnLabel);
+        //NO APLICA LA TRANSFERENCIA DE SIZE PORQUE ES OTRO STACKFRAME!
+        //current.size = current.previous.size;
     }
 
     export function popScope(){
