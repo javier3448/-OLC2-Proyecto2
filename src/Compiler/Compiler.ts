@@ -1,7 +1,7 @@
 //TODO (eventually): ordenar y tratar de separar en diferentes archivos
 
 import { RuntimeInterface, TsEntry } from "../app/app.component";
-import { Env, JumperSet } from "./Environment";
+import { Env, VarLocation } from "./Environment";
 import { Variable } from "./Variable";
 import { Global_c_ir } from "./Global_c_ir";
 import { Native_c_ir } from "./Native_c_ir";
@@ -489,6 +489,64 @@ export function compileStatement(statement:Statement):C_ir_instruction[]{
             case StatementKind.WhileKind:
                 return compileWhile(child as WhileStatement);
 
+            //jumpers
+            case StatementKind.ContinueKind:
+            {
+                //check that we are inside a loop or a continuable scope
+                let continueLabel:(Label | null) = Env.getContinueLabel();
+                if(continueLabel === null){
+                    throw new MyError(`'continue' solo puede ser usado adentro de un ciclo`);
+                }
+
+                let c_ir = [
+                    new Goto(continueLabel)
+                ];
+                return c_ir;
+            }break;
+            case StatementKind.BreakKind:
+            {
+                //check that we are inside a loop or a continuable scope
+                let continueLabel:(Label | null) = Env.getContinueLabel();
+                if(continueLabel === null){
+                    throw new MyError(`'break' solo puede ser usado adentro de un ciclo o switch`);
+                }
+
+                let c_ir = [
+                    new Goto(continueLabel)
+                ];
+                return c_ir;
+            }break;
+            case StatementKind.ReturnKind:
+            {
+                //check that we are inside a loop or a continuable scope
+                let continueLabel:(Label | null) = Env.getContinueLabel();
+                if(continueLabel === null){
+                    throw new MyError(`'break' solo puede ser usado adentro de un ciclo o switch`);
+                }
+                
+                //TODO: check return type of current function
+
+                let c_ir = [
+                    new Goto(continueLabel)
+                ];
+                return c_ir;
+            }break;
+            case StatementKind.ReturnWithValueKind:
+            {
+                //check that we are inside a loop or a continuable scope
+                let continueLabel:(Label | null) = Env.getContinueLabel();
+                if(continueLabel === null){
+                    throw new MyError(`'break' solo puede ser usado adentro de un ciclo o switch`);
+                }
+
+                //TODO: check return type of current function
+
+                let c_ir = [
+                    new Goto(continueLabel)
+                ];
+                return c_ir;
+            }break;
+
             default:
                 throw new Error(`runStatment no implementado para myTypeNode: ${statement.statementKind}`);
         }
@@ -529,7 +587,19 @@ export function compileExpression(expr:Expression, owedTemps:String[]):ExprResul
             //Casos especiales de binary expression
             if(expr.expressionKind === ExpressionKind.ASSIGNMENT){
                 let lvalue = compileLValue(expr.specification.left, owedTemps);
-                let newOwedTemps = owedTemps.concat(lvalue.addr);
+
+                //si lvalue es immediate, no necesitamos hacerle backup al registro
+                let newOwedTemps:String[]
+                if(lvalue.addr instanceof String){
+                    newOwedTemps = owedTemps.concat(lvalue.addr);
+                }
+                else if(lvalue.addr instanceof Number){
+                    newOwedTemps = owedTemps;
+                }
+                else{//'match' assertion
+                    throw new Error(`No implementado para lvalue.addr de tipo: ${lvalue.addr}`)
+                }
+
                 let rvalue = compileExpression(expr.specification.right, newOwedTemps);
 
                 //check types:
@@ -975,41 +1045,54 @@ export function compileExpression(expr:Expression, owedTemps:String[]):ExprResul
                     console.log("lol");
                 }
                 //We get the value from the symbol table
-                let getVarResult = Env.getVariable(identExp.name);
+                let getVarResult = Env.getVariableFix(identExp.name);
                 if(getVarResult === null){
                     throw new MyError(`No existe una variable con el nombre: '${identExp.name}' en este entorno`);
                 }
                 if(getVarResult.variable.isUndeclared === true){
                     throw new MyError(`La varialbe: '${identExp.name}' no esta inicializada`);
                 }
-                //FIXME: 
-                //TODO: Cuando tengamos funciones anidadas para a tener que hacer un caso especial para las variables 
-                //      que estan definidas en alguna funcion ancestro
-                let isGlobal = getVarResult.isGlobal;
                 let variable = getVarResult.variable;
+                let varLocation = getVarResult.location;
 
-                //Generamos c_ir diferente dependiendo de si es global
+                //Generamos c_ir diferente dependiendo de si es global o si esta en un stackframe ancestro o
                 //local
-                if(isGlobal){
-
+                //@Volatile @generateC_ir of a getVarResult (its slightly different if we are getting it as al lvalue)
+                if(varLocation === VarLocation.GLOBAL){
                     let temp = getNextTemp();
-                    let globalAccess = Mem.stackAccess(variable.offset);
                     let c_ir:C_ir_instruction[] = [
-                        new Assignment(temp, globalAccess)
+                        new Assignment(temp, Mem.stackAccess(variable.offset))
                     ]
 
                     return new ExprResult(variable.myType, false, temp, c_ir);
                 }
-                else{
+                else if(varLocation === VarLocation.CURRENT_STACK_FRAME){
                     let temp = getNextTemp();
                     let stackFrameAcessTemp = getNextTemp();//p+offset
-                    let globalAccess = Mem.stackAccess(stackFrameAcessTemp);
                     let c_ir:C_ir_instruction[] = [
                         new _3AddrAssignment(stackFrameAcessTemp, P_REG, ArithOp.ADDITION, variable.offset),
-                        new Assignment(temp, globalAccess)
+                        new Assignment(temp, Mem.stackAccess(stackFrameAcessTemp))
                     ];
 
                     return new ExprResult(variable.myType, false, temp, c_ir);
+                }
+                else if(varLocation === VarLocation.ANCESTOR_STACK_FRAME){
+                    let displayOffset = getVarResult.displayIndex; 
+
+                    let tempDisplayIndex = getNextTemp();
+                    let tempVarIndex = getNextTemp();
+                    let tempResult = getNextTemp();
+                    //value of variable is in: stack[stack[p + number] + varialbe.offset]
+                    let c_ir:C_ir_instruction[] = [
+                        new _3AddrAssignment(tempDisplayIndex, P_REG, ArithOp.ADDITION, new Number(displayOffset)),
+                        new _3AddrAssignment(tempVarIndex, Mem.stackAccess(tempDisplayIndex), ArithOp.ADDITION, new Number(variable.offset)),
+                        new Assignment(tempResult, Mem.stackAccess(tempVarIndex))
+                    ];
+
+                    return new ExprResult(variable.myType, false, tempResult, c_ir);
+                }
+                else{//a 'type switch' or 'match' assertion
+                    throw new Error(`No implementado para VarLocation: ${varLocation} todavia`);
                 }
             }break;
             //The way we traverse member access is kinda weird because the way the AST is shaped
@@ -1166,34 +1249,45 @@ function compileLValue(expr:Expression, owedTemps:String[]):LValueResult{
     if(expr.expressionKind === ExpressionKind.IDENTIFIER){
         let identExp = expr.specification as IdentifierExpression;
         //We get the value from the symbol table
-        let getVarResult = Env.getVariable(identExp.name);
+        let getVarResult = Env.getVariableFix(identExp.name);
         if(getVarResult === null){
             throw new MyError(`No existe una variable con el nombre: '${identExp.name}' en este entorno`);
         }
-        //FIXME: 
-        //TODO: Cuando tengamos funciones anidadas para a tener que hacer un caso especial para las variables 
-        //      que estan definidas en alguna funcion ancestro
-        let isGlobal = getVarResult.isGlobal;
+
         let variable = getVarResult.variable;
+        let varLocation = getVarResult.location;
 
-        //Generamos c_ir diferente dependiendo de si es global
+        //TODO: check if changing that global doesnt return its lvalResult in a temp 
+        //      causes any issues.
+        //Generamos c_ir diferente dependiendo de si es global o si esta en un stackframe ancestro o
         //local
-        if(isGlobal){
-
-            let temp = getNextTemp();
-            let c_ir:C_ir_instruction[] = [
-                new Assignment(temp, variable.offset)
-            ];
-
-            return new LValueResult(variable.myType, variable.isConst, true, temp, c_ir);
+        //@Volatile @generateC_ir of a getVarResult (its slightly different if we are getting it as al lvalue)
+        if(varLocation === VarLocation.GLOBAL){
+            return new LValueResult(variable.myType, false, true, new Number(variable.offset), []);
         }
-        else{
-            let temp = getNextTemp();
+        else if(varLocation === VarLocation.CURRENT_STACK_FRAME){
+            let tempResult = getNextTemp();
             let c_ir:C_ir_instruction[] = [
-                new _3AddrAssignment(temp, P_REG, ArithOp.ADDITION, variable.offset)
+                new _3AddrAssignment(tempResult, P_REG, ArithOp.ADDITION, variable.offset),
             ];
 
-            return new LValueResult(variable.myType, variable.isConst, true, temp, c_ir);
+            return new LValueResult(variable.myType, false, true, tempResult, c_ir);
+        }
+        else if(varLocation === VarLocation.ANCESTOR_STACK_FRAME){
+            let displayOffset = getVarResult.displayIndex; 
+
+            let tempDisplayIndex = getNextTemp();
+            let tempVarIndex = getNextTemp();
+            //value of variable is in: stack[stack[p + number] + varialbe.offset]
+            let c_ir:C_ir_instruction[] = [
+                new _3AddrAssignment(tempDisplayIndex, P_REG, ArithOp.ADDITION, new Number(displayOffset)),
+                new _3AddrAssignment(tempVarIndex, Mem.stackAccess(tempDisplayIndex), ArithOp.ADDITION, new Number(variable.offset)),
+            ];
+
+            return new LValueResult(variable.myType, false, true, tempVarIndex, c_ir);
+        }
+        else{//a 'type switch' or 'match' assertion
+            throw new Error(`No implementado para VarLocation: ${varLocation} todavia`);
         }
 
     }

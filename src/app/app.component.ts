@@ -189,9 +189,11 @@ function print10TimesAndReturn(s:string):number{
   }
 }
 print10times("hello");
+console.log(print10TimesAndReturn("Ten times"));
     `;
     }
 
+    //TODO: test break return and continue
     let testString = `
 function print10times(s:string):void{
   let count:number = 0;
@@ -211,9 +213,19 @@ function print10TimesAndReturn(s:string):number{
   return 4141;
 } 
 
+function printForever(s:string):number{
+  let count:number = 0;
+  while(count < 10){
+    console.log(s);
+    continue;
+    count = count + 1;
+  }
+}
+
 print10times("hello");
 console.log(print10times("ERROR"));//shoud be an error
 console.log(print10TimesAndReturn("Javier"));
+printForever("FOR EVER");
     `;
 
     this.sourceString = testString;

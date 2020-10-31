@@ -170,6 +170,30 @@ export class Scope{
     }
 }
 
+//MEJORA: better names for ResultingVariable and ResultingVariableKind
+export enum VarLocation{
+    GLOBAL,
+    CURRENT_STACK_FRAME,
+    ANCESTOR_STACK_FRAME //(displayIndex) -------------------------\
+            //                                                      \
+            //The value of the variable will be in stack[stack[p + displayIndex] + variable.offset]
+            //This whole thing is because we can access variables that are outside the current 
+            //stackframe and that are not globals. Because nested functions.
+}
+//The purpose of this class is to be the type tha getVariable returns.
+//getVariable must tell its caller if the returned variable is in the global frame or a on a 
+//frame of a parent function
+//because if it is it doesnt map to stack[p + variable.val] it maps to stack[variable.val]
+export class ResultingVariable{
+    constructor(
+        public location:VarLocation,
+        //null for every location except OUTSIDE
+        public displayIndex:(null | number), 
+        //idea: return like a mem access or reg 
+        public variable:Variable,
+    ){   } 
+}
+
 export module Env{
 
     //Como no se pueden definir tipos adentro de un scope o adentro del cuerpo
@@ -275,25 +299,12 @@ export module Env{
         return variable;
     }
 
-    //MEJORA: better name
-    //The purpose of this class is to be the type tha getVariable returns.
-    //getVariable must tell its caller if the returned variable is in the global scope
-    //because if it is it doesnt map to stack[p + variable.val] it maps to stack[variable.val]
-    export class ResultingVariable{
-        constructor(
-            public isGlobal:boolean,
-            public variable:Variable,
-        ){   } 
-    }
 
     //if null is returned there is no variable with that id in the stack frame or the global variables
     //in the current scope or the previous ones (we stop searching once we find the first)
-    //i.e. ReturnValue can only be Pointer of NullInstance
-    //only returns variables in the same stack frame so we can
-    //safely assume its number is an offset of the current p
-    //stack[p+Variable.value]
-    export function getVariable(id:string):(ResultingVariable | null){
+    export function getVariableFix(id:string):(ResultingVariable | null){
         let iter:(Scope | null) = current;
+        let displayIndex:(number | null) = null;
         let variable:Variable;
 
         //MEJORAR: Porfavor mejorar todo este flujo de busqueda :/
@@ -305,22 +316,20 @@ export module Env{
         while(iter !== null){
             variable = iter.myVariables[id];
             if(variable !== undefined){
-                let isGlobal = (iter.kind === ScopeKind.GLOBAL);
-                return new ResultingVariable(isGlobal, variable);
-            }
-
-            if(iter.kind === ScopeKind.FUNCTION_SCOPE){
-                //FIXME!!!!!!!!!!!!!!!!!!!!!. because of nested functions
-                //     now we can go thru function_scopes
-                //if we reach a function_scope our last hope is that 
-                //the variable is in the global scope
-                variable = global.myVariables[id];
-                if(variable !== undefined){
-                    return new ResultingVariable(true, variable);
+                if(iter.kind === ScopeKind.GLOBAL){
+                    return new ResultingVariable(VarLocation.GLOBAL, null, variable);
+                }
+                else if(displayIndex === null){
+                    return new ResultingVariable(VarLocation.CURRENT_STACK_FRAME, null, variable);
                 }
                 else{
-                    return null;
+                    return new ResultingVariable(VarLocation.ANCESTOR_STACK_FRAME, displayIndex, variable);
                 }
+            }
+
+            //TODO: test
+            if(iter.kind === ScopeKind.FUNCTION_SCOPE){
+                displayIndex = iter.nestingDepth  - 1;
             }
             iter = iter.previous;
         }
@@ -364,6 +373,22 @@ export module Env{
         }
 
         throw new Error("Assert failed: No existe FUNCTION_SCOPE ni GLOBAL_SCOPE en el stack de scopes (esto es imposible porque siempre tendria que existir el global scope hasta el fondo)");
+    }
+
+    export function getBreakLabel():Label{
+        
+    }
+
+    export function getContinueLabel():Label{
+
+    }
+
+    export function getContinueLabel():Label{
+
+    }
+
+    export function getReturnLabel():Label{
+
     }
 
     //TODO: documentar las diferencias de pasar el size cuando pusheamos un scope

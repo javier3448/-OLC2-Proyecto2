@@ -1,3 +1,5 @@
+BIG BIG BIG BIG TODO: test nested function with variables and all that. (particulary the Env.getVariable)
+
 MEJORA GENERAL: ver como hacer reserves de dynamic arrays en ts 
                 y aplicarlo donde sea posible
 
@@ -49,3 +51,16 @@ the biggest perfs hits (just a guess): the way we concant c_ir
 
 
 TODO: limpear los comentarios y poner aqui los que se repiten mucho y son importantes
+
+
+MEJORA: Environment needs quite a bit of rework now that we know how the global and the nested functions 
+        work.
+
+
+TODO: que sea case insensitive
+
+TODO: que siempre grafique la tabla de simbolos de ultimo
+
+TODO: cambiar AND a &&, OR a || y NOT a !
+
+TODO: fix the graphviz library thing
