@@ -40,6 +40,7 @@ export enum ExpressionKind{
     FUNCTION_CALL = 'FUNCTION_CALL',
     OBJECT_LITERAL = 'OBJECT_LITERAL',
     ARRAY_LITERAL = 'ARRAY_LITERAL',
+    NEW_ARRAY = 'NEW_ARRAY',
 }
 
 export class UnaryExpression{
@@ -89,6 +90,10 @@ export class ArrayLiteralExpression{
     constructor(public expressions:Expression[]){   }
 }
 
+export class NewArrayExpression{
+    constructor(public sizeExpr:Expression){   }
+}
+
 export class PropertyNode{
 
     astNode:AstNode;
@@ -114,7 +119,7 @@ export class Expression {
     public expressionKind: ExpressionKind;
     public specification: (UnaryExpression | BinaryExpression | TernaryExpression | 
                            IdentifierExpression | LiteralExpression | MemberAccessExpression | 
-                           ObjectLiteralExpression | ArrayLiteralExpression);
+                           ObjectLiteralExpression | ArrayLiteralExpression | NewArrayExpression);
 
     constructor(expressionKind:ExpressionKind, specification:(UnaryExpression | BinaryExpression | TernaryExpression | IdentifierExpression | LiteralExpression | MemberAccessExpression | ObjectLiteralExpression | ArrayLiteralExpression),
                 firstLine:number, firstColumn:number, lastLine:number, lastColumn:number){
@@ -188,6 +193,11 @@ export class Expression {
             case ExpressionKind.ARRAY_LITERAL:
                 if(!(specification instanceof ArrayLiteralExpression)){
                     throw new Error(`Assertion Error: expressionKind ${expressionKind.toString()} must be type ArrayLiteralExpression instead of ${(specification)}`);
+                }
+            break;
+            case ExpressionKind.NEW_ARRAY:
+                if(!(specification instanceof NewArrayExpression)){
+                    throw new Error(`Assertion Error: expressionKind ${expressionKind.toString()} must be type NewArrayExpression instead of ${(specification)}`);
                 }
             break;
             //Solo para que no se nos olvide incluir todos los operadores posibles en este switch

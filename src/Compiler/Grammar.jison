@@ -3,7 +3,8 @@
     const { Expression, ExpressionKind, 
     UnaryExpression, BinaryExpression, TernaryExpression, LiteralExpression, StringLiteral,
     IdentifierExpression, FunctionCallExpression, MemberAccessExpression, 
-    PropertyNode, ObjectLiteralExpression, ArrayLiteralExpression } = require('../Ast/Expression');
+    PropertyNode, ObjectLiteralExpression, ArrayLiteralExpression,
+    NewArrayExpression } = require('../Ast/Expression');
     const { MemberAccess, AccessKind, FunctionAccess, IndexAccess, AttributeAccess } = require('../Ast/MemberAccess');
     const { Statement, StatementKind, Block, 
             WhileStatement, DoWhileStatement, IfStatement, 
@@ -37,6 +38,7 @@
 "null"                        return 'NULL'
 
 "type"                        return 'TYPE'
+"new"                         return 'NEW'
 "Array"                       return 'ARRAY'
 "function"                    return 'FUNCTION'
 
@@ -56,8 +58,8 @@
 "continue"                    return 'CONTINUE'
 "return"                      return 'RETURN'
 
-"OR"                          return 'OR'
-"AND"                         return 'AND'
+"||"                          return '||'
+"&&"                          return '&&'
 "=="                          return '=='
 "!="                          return '!='
 ">="                          return '>='
@@ -72,7 +74,7 @@
 "*"                           return '*'
 "/"                           return '/'
 "%"                           return '%'
-"NOT"                         return 'NOT'
+"!"                           return '!'
 "("                           return '('
 ")"                           return ')'
 "="                           return '='
@@ -108,8 +110,8 @@
 
 %right '='
 %right '?'
-%left 'OR'
-%left 'AND'
+%left '||'
+%left '&&'
 %left '==', '!='
 %nonassoc '>', '<', '>=', '<='
 %left '+', '-'
@@ -594,15 +596,15 @@ Expression
     {
         $$ = new Expression(ExpressionKind.NOT_EQUAL, new BinaryExpression($1, $3), @1.first_line, @1.first_column, @3.last_line, @3.last_column);
     }
-    | Expression 'OR' Expression
+    | Expression '||' Expression
     {
         $$ = new Expression(ExpressionKind.OR, new BinaryExpression($1, $3), @1.first_line, @1.first_column, @3.last_line, @3.last_column);
     }
-    | Expression 'AND' Expression
+    | Expression '&&' Expression
     {
         $$ = new Expression(ExpressionKind.AND, new BinaryExpression($1, $3), @1.first_line, @1.first_column, @3.last_line, @3.last_column);
     }
-    | 'NOT' Expression %prec NOT
+    | '!' Expression %prec NOT
     {
         $$ = new Expression(ExpressionKind.NOT, new UnaryExpression($2), @1.first_line, @1.first_column, @2.last_line, @2.last_column);
     }
@@ -687,6 +689,10 @@ Expression
     | '[' ExpressionList_ ']'
     {
         $$ = new Expression(ExpressionKind.ARRAY_LITERAL, new ArrayLiteralExpression($2), @1.first_line, @1.first_column, @3.last_line, @3.last_column);
+    }
+    | NEW ARRAY '(' Expression ')'
+    {
+        $$ = new Expression(ExpressionKind.NEW_ARRAY, new NewArrayExpression($4), @1.first_line, @1.first_column, @5.last_line, @5.last_column);
     }
 ;
 

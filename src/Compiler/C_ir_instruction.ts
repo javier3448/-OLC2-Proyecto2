@@ -164,6 +164,11 @@ export class Mem{
         return new Mem(MemKind.HEAP, offset);
     }
 
+    //MEJORA: better name
+    public static access(memKind:MemKind, offset:(String | Number)){
+        return new Mem(memKind, offset);
+    }
+
     public toString():string{
 
         switch (this.kind) {
@@ -238,6 +243,12 @@ export class Debug_instruction{
     ) {   }
 }
 
+//DEBUG: just comments, which are allowed but we will still remove in the final commit
+export class Comment{
+    constructor(
+        public comment:String,
+    ) {   }
+}
 export class FunctionCall{
     constructor(
         public funcName:string
@@ -256,7 +267,7 @@ export class FuncClose{
 
 //TODO?: c_ir para printf?
 
-export type C_ir_instruction = (LabelDeclaration | Assignment | _3AddrAssignment | Goto | Cond_goto | FunctionCall | Debug_instruction | FuncOpening | FuncClose);
+export type C_ir_instruction = (LabelDeclaration | Assignment | _3AddrAssignment | Goto | Cond_goto | FunctionCall | Debug_instruction | FuncOpening | FuncClose | Debug_instruction | Comment);
 
 export function c_ir_instruction_toString(c_ir_ins:C_ir_instruction):string{
     if(c_ir_ins instanceof LabelDeclaration){
@@ -299,6 +310,14 @@ export function c_ir_instruction_toString(c_ir_ins:C_ir_instruction):string{
     else if(c_ir_ins instanceof FuncClose){
         //DEBUG: Basically cheating. For debuggin ONLY
         return `return;\n}\n`;
+    }
+    else if(c_ir_ins instanceof Debug_instruction){
+        //DEBUG: Basically cheating. For debuggin ONLY
+        return c_ir_ins.ins.toString();
+    }
+    else if(c_ir_ins instanceof Comment){
+        //DEBUG: Basically cheating. For debuggin ONLY
+        return("//" + c_ir_ins.comment.toString() + "\n").toString();
     }
     else{
         throw new Error(`C_ir_instruction.toString no implementado para ${c_ir_ins}!`);

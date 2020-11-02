@@ -1,0 +1,6 @@
+//THOUGHTS AND PRAYERS
+
+We must assure that by the type we reach a statement
+we cant possible have OwedTemps
+I think we can do that just by not returning any temp
+in statement

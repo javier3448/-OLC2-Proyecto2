@@ -6,6 +6,8 @@ export enum MyTypeKind {
     BOOLEAN = 'BOOLEAN',
     NULL = 'NULL',
     ARRAY = 'ARRAY',
+    //an a array that can have ANY subtype. examples: the expression '[]', new Array(num);
+    ALPHA_ARRAY = 'ALPHA_ARRAY',
     CUSTOM = 'CUSTOM',
     VOID = 'VOID',//Medio chapuz
     MY_CONSOLE = 'MY_CONSOLE',//Medio chapuz
@@ -64,6 +66,7 @@ export class MyType
             case MyTypeKind.MY_CONSOLE:
             case MyTypeKind.WAITING:
             case MyTypeKind.VOID:
+            case MyTypeKind.ALPHA_ARRAY:
                 if(specification !== null){
                     throw new Error(`No se puede construir un MyType ${kind} con tipo no null`)
                 }
@@ -103,6 +106,10 @@ export class MyType
                 let subType = this.specification as MyType;
                 return `Array<${subType.getName()}>`
             }break;
+            case MyTypeKind.ALPHA_ARRAY:
+            {
+                return `Array<a'>`
+            }break;
 
             case MyTypeKind.CUSTOM:
             {
@@ -128,6 +135,7 @@ export class MyType
                 return 0;
             case MyTypeKind.STRING:
             case MyTypeKind.ARRAY:
+            case MyTypeKind.ALPHA_ARRAY://Este la verdad nunca deberia de llamar a la funcion getDefaultVal
             case MyTypeKind.CUSTOM:
                 //MEJORA?: Que nullPointer se una constante global o algo asi
                 return -1;//null pointer
@@ -146,6 +154,7 @@ export class MyType
     public static NULL = new MyType(MyTypeKind.NULL, null);
     public static VOID = new MyType(MyTypeKind.VOID, null);
     public static CONSOLE = new MyType(MyTypeKind.MY_CONSOLE, null);
+    public static ALPHA_ARRAY = new MyType(MyTypeKind.ALPHA_ARRAY, null);
 
     public static makeCustomType(typeSignature:TypeSignature):MyType{
         return new MyType(MyTypeKind.CUSTOM, typeSignature);
@@ -155,7 +164,6 @@ export class MyType
         return new MyType(MyTypeKind.WAITING, null);
     }
 
-    //TODO: un typeSignature de Array con las funciones nativas de array
     public static makeArrayType(subType:MyType):MyType{
         return new MyType(MyTypeKind.ARRAY, subType);
     }
@@ -187,7 +195,21 @@ export class MyType
 
             case MyTypeKind.ARRAY:
             {
-                throw new Error(`compareTypes no implementado para leftType: ${leftType}`)
+                if(rightType.kind === MyTypeKind.ALPHA_ARRAY){
+                    return true;
+                }
+                if(rightType.kind === MyTypeKind.ARRAY){
+                    return this.compareTypes(leftType.specification as MyType, rightType.specification as MyType);
+                }
+                return false;
+            }break;
+
+            case MyTypeKind.ALPHA_ARRAY:
+            {
+                if(rightType.kind === MyTypeKind.ALPHA_ARRAY || rightType.kind === MyTypeKind.ARRAY){
+                    return true;
+                }
+                return false;
             }break;
 
             

@@ -1,4 +1,4 @@
-import { C_ir_instruction } from './C_ir_instruction';
+import { C_ir_instruction, MemKind } from './C_ir_instruction';
 import { MyType, MyTypeKind } from "./MyType";
 
 export class LValueResult {
@@ -6,8 +6,8 @@ export class LValueResult {
         public myType:MyType,
         //Nos indica si la variable o lo que se de donde vino tiene el modificar const
         public isConst:boolean,
-        //Only works if we only have two segements: stack and heap
-        public isInStack:boolean,
+        //answers the question: address relative to what memorySegment? (heap or stack)
+        public memKind:MemKind,
         //contiene la direccion en memoria. ([!] NO OFFSET AL STACKFRAME POINTER: p)
         //relativa al segmento especificado en el attributo isInStack. que contiene
         //el valor del lvalue

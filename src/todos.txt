@@ -64,3 +64,15 @@ TODO: que siempre grafique la tabla de simbolos de ultimo
 TODO: cambiar AND a &&, OR a || y NOT a !
 
 TODO: fix the graphviz library thing
+
+MEJORA: clean up the switches, put things in different functions when its appropiate
+
+MEJORA?????: We are not consistent when we compare types, sometimes we use the function
+             other times we just take the .kind ourselfs and compare it
+
+
+TODO: quitar constExpr o ver si siquiera lo usamos
+
+//MEJORA: We could do the boolean expr evaluation optimizations described in the dragon
+//        book near section 6.6.5 in some easy cases like:
+//        while(HERE) for(;HERE;) ... etc

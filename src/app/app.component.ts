@@ -193,7 +193,7 @@ console.log(print10TimesAndReturn("Ten times"));
     `;
     }
 
-    //TODO: test break return and continue
+    {
     let testString = `
 function print10times(s:string):void{
   let count:number = 0;
@@ -203,7 +203,6 @@ function print10times(s:string):void{
    	break;
   }
 } 
-
 function print10TimesAndReturn(s:string):number{
   let count:number = 0;
   while(count < 10){
@@ -212,7 +211,6 @@ function print10TimesAndReturn(s:string):number{
   }
   return 4141;
 } 
-
 function printForever(s:string):number{
   let count:number = 0;
   while(count < 10){
@@ -221,12 +219,212 @@ function printForever(s:string):number{
     count = count + 1;
   }
 }
-
 print10times("hello");
 console.log(print10times("ERROR"));//shoud be an error
 console.log(print10TimesAndReturn("Javier"));
 printForever("FOR EVER");
     `;
+    }
+
+    {
+    let testString = `
+let a:number[] = [10,20,30,40,50];
+console.log(a[0]);
+console.log(a[1]);
+console.log(a[2]);
+console.log(a[3]);
+console.log(a[4]);
+let b:boolean[] = new Array(5);
+console.log(b[0]);
+console.log(b[1]);
+console.log(b[2]);
+console.log(b[3]);
+console.log(b[4]);
+//console.log(a.length);
+//luego probar con b[0][1][2]
+//y b[0].length
+//y que b[0] se le pueda metar otro array
+//y new Array(5);
+//let b:boolean[] = new Array(5);
+// for(let i:number = 0; i < a.length; i++){
+//   console.log(a[i]);
+//   console.log(NOT b[i]);
+// }
+    `;
+    }
+
+    {
+    let testString = `
+let a:number[][] = [[10,20,30,40,50], [60,70,80,90,100]];
+graficar_ts();
+console.log(a[0][0]);//10
+console.log(a[0][1]);//20
+console.log(a[0][2]);//30
+console.log(a[0][3]);//40
+console.log(a[0][4]);//50
+console.log(a[1][0]);//60
+console.log(a[1][1]);//70
+console.log(a[1][2]);//80
+console.log(a[1][3]);//90
+console.log(a[1][4]);//100
+let b:boolean[] = new Array(5);
+console.log(b[0]);
+console.log(b[1]);
+console.log(b[2]);
+console.log(b[3]);
+console.log(b[4]);
+//console.log(a.length);
+//luego probar con b[0][1][2]
+//y b[0].length
+//y que b[0] se le pueda metar otro array
+//y new Array(5);
+//let b:boolean[] = new Array(5);
+// for(let i:number = 0; i < a.length; i++){
+//   console.log(a[i]);
+//   console.log(NOT b[i]);
+// }
+    `;
+    }
+
+    {
+    let testString = `
+let a:number[][] = [[10,20,30,40,50], [60,70,80,90,100]];
+graficar_ts();
+console.log(a[0][0]);//10
+console.log(a[0][1]);//20
+console.log(a[0][2]);//30
+console.log(a[0][3]);//40
+console.log(a[0][4]);//50
+console.log(a[1][0]);//60
+console.log(a[1][1]);//70
+console.log(a[1][2]);//80
+console.log(a[1][3]);//90
+console.log(a[1][4]);//100
+let b:boolean[] = new Array(5);
+console.log(b[0]);
+console.log(b[1]);
+console.log(b[2]);
+console.log(b[3]);
+console.log(b[4]);
+//console.log(a.length);
+//luego probar con b[0][1][2]
+//y b[0].length
+//y que b[0] se le pueda metar otro array
+//y new Array(5);
+//let b:boolean[] = new Array(5);
+// for(let i:number = 0; i < a.length; i++){
+//   console.log(a[i]);
+//   console.log(NOT b[i]);
+// }
+    `;
+    }
+
+    {
+    let testString = `
+let a:number[][] = [[10,20,30,40], [60,70,80,90,100,200]];
+graficar_ts();
+console.log(a.length);//2
+console.log(a[0].length);//5
+console.log(a[1].length);//6
+
+console.log((new Array(10)).length);
+//console.log(a.length);
+//luego probar con b[0][1][2]
+//y b[0].length
+//y que b[0] se le pueda metar otro array
+//y new Array(5);
+//let b:boolean[] = new Array(5);
+// for(let i:number = 0; i < a.length; i++){
+//   console.log(a[i]);
+//   console.log(NOT b[i]);
+// }
+    `;
+    }
+
+    {
+    let testString = `
+console.log(!false);//true
+console.log(true&&true);//true
+console.log(true||false);//true
+    `;
+    }
+
+    //test postFix increment and decrement
+    {
+      let tesString = `
+let a:number = 1;
+console.log(a++);//prints 1
+console.log(a);//prints 2
+let b:number = 1;
+console.log(b--);//prints 1
+console.log(b);//prints 0
+      `
+    }
+
+    //OLD BUG: it wouldn't generate code for console.log(a+b+c); because
+    //it would say c wasn't initialized yet
+    {
+      let testString = `
+let a:number = 12345678;
+let b:number = 41414141;
+let c:number = 88888888;
+suma(10, 20);
+function suma(a:number, b:number):void
+{
+  console.log(a+b+c);
+}
+console.log(a);
+console.log(b);
+console.log(c);
+      `;
+    }
+
+    {
+      let testString = `
+let a:Array<string> =(["Javier", "Antonio", "Alvarez", "Gonzalez"]);
+for(let i:number = 0; i < a.length; i++){
+  console.log(a[i]);
+}
+//Javier
+//Antonio
+//Alvarez
+//Gonzalez
+      `;
+    }
+
+    {
+    let testString = `
+let i:number = 987654321;
+for(let i:number = 0; i < 5; i++){
+    let i:number = 41;
+    console.log(i);
+}
+//imprime 41 5 veces
+//41
+//41
+//41
+//41
+//41
+    `;
+    }
+
+    //TODO:
+    //faltan todos los member access para los lvalue (result[i - 1] = strs[i])
+    //es el lvalue que causa clavo
+    let testString = `
+function tail(strs:string[]):string[]{
+  let result:string[] = new Array(strs.length - 1);
+  for(let i:number = 1; i < strs.length; i++){
+    result[i - 1] = strs[i];
+  }
+  return result;
+}
+let a:Array<string> = tail(["Javier", "Antonio", "Alvarez", "Gonzalez"]);
+for(let i:number = 0; i < a.length; i++){
+  console.log(a[i]);
+}
+    `;
+
 
     this.sourceString = testString;
     wasmFolder('https:cdn.jsdelivr.net/npm/@hpcc-js/wasm@0.3.13/dist');

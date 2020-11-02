@@ -33,6 +33,13 @@ export enum ScopeKind{
     IF,
     WHILE,
     FOR,
+    //el for hace dos scopes diferentes para que cosas como:
+    //let i:number = 20;
+    //for(let i:number = 0; i < 10; i++){
+    //    let i:number = 10;
+    //}
+    //sean posibles
+    AUX_FOR,
     GLOBAL,
     BLOCK, //a plain old {}
 }
@@ -131,6 +138,14 @@ export class Scope{
 
     public static makeWhile(previous:Scope, continueJumper:Label, breakJumper:Label){
         return new Scope(0, ScopeKind.WHILE, new JumperSet(continueJumper, breakJumper, null), null, null, previous);
+    }
+
+    public static makeAuxFor(previous:Scope){
+        return new Scope(0, ScopeKind.AUX_FOR, new JumperSet(null, null, null), null, null, previous);
+    }
+
+    public static makeFor(previous:Scope, continueJumper:Label, breakJumper:Label){
+        return new Scope(0, ScopeKind.FOR, new JumperSet(continueJumper, breakJumper, null), null, null, previous);
     }
 
     public static makeFunction(previous:Scope, funcName:string, nestingDepth:number, returnType:MyType, returnLabel:Label){
@@ -302,7 +317,7 @@ export module Env{
 
     //if null is returned there is no variable with that id in the stack frame or the global variables
     //in the current scope or the previous ones (we stop searching once we find the first)
-    export function getVariableFix(id:string):(ResultingVariable | null){
+    export function getVariable(id:string):(ResultingVariable | null){
         let iter:(Scope | null) = current;
         let displayIndex:(number | null) = null;
         let variable:Variable;
@@ -375,20 +390,65 @@ export module Env{
         throw new Error("Assert failed: No existe FUNCTION_SCOPE ni GLOBAL_SCOPE en el stack de scopes (esto es imposible porque siempre tendria que existir el global scope hasta el fondo)");
     }
 
-    export function getBreakLabel():Label{
-        
+    export function getBreakLabel():(Label | null){
+        let iter:(Scope | null) = current;
+
+        //search all the scopes in the scope stack, return the nesting depth of the first FUNCTION_SCOPE
+        //or GLOBAL we find
+        while(iter !== null){
+            if(iter.jumperSet.breakJumper !== null){
+                return iter.jumperSet.breakJumper;
+            }
+
+            if(iter.kind === ScopeKind.FUNCTION_SCOPE || iter.kind === ScopeKind.GLOBAL){
+                return null;
+            }
+
+            iter = iter.previous;
+        }
+
+        throw new Error("no deberiamos de llegar a este punto en la funcion");
     }
 
-    export function getContinueLabel():Label{
+    export function getContinueLabel():(Label | null){
+        let iter:(Scope | null) = current;
 
+        //search all the scopes in the scope stack, return the nesting depth of the first FUNCTION_SCOPE
+        //or GLOBAL we find
+        while(iter !== null){
+            if(iter.jumperSet.continueJumper !== null){
+                return iter.jumperSet.continueJumper;
+            }
+
+            if(iter.kind === ScopeKind.FUNCTION_SCOPE || iter.kind === ScopeKind.GLOBAL){
+                return null;
+            }
+
+            iter = iter.previous;
+        }
+
+        throw new Error("no deberiamos de llegar a este punto en la funcion");
     }
 
-    export function getContinueLabel():Label{
+    export function getReturnJumper():(ReturnJumper | null){
+        let iter:(Scope | null) = current;
 
-    }
+        //search all the scopes in the scope stack, return the nesting depth of the first FUNCTION_SCOPE
+        //or GLOBAL we find
+        while(iter !== null){
 
-    export function getReturnLabel():Label{
+            if(iter.kind === ScopeKind.FUNCTION_SCOPE){
+                return iter.jumperSet.returnJumper;
+            }
 
+            if(iter.kind === ScopeKind.GLOBAL){
+                return null;
+            }
+
+            iter = iter.previous;
+        }
+
+        throw new Error("no deberiamos de llegar a este punto en la funcion");
     }
 
     //TODO: documentar las diferencias de pasar el size cuando pusheamos un scope
@@ -405,152 +465,19 @@ export module Env{
         //current.size = current.previous.size;
     }
 
+    export function pushAuxForScope(){
+        current = Scope.makeAuxFor(current);
+        current.size = current.previous.size;
+    }
+
+    export function pushForScope(continueJumper:Label, breakJumper:Label){
+        current = Scope.makeFor(current, continueJumper, breakJumper);
+        current.size = current.previous.size;
+    }
+
     export function popScope(){
         current = current.previous;
     }
 
-    /*
-    //[throws_MyError]
-    //Atrapa si no exite el id en ningun scope
-    //Atrapa si el numero de parametros es diferente
-    //Atrapa si tiene diferente tipo de parametros
-    //Atrapa cualquier error que ocurra mientras se ejecuta el codigo de la funcion
-    export function callFunction(id:string, myArgs:ReturnValue[]):MyObj{
-
-        let iter:(Scope | null) = current;
-        let myFunctionSignature:(MyFunction | undefined);
-
-        // we traverse the stack of scopes until we find the first 
-        // function to have the same name
-        while(iter !== null){
-            myFunctionSignature = iter.myFunctions[id];
-            if(myFunctionSignature !== undefined){
-                //this would be a good example of a goto
-                break;
-            }
-            iter = iter.previous;
-        }
-        if(myFunctionSignature === undefined){
-            throw new MyError(`No existe una funcion con el nomber '${id}' en el entorno actual`);
-        }
-
-        // chapuz: revisamos si es una funcion nativa y, de ser asi, la ejecutamos
-        // esto funciona por ahora solo porque una funcion nativa no puede tirar 
-        // MyErro y porque ninguna func nativa recibe parametros
-        // POSSIBLE BUG: We dont push the scope and all that when calling this native func, is no necessary for
-        // now but still be mindful of it
-        if(myFunctionSignature.kind === MyFunctionKind.GRAFICAR_TS){
-            let graficarTs = myFunctionSignature.specification as GraficarTs;
-            if(myArgs.length !== 0){
-                throw new MyError(`No se puede llamar a la funcion <graficar_ts> con ${myArgs.length} argumentos`)
-            }
-            graficar_ts();
-            //we return 'void' which is 'undefined' in typescript
-            return MyObj.undefinedInstance;
-        }
-
-        let nonNativeFunctionSignature = myFunctionSignature.specification as MyNonNativeFunction;
-        let params = nonNativeFunctionSignature.params;
-        
-        // we check if they have the same number of params and args
-        if(myArgs.length !== params.length){
-            throw new MyError(`No se puede llamar a la funcion <${id}> con ${myArgs.length} argumentos`)
-        }
-
-        // At this point our function signature is a non_native kind
-        // [Think]: goto would help avoid missing pops here... just saying
-        let oldCurrent = Env.current;
-        //CHAPUZ MAXIMO
-        //We solved the nested functions problem by not unrolling all the way back to global when 
-        //we call a function that is inside anotherone. :(
-        //we know a function was defined inside another because it begins with '__'
-        //The part that made me give up is that we have to translate first so the info of who is the
-        //parent of the function is lost. unless we encode it in the function name which would be
-        //hard and stupid.
-        //And there is no time left
-        //BUG: if we call a nested function it can access variables that were defined by whoever
-        //called the parent function
-        if(!id.startsWith("__")){
-            Env.current = global;
-        }
-        Env.pushScope();
-
-        // Should the arrays indices be passed by reference too?? for now they are
-        // if we wanted them to not be passed by reference:
-        // We cant make that happen from here, the easiest way would be to have array index
-        // access never return a Pointer REturnType, BUT that would mean that we couldn't
-        // use it to assign stuff: array[0] = someObj; wouldnt be possible
-        // we would have to do some crazy bodging, there is no way around I think
-
-        // We set up the environment for the function call: (i.e. the function arguments)
-        // we check the correctness of the types and assing each pointer to the param name in a new scope
-        for (let i = 0; i < myArgs.length; i++) {
-            const resultValue = myArgs[i];
-
-            let typeArg = resultValue.getMyObj().myType;
-            let typeParam =params[i].myType;
-            if(!compareMyTypes(typeArg, typeParam)){
-                Env.popScope();
-                Env.current = oldCurrent;
-                throw new MyError(`Types no compatibles en el argumento: ${i}. Se tiene: ${typeArg.toString()} se esperaba: ${typeParam.toString()}`)
-            }
-            //If resultValue is of type (CUSTOM or ARRAY) And it is a pointer we pass the param by pointer, if not we copy the MyObj
-            if((typeArg.kind === MyTypeKind.CUSTOM || typeArg.kind === MyTypeKind.ARRAY) &&
-                resultValue.kind === ReturnKind.POINTER)
-            {
-                //unsafe but its ok because we added a brand new scope
-                Env.current.myVariables[params[i].paramName] = resultValue.unsafeGetPointer();
-            }
-            else{
-                Env.current.myVariables[params[i].paramName] = Pointer.makeMyObjectPointer(resultValue.getMyObj());
-            }
-            
-        }
-
-        //We run the function's code
-        let returnType =  (myFunctionSignature.specification as MyNonNativeFunction).returnType;//Can be null (represents void)
-        let statements = (myFunctionSignature.specification as MyNonNativeFunction).statements;
-        for (const stmt of statements) {
-            //Recordar que las exceptions se atrapan en runStatement
-            let stmtResult = compileStatement(stmt);
-            if(stmtResult === null){
-                continue;
-            }
-            //Be mindful that if we throw and exception we dont have to return anything
-            switch(stmtResult.kind){
-                case JumperKind.BREAK:
-                case JumperKind.CONTINUE:
-                    Env.popScope();
-                    Env.current = oldCurrent;
-                    throw new MyError(`Fallo la llamada a funcion '${id}': ${stmtResult.kind} a traves del limete de funcion`)
-                case JumperKind.RETURN:
-                    Env.popScope();
-                    Env.current = oldCurrent;
-                    if(returnType === null){
-                        return MyObj.undefinedInstance;//Return without errors :D
-                    }else{
-                        throw new MyError(`No se puede retornar un valor en una fucion tipo :void`)
-                    }
-                case JumperKind.RETURN_VALUE:
-                    //by this point stmtReslt.value cannot be null
-                    Env.popScope();
-                    Env.current = oldCurrent;
-                    if(compareMyTypes(returnType, stmtResult.value.myType)){
-                        return stmtResult.value;//Return without errors :D
-                    }else{
-                        throw new MyError(`No se puede retornar un tipo en una fucion tipo :void`)
-                    }
-
-            }
-        }
-        Env.popScope();
-        Env.current = oldCurrent;
-        if(returnType === null){
-            return MyObj.undefinedInstance;//Return without errors :D
-        }else{
-            throw new MyError(`La funcion '${id}:' debe retornar un valor de tipo: '${returnType.getName()}`)
-        }
-    }
-
-    */
+    
 }

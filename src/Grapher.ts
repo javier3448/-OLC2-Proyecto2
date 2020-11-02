@@ -2,7 +2,7 @@ import { digraph, Digraph, attribute, INode, toDot } from "ts-graphviz";
 import { Expression, ExpressionKind, LiteralExpression, 
           IdentifierExpression, BinaryExpression, UnaryExpression, 
           TernaryExpression, MemberAccessExpression, FunctionCallExpression, 
-          ObjectLiteralExpression, PropertyNode, ArrayLiteralExpression, StringLiteral } from "./Ast/Expression";
+          ObjectLiteralExpression, PropertyNode, ArrayLiteralExpression, StringLiteral, NewArrayExpression } from "./Ast/Expression";
 import { Statement, WhileStatement, Block, StatementKind, IfStatement, ForStatement, ForInStatement, ForOfStatement, SwitchStatement, DoWhileStatement  } from "./Ast/Statement";
 import { AstNode } from "./Ast/AstNode";
 
@@ -324,6 +324,14 @@ export function graphExpression(g:Digraph, expr:Expression):INode{
                 g.createEdge([result, child]);
             }
         }break;
+        //new Array
+        case ExpressionKind.NEW_ARRAY:
+        {
+            const newArrayExpr = expr.specification as NewArrayExpression;
+
+            let child: INode = graphExpression(g, newArrayExpr.sizeExpr);
+            g.createEdge([result, child]);
+        }break;
 
         case ExpressionKind.FUNCTION_CALL:
         {
@@ -530,6 +538,9 @@ function expressionToLabel(expr:Expression):string{
             return `ObjectLiteral`;
         case ExpressionKind.ARRAY_LITERAL:
             return `ArrayLiteral`;
+
+        case ExpressionKind.NEW_ARRAY:
+            return `NewArray`;
 
         case ExpressionKind.IDENTIFIER:
             return `Identifier\n${(expr.specification as IdentifierExpression).name}`;
