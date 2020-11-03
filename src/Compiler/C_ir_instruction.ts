@@ -28,7 +28,7 @@ export function arithOpToString(arithOperator:ArithOp):string{
         case ArithOp.MODULUS:
             return "MODULUS";
         default:
-            throw new Error(`ArithOperator.toString no implementado para ${arithOperator}!`);
+            throw new Error(`ArithOperator.toString no implementado para '${arithOperator}'!`);
     }
 }
 export function arithOpGetSymbol(arithOp:ArithOp):string{
@@ -44,7 +44,7 @@ export function arithOpGetSymbol(arithOp:ArithOp):string{
         case ArithOp.MODULUS:
             return "%";
         default:
-            throw new Error(`ArithOperator.getSymbol no implementado para ${arithOp}!`);
+            throw new Error(`ArithOperator.getSymbol no implementado para '${arithOp}'!`);
     }
 }
 
@@ -73,7 +73,7 @@ export function relOpToString(relationalOperator:RelOp):string{
             return "NOT_EQUAL";
 
         default:
-            throw new Error(`RelationalOperator.toString no implementado para ${relationalOperator}!`);
+            throw new Error(`RelationalOperator.toString no implementado para '${relationalOperator}'!`);
     }
 }
 
@@ -93,7 +93,7 @@ export function relOpGetSymbol(relationalOperator:RelOp):string{
             return "!=";
 
         default:
-            throw new Error(`RelationalOperator.toString no implementado para ${relationalOperator}!`);
+            throw new Error(`RelationalOperator.toString no implementado para '${relationalOperator}'!`);
     }
 }
 
@@ -125,7 +125,7 @@ export function relOpGetSymbol(relationalOperator:RelOp):string{
 //                 return "PRINT_F";
         
 //             default:
-//                 throw new Error(`RelationalOperator.toString no implementado para ${c_ir_kind}!`);
+//                 throw new Error(`RelationalOperator.toString no implementado para '${c_ir_kind}'!`);
 //         }       
 //     }
 // }
@@ -177,7 +177,7 @@ export class Mem{
             case MemKind.HEAP:
                 return `heap[(int)${this.offset.toString()}]`
             default:
-                throw new Error(`Mem.toString no implementado para MemKind ${this.kind}!`);
+                throw new Error(`Mem.toString no implementado para MemKind '${this.kind}'!`);
         }
     }
 }
@@ -320,7 +320,7 @@ export function c_ir_instruction_toString(c_ir_ins:C_ir_instruction):string{
         return("//" + c_ir_ins.comment.toString() + "\n").toString();
     }
     else{
-        throw new Error(`C_ir_instruction.toString no implementado para ${c_ir_ins}!`);
+        throw new Error(`C_ir_instruction.toString no implementado para '${c_ir_ins}'!`);
     }
 }
 
@@ -335,7 +335,7 @@ export function c_ir_value_toString(val:(String | Mem | Number)):string{
         return val.toString();
     }
     else{
-        throw new Error(`c_ir_value_toString no implementado para ${val}!`);
+        throw new Error(`c_ir_value_toString no implementado para '${val}'!`);
     }
 }
 

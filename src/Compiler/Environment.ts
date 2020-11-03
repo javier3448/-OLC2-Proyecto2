@@ -352,6 +352,29 @@ export module Env{
         return null;
     }
 
+    //null si no estamos en un function scope que tenga un retorno no void
+    export function getReturnOffset():(null | number){
+        let iter:(Scope | null) = current;
+
+        //search all the scopes in the scope stack, return the nesting depth of the first FUNCTION_SCOPE
+        //or GLOBAL we find
+        while(iter !== null){
+            if(iter.kind === ScopeKind.FUNCTION_SCOPE || iter.kind === ScopeKind.GLOBAL){
+                //BAD: constante "@return" quemada
+                if(iter.myVariables["@return"] === undefined){
+                    return null;
+                }
+                else{
+                    return iter.myVariables["@return"].offset;
+                }
+            }
+
+            iter = iter.previous;
+        }
+
+        throw new Error("Assert failed: No existe FUNCTION_SCOPE ni GLOBAL_SCOPE en el stack de scopes (esto es imposible porque siempre tendria que existir el global scope hasta el fondo)");
+    }
+
     //if null is returned there is no function with that name in the scopestack
     export function getFunction(funcName:string):(MyFunction | null){
 
@@ -430,6 +453,7 @@ export module Env{
         throw new Error("no deberiamos de llegar a este punto en la funcion");
     }
 
+
     export function getReturnJumper():(ReturnJumper | null){
         let iter:(Scope | null) = current;
 
@@ -438,6 +462,7 @@ export module Env{
         while(iter !== null){
 
             if(iter.kind === ScopeKind.FUNCTION_SCOPE){
+                //here we could def go get the return var if there is any
                 return iter.jumperSet.returnJumper;
             }
 

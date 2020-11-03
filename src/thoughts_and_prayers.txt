@@ -4,3 +4,53 @@ We must assure that by the type we reach a statement
 we cant possible have OwedTemps
 I think we can do that just by not returning any temp
 in statement
+
+Otra estrategia para el lvalue es que TODO sea lvalue y genere codigo 
+de lvalue hasta que sea necesario desreferenciarlo mas arriba en la recursion
+Y que el exprResult 'recuerde' si ya fue desreferenciado o no. Eso se puede saber 
+en compile time no?
+Para mas adelante: Definitivamente el cambio mas brusco es que ahora que algo sea o no 
+puntero no tiene nada que ver con el tipo???? Pero si existe el concepto de un tipo
+puntero... no se, no importa
+
+//mad
+let c_ir = new Array<C_ir_instruction>();
+
+c_ir = c_ir.concat([
+    exprResult.c_ir,//Array of C_ir_instruction
+    [new Goto(returnJumper.label)]
+]);
+
+//Stupid fucking typescript lets me do that
+//a REAL statically typed lang would let me do it!!!!!!!!!!!!!!!!!!!!
+
+pareciera que separamos el Env de variables y el env de JumperResult innecsariamente
+lo que quiero evitar es que sea mas complejo y confuso de lo necesario y, concretamente
+evitar hacer la consulta a la tabla de simbolos dos veces en este caso:
+                //check that we are inside a loop or a continuable scope
+                let returnJumper:(ReturnJumper | null) = Env.getReturnJumper();
+                if(returnJumper === null){
+                    throw new MyError(`'return' solo puede ser usado adentro una funcion`);
+                }
+
+                let exprResult = compileExpression(statement.child as Expression, []);
+
+                if(!MyType.compareTypes(returnJumper.myType, exprResult.myType)){
+                    throw new MyError(`Tipos no compatibles. se esperaba: '${returnJumper.myType.getName()}' se obtuvo: '${exprResult.myType.getName()}'`);
+                }
+
+no necesario--->let retVar = Env.getReturnOffset();
+
+                let c_ir = new Array<C_ir_instruction>();
+
+                let tempReturnIndex = getNextTemp();
+                c_ir = c_ir.concat(
+                    exprResult.c_ir,
+                   [new _3AddrAssignment(tempReturnIndex, REG_P, ArithOp.ADDITION, new Number(retVar.offset)),
+                    new Assignment(Mem.stackAccess(tempReturnIndex), exprResult.val),
+                    new Goto(returnJumper.label)]
+                );
+                return c_ir;
+
+
+Having a a better unitialized (we currently have 0) value would have helped a ton!

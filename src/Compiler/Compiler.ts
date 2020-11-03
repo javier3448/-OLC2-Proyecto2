@@ -28,6 +28,7 @@ import { ArithOp, Assignment, _3AddrAssignment, Cond_goto,
          C_ir_instruction, c_ir_instructions_toString, Goto, 
          Label, LabelDeclaration, RelOp, Mem, FunctionCall, FuncOpening, FuncClose, Comment, MemKind } from './C_ir_instruction';
 import { AccessKind, AttributeAccess, FunctionAccess, IndexAccess } from 'src/Ast/MemberAccess';
+import { ErrorStateMatcher } from '@angular/material/core';
 
 //TODO: agregar un comentario con el c_ir deseado en todos 
 //      los lugares en los que generamos c_ir
@@ -39,6 +40,8 @@ import { AccessKind, AttributeAccess, FunctionAccess, IndexAccess } from 'src/As
 let runtimeInterface:RuntimeInterface;
 
 //TODO: algo que indique las diferentes llamadas a graficar_ts
+//      que sea un monton de asteriscos que llenen todo perfectamente
+//      cambiar el font a algo monospaced 
 export function graficar_ts():void{
     console.log(Env.current);
 
@@ -51,6 +54,7 @@ export function graficar_ts():void{
         runtimeInterface.tsDataSet.push(new TsEntry("top-"+count.toString(), key, "-", typeSignature.getName()));
     }
 
+    //TODO: que el scope no diga count. que use el nombre 
     while(iter != null){
         //Function signatures
         for (const key in iter.myFunctions) {
@@ -61,15 +65,15 @@ export function graficar_ts():void{
         for (const key in iter.myVariables) {
             let variable = iter.myVariables[key];
             //@FIXME
-            //runtimeInterface.tsDataSet.push(new TsEntry("top-"+count.toString(), key, variable.myType.getName(), variable.myObj.toPrintableString()));
+            runtimeInterface.tsDataSet.push(new TsEntry("top-"+count.toString(), key, variable.myType.getName(), variable.offset.toString()));
         }
         iter = iter.previous;
         count++;
     }
 }
-
 export function resetRuntimeInterface():void{
     runtimeInterface.tsDataSet = [];
+    runtimeInterface.errorDataSet = [];
     runtimeInterface.errorDataSet = [];
     runtimeInterface.intermediateRepresentation = "";
 }
@@ -195,6 +199,9 @@ export function compile(root:GlobalInstructions, _runtimeInterface:RuntimeInterf
     runtimeInterface.intermediateRepresentation = construct_c_ir_header_and_funcs(global_c_ir.funcs_c_ir);
     runtimeInterface.intermediateRepresentation += c_ir_instructions_toString(global_c_ir.statements_c_ir);
     runtimeInterface.intermediateRepresentation += construct_c_ir_foot();
+
+    //Corremos el graficar_ts() solo porque si
+    graficar_ts();
 }
 
 export function compileGlobalInstructions(globalInstructions:GlobalInstructions):Global_c_ir{
@@ -541,6 +548,7 @@ export function compileStatement(statement:Statement):C_ir_instruction[]{
                 ];
                 return c_ir;
             }break;
+            //TODO: ordenar mejor este case para que sea mas legible
             case StatementKind.ReturnWithValueKind:
             {
                 //check that we are inside a loop or a continuable scope
@@ -555,9 +563,18 @@ export function compileStatement(statement:Statement):C_ir_instruction[]{
                     throw new MyError(`Tipos no compatibles. se esperaba: '${returnJumper.myType.getName()}' se obtuvo: '${exprResult.myType.getName()}'`);
                 }
 
-                let c_ir = [
-                    new Goto(returnJumper.label)
-                ];
+                //should never be null because we already did the compareTypes
+                let retVarOffset = Env.getReturnOffset();
+
+                let c_ir = new Array<C_ir_instruction>();
+
+                let tempReturnIndex = getNextTemp();
+                c_ir = c_ir.concat(
+                    exprResult.c_ir,
+                   [new _3AddrAssignment(tempReturnIndex, REG_P, ArithOp.ADDITION, new Number(retVarOffset)),
+                    new Assignment(Mem.stackAccess(tempReturnIndex), exprResult.val),
+                    new Goto(returnJumper.label)]
+                );
                 return c_ir;
             }break;
 
@@ -620,14 +637,101 @@ export function compileExpression(expr:Expression, owedTemps:String[]):ExprResul
             switch (expr.expressionKind) {
                 case ExpressionKind.ADDITION:
                 {
+                    let c_ir = new Array<C_ir_instruction>();
+                    let tempResult = getNextTemp();
                     //revisamos errores de tipos:
                     //String type can be added to anything but CUSTOM
+                    //MEJORA!: codigo MUY similar para todos los casos. meterlo en una funcion
+                    //         o algo asi
                     if((leftResult.myType.kind === MyTypeKind.STRING ||
                        rightResult.myType.kind === MyTypeKind.STRING) && 
                        (leftResult.myType.kind !== MyTypeKind.CUSTOM &&
                        rightResult.myType.kind !== MyTypeKind.CUSTOM)
                     ){
-                        throw new Error("implementacion de suma con strings no implementado todavia!");
+                        //At this point we can assure that there is at least 1 string in this binary expression
+                        //izq es number o boolean. der es string
+                        if(leftResult.myType.kind === MyTypeKind.NUMBER){
+                            c_ir = c_ir.concat(
+                                leftResult.c_ir,
+                                rightResult.c_ir,
+                               [//llamamos number to string obtenemos el resultado en _return1
+                                new Assignment(Native_c_ir._param1, leftResult.val),
+                                new FunctionCall(Native_c_ir.numberToString),
+                                //we want to call stringConcat now. we get the result in _return1
+                                new Assignment(Native_c_ir._param1, Native_c_ir._return1),
+                                //At this point we know that rightResult MUST  be type STRING
+                                new Assignment(Native_c_ir._param2, rightResult.val),
+                                new FunctionCall(Native_c_ir.stringConcat),
+                                new Assignment(tempResult, Native_c_ir._return1)]
+                            );
+
+                            return new ExprResult(MyType.STRING, false, tempResult, c_ir);
+                        }
+                        else if(leftResult.myType.kind === MyTypeKind.BOOLEAN){
+                            c_ir = c_ir.concat(
+                                leftResult.c_ir,
+                                rightResult.c_ir,
+                               [//llamamos number to string obtenemos el resultado en _return1
+                                new Assignment(Native_c_ir._param1, leftResult.val),
+                                new FunctionCall(Native_c_ir.booleanToString),
+                                //we want to call stringConcat now. we get the result in _return1
+                                new Assignment(Native_c_ir._param1, Native_c_ir._return1),
+                                //At this point we know that rightResult MUST  be type STRING
+                                new Assignment(Native_c_ir._param2, rightResult.val),
+                                new FunctionCall(Native_c_ir.stringConcat),
+                                new Assignment(tempResult, Native_c_ir._return1)]
+                            );
+
+                            return new ExprResult(MyType.STRING, false, tempResult, c_ir);
+                        }
+                        //der es number o boolean. izq es string
+                        else if(rightResult.myType.kind === MyTypeKind.NUMBER){
+                            c_ir = c_ir.concat(
+                                leftResult.c_ir,
+                                rightResult.c_ir,
+                               [//llamamos number to string obtenemos el resultado en _return1
+                                new Assignment(Native_c_ir._param1, rightResult.val),
+                                new FunctionCall(Native_c_ir.numberToString),
+                                //we want to call stringConcat now. we get the result in _return1
+                                //At this point we know that leftResult MUST  be type STRING
+                                new Assignment(Native_c_ir._param1, leftResult.val),
+                                new Assignment(Native_c_ir._param2, Native_c_ir._return1),
+                                new FunctionCall(Native_c_ir.stringConcat),
+                                new Assignment(tempResult, Native_c_ir._return1)]
+                            );
+
+                            return new ExprResult(MyType.STRING, false, tempResult, c_ir);
+                        }
+                        else if(rightResult.myType.kind === MyTypeKind.BOOLEAN){
+                            c_ir = c_ir.concat(
+                                leftResult.c_ir,
+                                rightResult.c_ir,
+                               [//llamamos number to string obtenemos el resultado en _return1
+                                new Assignment(Native_c_ir._param1, rightResult.val),
+                                new FunctionCall(Native_c_ir.booleanToString),
+                                //we want to call stringConcat now. we get the result in _return1
+                                //At this point we know that leftResult MUST  be type STRING
+                                new Assignment(Native_c_ir._param1, leftResult.val),
+                                new Assignment(Native_c_ir._param2, Native_c_ir._return1),
+                                new FunctionCall(Native_c_ir.stringConcat),
+                                new Assignment(tempResult, Native_c_ir._return1)]
+                            );
+
+                            return new ExprResult(MyType.STRING, false, tempResult, c_ir);
+                        }
+                        //ambos son string
+                        else{
+                            c_ir = c_ir.concat(
+                                leftResult.c_ir,
+                                rightResult.c_ir,
+                               [new Assignment(Native_c_ir._param1, leftResult.val),
+                                new Assignment(Native_c_ir._param2, rightResult.val),
+                                new FunctionCall(Native_c_ir.stringConcat),
+                                new Assignment(tempResult, Native_c_ir._return1)]
+                            );
+
+                            return new ExprResult(MyType.STRING, false, tempResult, c_ir);
+                        }
                     }
                     //se pueden operar booleans con numbers
                     else if((leftResult.myType.kind === MyTypeKind.NUMBER  && rightResult.myType.kind === MyTypeKind.NUMBER) ||
@@ -1125,9 +1229,9 @@ function compileAssignment(binaryExpr:BinaryExpression, owedTemps:String[]):Expr
     return new ExprResult(lvalue.myType, false, temp, c_ir);
 }
 
-//TODO: ver si LValue definitivamente no necesita de owedTemps
-//a valid Lvalue shouldnt make a function call so it shouldnt need a owedTemps array
-//but we will pass it anyway because I am not 100% sure?? :(
+//lvalue can make function calls so it does need owedTemps
+//TODO: el recorido que hacemos de un Lvalue con members access es muy raro
+//      => Hay que documentarlo
 function compileLValue(expr:Expression, owedTemps:String[]):LValueResult{
     if(expr.expressionKind === ExpressionKind.IDENTIFIER){
         let identExp = expr.specification as IdentifierExpression;
@@ -1175,8 +1279,103 @@ function compileLValue(expr:Expression, owedTemps:String[]):LValueResult{
 
     }
     else if(expr.expressionKind === ExpressionKind.MEMBER_ACCESS){
-        //tenemos que tener el typeSignature antes de hacer esta parte
-        throw new Error(`compileLValue no implementado para member access todavia`);
+        let memAccessExpr = expr.specification as MemberAccessExpression;
+
+        let leftExprResult = compileExpression(memAccessExpr.expression, owedTemps);
+        let accessKind = memAccessExpr.memberAccess.accessKind;
+        let access = memAccessExpr.memberAccess.access;
+        switch (accessKind) {
+            case AccessKind.AttributeAccess:
+            {
+                let attributeAccess = access as AttributeAccess;
+                
+                switch (leftExprResult.myType.kind) {
+                
+                    case MyTypeKind.STRING:
+                    case MyTypeKind.ARRAY:
+                    case MyTypeKind.ALPHA_ARRAY:
+                    {
+                        if(attributeAccess.name == "length"){
+                            throw new MyError(`'length' de '${leftExprResult.myType.getName()}' no es un lvalue valido`);
+                        }
+                        else{
+                            throw new MyError(`el tipo: '${leftExprResult.myType.getName()}' no tiene un atributo con el nombre '${attributeAccess.name}'`);
+                        }
+                    }break;
+                    case MyTypeKind.NUMBER:
+                    case MyTypeKind.BOOLEAN:
+                    case MyTypeKind.NULL:
+                    case MyTypeKind.VOID:
+                    case MyTypeKind.MY_CONSOLE:
+                    {
+                        throw new MyError(`el tipo: '${leftExprResult.myType.getName()}' no tiene un atributos`);
+                    }break;
+                    case MyTypeKind.CUSTOM:
+                    {
+                        throw new Error(`lvalue member access para custom no implementado todavia`);
+                    }break;
+                    default:
+                        throw new Error(`compileLValue, No implementado para el '${leftExprResult.myType.getName()}'`);
+                }
+
+            }break;
+            case AccessKind.IndexAccess:
+            {
+                let indexAccess = access as IndexAccess;
+                switch (leftExprResult.myType.kind) {
+                
+                    case MyTypeKind.ARRAY:
+                    { 
+                        //compile the indexExpression
+                        let newOwedTemps:String[];
+                        if(leftExprResult.val instanceof String){
+                            newOwedTemps = owedTemps.concat([leftExprResult.val]);
+                        }
+                        else{
+                            newOwedTemps = owedTemps;
+                        }
+                        let indexResult = compileExpression(indexAccess.index, newOwedTemps);
+
+                        let temp = getNextTemp();
+                        let c_ir = new Array<C_ir_instruction>();
+                        c_ir = c_ir.concat(
+                            leftExprResult.c_ir,
+                            indexResult.c_ir,
+                           [new _3AddrAssignment(temp, leftExprResult.val, ArithOp.ADDITION, indexResult.val),
+                            new _3AddrAssignment(temp, temp, ArithOp.ADDITION, new Number(1))]
+                        );
+
+                        //We know .specification is MyType because MyTypeKind is ARRAY
+                        let lvalueType = leftExprResult.myType.specification as MyType;
+                        return new LValueResult(lvalueType, false, MemKind.HEAP, temp, c_ir);
+                    }break;
+                    case MyTypeKind.STRING:
+                    {
+                        //No se puede porque los strings son 100% inmutables y dependemos de eso
+                        //para inicializar los string literals :(
+                        throw new MyError(`No se puede hacer un IndexAccess al tipo: '${leftExprResult.myType.getName()}'`);
+                    }break;
+                    case MyTypeKind.ALPHA_ARRAY:
+                    case MyTypeKind.NUMBER:
+                    case MyTypeKind.BOOLEAN:
+                    case MyTypeKind.NULL:
+                    case MyTypeKind.VOID:
+                    case MyTypeKind.MY_CONSOLE:
+                    case MyTypeKind.CUSTOM:
+                    {
+                        throw new MyError(`No se puede hacer un IndexAccess al tipo: '${leftExprResult.myType.getName()}'`);
+                    }break;
+                    default:
+                        throw new Error(`compileLValue, No implementado para el '${leftExprResult.myType.getName()}'`);
+                }
+            }break;
+            case AccessKind.FunctionAccess:
+            {
+                throw new MyError(`Not an lvalue. LValue must be a variable, IndexAccess or an Attribute access`);
+            }break;
+            default:
+                throw new Error(`compileLValue no implementado para memberAcesssKind: '${accessKind}'`);
+        }
     }
     else{
         throw new MyError(`Not an lvalue`);
@@ -1307,7 +1506,8 @@ export function compileFuncCall(funcCall:FunctionCallExpression, owedTemps:Strin
         }
         c_ir = c_ir.concat(
             //(calleeSignature.nestingDepth - 1) = la ultima posion del display
-            [new _3AddrAssignment(argIndex, nextStackFrameBegining, ArithOp.ADDITION, new Number(calleeSignature.nestingDepth + i)),
+            argResult.c_ir,
+           [new _3AddrAssignment(argIndex, nextStackFrameBegining, ArithOp.ADDITION, new Number(calleeSignature.nestingDepth + i)),
             new Assignment(Mem.stackAccess(argIndex), argResult.val)]
         );
     }

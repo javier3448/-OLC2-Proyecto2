@@ -78,6 +78,8 @@ export class FunctionCallExpression{
     constructor(public name:string, public functionArgs:Expression[]){   }
 }
 
+//TODO: mejorar esta clase. Es super confuso y creo que MemberAccess esta de mas
+//      lo unico malo es que hay algo con los astNode entre: Expression, y MemberAcess
 export class MemberAccessExpression{
     constructor(public expression:Expression, public memberAccess:MemberAccess){   }
 }

@@ -21,17 +21,4 @@ export class ExprResult {
                                        // ejemplo: `null`, `413`
     ){  }
 
-    //bad name :/
-    //retorna el valor en c_ir de val en forma de string para que pueda ser usado
-    //por otro lang construct en su c_ir
-    //ejemplo:
-    //un 10 const expr tiene un val number, entonces retornaria el string: '10'
-    //un T10 retorna el string 'T10'
-    //null tira error
-    derefVal():string{
-        if(this.myType.kind === MyTypeKind.NULL){
-            throw new Error("No se puede hacer deref");
-        }
-        return this.val.toString();
-    }
 }

@@ -20,7 +20,7 @@ export class MyFunction{
     getTypeString():string{
         let resultString = "(";
         for (const param of this.params) {
-            resultString = param.getName() + ", ";
+            resultString += param.getName() + ", ";
         }
         if(resultString.length > 2){
             resultString = resultString.slice(0, resultString.length - 2);
