@@ -156,6 +156,10 @@ export class Scope{
         return new Scope(0, ScopeKind.IF, JumperSet.makeEmpty(), null, null, previous);
     }
 
+    public static makeBlock(previous:Scope){
+        return new Scope(0, ScopeKind.BLOCK, JumperSet.makeEmpty(), null, null, previous);
+    }
+
     //TODO: static make of all the other ScopeKinds
 
     //TODO:
@@ -221,6 +225,7 @@ export module Env{
 
     // clears the Environment and adds the default functions and variables
     export function initEnvironment():void{
+        funcNameCount = 1;
         global = Scope.makeGlobal();
 
         //Inicializamos las variables, funciones y definiciones nativas del scope global
@@ -481,6 +486,16 @@ export module Env{
 
     export function pushWhileScope(continueJumper:Label, breakJumper:Label){
         current = Scope.makeWhile(current, continueJumper, breakJumper);
+        current.size = current.previous.size;
+    }
+
+    export function pushIfScope(){
+        current = Scope.makeIf(current);
+        current.size = current.previous.size;
+    }
+
+    export function pushBlockScope(){
+        current = Scope.makeBlock(current);
         current.size = current.previous.size;
     }
 

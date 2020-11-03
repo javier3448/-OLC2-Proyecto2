@@ -52,5 +52,13 @@ no necesario--->let retVar = Env.getReturnOffset();
                 );
                 return c_ir;
 
+//THIS WAS NOT A FUKCING ERROR. FUCK YOU TYPESCRIPT
+    Env.pushBlockScope(); let stmts_c_ir = new Array<C_ir_instruction>();
+    for (const stmt of block.statements) {
+        stmts_c_ir = stmts_c_ir.concat(compileStatement);//compileStatement is a fucking function and it just lets me add it to a C_ir_instruction[]. WTF?!?!?!?!?
+    }
+    Env.popScope();
 
 Having a a better unitialized (we currently have 0) value would have helped a ton!
+
+

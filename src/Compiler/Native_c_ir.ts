@@ -189,18 +189,92 @@ export module Native_c_ir{
     }
     
     //maps to string.CharAt();
+    //_param1 string
+    //_param2 number of index
     void _string_CharAt(){
-    
+        _local1 = _param1 + _param2;
+        _local1 = _local1 + 1;
+
+        //hacemos otro string
+        heap[(int)h] = 1;
+        h = h + 1;
+        heap[(int)h] = heap[(int)_local1];
+        h = h + 1;
+
+        _return1 = h - 2;
     }
-    
+
     //maps to string.ToLower();
+    //_param1 string
     void _string_ToLower(){
-    
+        //hacemos el nuevo string
+
+        //puntero al nuevo string donde inician los caracteres, no donde esta el size:
+        _local1 = h + 1;
+        //puntero al nuevo string:
+        _return1 = h;
+        //seteamos el size del nuevo string
+        heap[(int)h] = heap[(int)_param1];
+        //reservamos el espacio para el nuevo string
+        h = h + heap[(int)_param1];
+        h = h + 1;
+
+        //para que apuntemos a donde estan los caracteres y no donde esta el size
+        _param1 = _param1 + 1;
+        _loop_back:
+        if(_local1 >= h) goto _end_loop;
+
+        if(heap[(int)_param1] < 65) goto _dont_change;
+        if(heap[(int)_param1] > 90) goto _dont_change;
+        _change:
+        heap[(int)_local1] = heap[(int)_param1] + 32;
+        goto _end_if;
+        _dont_change:
+        heap[(int)_local1] = heap[(int)_param1];
+
+        _end_if:
+        _param1 = _param1 + 1;
+        _local1 = _local1 + 1;
+        goto _loop_back;
+        _end_loop:
+
+        return;
     }
-    
+
     //maps to string.ToUpper();
     void _string_ToUpper(){
-    
+        //hacemos el nuevo string
+
+        //puntero al nuevo string donde inician los caracteres, no donde esta el size:
+        _local1 = h + 1;
+        //puntero al nuevo string:
+        _return1 = h;
+        //seteamos el size del nuevo string
+        heap[(int)h] = heap[(int)_param1];
+        //reservamos el espacio para el nuevo string
+        h = h + heap[(int)_param1];
+        h = h + 1;
+
+        //para que apuntemos a donde estan los caracteres y no donde esta el size
+        _param1 = _param1 + 1;
+        _loop_back:
+        if(_local1 >= h) goto _end_loop;
+
+        if(heap[(int)_param1] < 97) goto _dont_change;
+        if(heap[(int)_param1] > 122) goto _dont_change;
+        _change:
+        heap[(int)_local1] = heap[(int)_param1] - 32;
+        goto _end_if;
+        _dont_change:
+        heap[(int)_local1] = heap[(int)_param1];
+
+        _end_if:
+        _param1 = _param1 + 1;
+        _local1 = _local1 + 1;
+        goto _loop_back;
+        _end_loop:
+
+        return;
     }
     
     //maps to string.concat();
@@ -243,15 +317,24 @@ export module Native_c_ir{
 
         return;
     }
-    
-    //[?]
-    //maps to new Array() kinda. but I have no fucking idea
-    void _new_array(){
-    
-    }
-    
+
+    //_param1: num izq
+    //_param2: num der
+    //_param1 ** _param2
     void _number_pow_number(){
-    
+        //accumlator
+        _return1 = 1;
+        //convertimos a entero
+        _param1 = (int)_param1;
+        _param2 = (int)_param2;
+
+        _loop_back:
+        if(_param2 <= 0) goto _end_loop;
+        _return1 = _return1 * _param1;
+        _param2 = _param2 - 1;
+        goto _loop_back;
+        _end_loop:
+        return;
     }
 `;
 
@@ -278,5 +361,9 @@ heap[10] = 101;//'e'
     export let logString = "_log_string";
     export let booleanToString = "_boolean_to_string";
     export let numberToString = "_number_to_string";
+    export let power = "_number_pow_number";
     export let stringConcat = "_string_Concat";
+    export let stringCharAt = "_string_CharAt"
+    export let stringToUpperCase = "_string_ToUpper"
+    export let stringToLowerCase = "_string_ToLower"
 }   

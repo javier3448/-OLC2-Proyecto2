@@ -6,7 +6,7 @@ import { Variable } from "./Variable";
 import { Global_c_ir } from "./Global_c_ir";
 import { Native_c_ir } from "./Native_c_ir";
 
-import { ForStatement, Statement, StatementKind, WhileStatement } from "../Ast/Statement";
+import { ForStatement, IfStatement, Block, Statement, StatementKind, WhileStatement } from "../Ast/Statement";
 
 import { MyType, MyTypeKind, TypeSignature } from "./MyType";
 import { MyError, MyErrorKind } from './MyError';
@@ -29,6 +29,7 @@ import { ArithOp, Assignment, _3AddrAssignment, Cond_goto,
          Label, LabelDeclaration, RelOp, Mem, FunctionCall, FuncOpening, FuncClose, Comment, MemKind } from './C_ir_instruction';
 import { AccessKind, AttributeAccess, FunctionAccess, IndexAccess } from 'src/Ast/MemberAccess';
 import { ErrorStateMatcher } from '@angular/material/core';
+import { Template } from '@angular/compiler/src/render3/r3_ast';
 
 //TODO: agregar un comentario con el c_ir deseado en todos 
 //      los lugares en los que generamos c_ir
@@ -460,11 +461,11 @@ export function compileFunctionDef(functionDefNode:FunctionDef, nestingDepth:num
     //retornamos todo el c_ir_concatenado
     let c_ir = new Array<C_ir_instruction>();
     return c_ir.concat(
+        nestedFuncs_c_ir,
        [new FuncOpening(c_irFuncName)],
         statements_c_ir,
        [new LabelDeclaration(returnLabel),
         new FuncClose()],
-        nestedFuncs_c_ir,
     )
 }
 
@@ -501,6 +502,12 @@ export function compileStatement(statement:Statement):C_ir_instruction[]{
 
             case StatementKind.ForKind:
                 return compileFor(child as ForStatement);
+
+            case StatementKind.IfKind:
+                return compileIf(child as IfStatement);
+
+            case StatementKind.BlockKind:
+                return compileBlock(child as Block);
 
             //jumpers
             //TODO: put each case in a different func just to be consistent and to 
@@ -579,7 +586,7 @@ export function compileStatement(statement:Statement):C_ir_instruction[]{
             }break;
 
             default:
-                throw new Error(`runStatment no implementado para myTypeNode: ${statement.statementKind}`);
+                throw new Error(`compileStatement no implementado para myTypeNode: ${statement.statementKind}`);
         }
     } catch (myError) {
         if(myError instanceof MyError){
@@ -619,6 +626,28 @@ export function compileExpression(expr:Expression, owedTemps:String[]):ExprResul
             //Casos especiales de binary expression
             if(expr.expressionKind === ExpressionKind.ASSIGNMENT){
                 return compileAssignment(expr.specification, owedTemps);
+            }
+            //potencia porque el orden en el que se compilan los operandos es diferente (primero der luego izq)
+            if(expr.expressionKind === ExpressionKind.POWER){
+
+                let rightResult = compileExpression(expr.specification.right, owedTemps);
+                let newOwedTemps = new Array<String>();
+                if(rightResult.val instanceof String){
+                    newOwedTemps = owedTemps.concat([rightResult.val]);
+                }
+                else{
+                    newOwedTemps = owedTemps;
+                }
+                let leftResult = compileExpression(expr.specification.left, newOwedTemps);
+
+                if(leftResult.myType.kind === MyTypeKind.NUMBER  &&
+                        rightResult.myType.kind === MyTypeKind.NUMBER){
+
+                    return generatePowExprResult(leftResult.c_ir, leftResult.val, rightResult.c_ir, rightResult.val);
+                }
+
+                throw MyError.makeMyError(MyErrorKind.TYPE_ERROR, 
+                                `No se puede realizar la operacion: '${expr.expressionKind}' con los tipos: '${leftResult.myType.getName()} y '${rightResult.myType.getName()}'`);
             }
 
             //De este punto en adelante siempre vamos compilar ambos lados
@@ -779,10 +808,6 @@ export function compileExpression(expr:Expression, owedTemps:String[]):ExprResul
                     //else: goto @Tag: return with error BinaryExpr
                 }break;
 
-                case ExpressionKind.POWER:
-                {
-                    throw new Error(`operacion binaria: ${expr.expressionKind} no implementada todavia`);
-                }break;
 
                 //LOGICAS
                 case ExpressionKind.AND:
@@ -1065,6 +1090,25 @@ function generateSimpleArithExprResult(left_c_ir:C_ir_instruction[], left_val:(S
         left_c_ir,
         right_c_ir,
         [new _3AddrAssignment(temp, left_val, arithOp, right_val)]
+    );
+
+    return new ExprResult(MyType.NUMBER, false, temp, c_ir);
+}
+
+function generatePowExprResult(left_c_ir:C_ir_instruction[], left_val:(String | Number), right_c_ir:C_ir_instruction[], right_val:(String | Number)):ExprResult{
+
+    //generamos el c_ir y retornamos el ExprResult
+    let temp = getNextTemp();
+
+    let c_ir:C_ir_instruction[] = new Array();
+
+    c_ir = c_ir.concat(
+        right_c_ir,
+        left_c_ir,
+       [new Assignment(Native_c_ir._param1, left_val),
+        new Assignment(Native_c_ir._param2, right_val),
+        new FunctionCall(Native_c_ir.power),
+        new Assignment(temp, Native_c_ir._return1)]
     );
 
     return new ExprResult(MyType.NUMBER, false, temp, c_ir);
@@ -1813,6 +1857,8 @@ export function compileMemberAccess(memberAccessExpr:MemberAccessExpression, owe
 
         case AccessKind.FunctionAccess:
         {
+            let funcAccess = memberAccessExpr.memberAccess.access as FunctionAccess;
+
             switch(leftExprResult.myType.kind){
                 //Si los CUSTOM pudieran tener funcs definidas por el programador o
                 //el programador pudiera agregar mas funciones a los tipos nativos
@@ -1820,9 +1866,7 @@ export function compileMemberAccess(memberAccessExpr:MemberAccessExpression, owe
                 //tipo en la tabla de simbolos
                 case MyTypeKind.MY_CONSOLE:
                 {
-                    let funcAccess = memberAccessExpr.memberAccess.access as FunctionAccess;
-
-                    if(funcAccess.functionName === "log"){
+                    if(funcAccess.functionName.toLowerCase() == "log"){
                         if(funcAccess.functionArguments.length === 1){                                            
                             //if exprResult=compileExpression(....) is type CONSOLE we know it produces
                             //a void .val so we dont need to add anything to owedTemps
@@ -1883,6 +1927,118 @@ export function compileMemberAccess(memberAccessExpr:MemberAccessExpression, owe
                         throw new MyError(`No existe un metodo con nombre: ${funcAccess.functionName} para el tipo: Console`);
                     }
                 }break;
+                case MyTypeKind.STRING:
+                {
+                    //MEJORA: codigo muy similar para cada funcion de string
+                    if(funcAccess.functionName.toLowerCase() == "charat"){
+                        if(funcAccess.functionArguments.length != 1){
+                            //MEJORA: better error message
+                            throw new MyError(`Metodo: charAt de String requiere 1 parametro`);
+                        }
+                        
+                        let newOwedTemp = new Array<String>();
+                        if(leftExprResult.val instanceof String){
+                            newOwedTemp = owedTemps.concat([leftExprResult.val]);
+                        }
+                        else{
+                            newOwedTemp = owedTemps;
+                        }
+                        let argResult = compileExpression(funcAccess.functionArguments[0], newOwedTemp);
+
+                        if(argResult.myType.kind !== MyTypeKind.NUMBER){
+                            throw new MyError(`Metodo: charAt de String requiere 1 parametro de tipo 'NUMBER'`);
+                        }
+
+                        let temp = getNextTemp();
+                        let c_ir = new Array<C_ir_instruction>();
+
+                        c_ir = c_ir.concat(
+                            leftExprResult.c_ir,
+                            argResult.c_ir,
+                           [new Assignment(Native_c_ir._param1, leftExprResult.val),
+                            new Assignment(Native_c_ir._param2, argResult.val),
+                            new FunctionCall(Native_c_ir.stringCharAt),
+                            new Assignment(temp, Native_c_ir._return1)]
+                        );
+                        return new ExprResult(MyType.STRING, false, temp, c_ir);
+                    }
+                    else if(funcAccess.functionName.toLowerCase() == "touppercase"){
+                        if(funcAccess.functionArguments.length != 0){
+                            //MEJORA: better error message
+                            throw new MyError(`Metodo: toUpperCase de String requiere 0 parametro`);
+                        }
+                        
+                        let temp = getNextTemp();
+                        let c_ir = new Array<C_ir_instruction>();
+
+                        c_ir = c_ir.concat(
+                            leftExprResult.c_ir,
+                           [new Assignment(Native_c_ir._param1, leftExprResult.val),
+                            new FunctionCall(Native_c_ir.stringToUpperCase),
+                            new Assignment(temp, Native_c_ir._return1)]
+                        );
+                        return new ExprResult(MyType.STRING, false, temp, c_ir);
+                    }
+                    else if(funcAccess.functionName.toLowerCase() == "tolowercase"){
+                        if(funcAccess.functionArguments.length != 0){
+                            //MEJORA: better error message
+                            throw new MyError(`Metodo: toUpperCase de String requiere 0 parametro`);
+                        }
+                        
+                        let temp = getNextTemp();
+                        let c_ir = new Array<C_ir_instruction>();
+
+                        c_ir = c_ir.concat(
+                            leftExprResult.c_ir,
+                           [new Assignment(Native_c_ir._param1, leftExprResult.val),
+                            new FunctionCall(Native_c_ir.stringToLowerCase),
+                            new Assignment(temp, Native_c_ir._return1)]
+                        );
+                        return new ExprResult(MyType.STRING, false, temp, c_ir);
+                    }
+                    else if(funcAccess.functionName.toLowerCase() == "concat"){ 
+
+                        if(funcAccess.functionArguments.length != 1){
+                            //MEJORA: better error message
+                            throw new MyError(`Metodo: charAt de String requiere 1 parametro`);
+                        }
+                        
+                        let newOwedTemp = new Array<String>();
+                        if(leftExprResult.val instanceof String){
+                            newOwedTemp = owedTemps.concat([leftExprResult.val]);
+                        }
+                        else{
+                            newOwedTemp = owedTemps;
+                        }
+                        let argResult = compileExpression(funcAccess.functionArguments[0], newOwedTemp);
+
+                        if(argResult.myType.kind !== MyTypeKind.STRING){
+                            throw new MyError(`Metodo: concat de String requiere 1 parametro de tipo 'STRING'`);
+                        }
+
+                        let temp = getNextTemp();
+                        let c_ir = new Array<C_ir_instruction>();
+
+                        c_ir = c_ir.concat(
+                            leftExprResult.c_ir,
+                            argResult.c_ir,
+                           [new Assignment(Native_c_ir._param1, leftExprResult.val),
+                            new Assignment(Native_c_ir._param2, argResult.val),
+                            new FunctionCall(Native_c_ir.stringConcat),
+                            new Assignment(temp, Native_c_ir._return1)]
+                        );
+                        return new ExprResult(MyType.STRING, false, temp, c_ir);
+                    }
+                }break;
+                case MyTypeKind.NUMBER:
+                case MyTypeKind.BOOLEAN:
+                case MyTypeKind.NULL:
+                case MyTypeKind.ARRAY:
+                case MyTypeKind.ALPHA_ARRAY:
+                case MyTypeKind.CUSTOM:
+                case MyTypeKind.VOID:
+                    throw new MyError(`No se puede hacer function access al tipo: '${leftExprResult.myType.getName()}'`);
+                
                 default:
                     throw new Error(`Function access no implementado para ${leftExprResult.myType.getName()} todavia`);
             }
@@ -2122,4 +2278,60 @@ export function compileFor(forStatement:ForStatement):C_ir_instruction[]{
     Env.popScope();
 
     return c_ir;
+}
+
+//MEJORA?: talvez tener un compileBlock nos ayude a quitar codigo similar en 
+//         if, while, for... etc
+export function compileIf(ifStatement:IfStatement):C_ir_instruction[]{
+    let condResult = compileExpression(ifStatement.expr, []);
+
+    if(condResult.myType.kind !== MyTypeKind.BOOLEAN){
+        throw new MyError(`Se esperaba 'BOOLEAN' en la condicion de 'if'. Se obtuvo: ${condResult.myType.getName()}`);
+    }
+
+    //We compile its statements in a different scope:
+    Env.pushIfScope();
+    let stmts_c_ir = new Array<C_ir_instruction>();
+    for (const stmt of ifStatement.statements) {
+        stmts_c_ir = stmts_c_ir.concat(compileStatement(stmt));
+    }
+    Env.popScope();
+
+    //stays empty if this if doesnt have an else
+    let else_c_ir = new Array<C_ir_instruction>();
+    if(ifStatement.elseStatment !== null){
+        else_c_ir = compileStatement(ifStatement.elseStatment);
+    }
+
+    let elseLabel = new Label(getNextLabel());
+    let endLabel = new Label(getNextLabel());
+    let result_c_ir = new Array<C_ir_instruction>();
+    result_c_ir = result_c_ir.concat(
+        condResult.c_ir,
+       [new Cond_goto(condResult.val, RelOp.NOT_EQUAL, new Number(1), elseLabel)],
+        stmts_c_ir,
+       [new Goto(endLabel),
+        new LabelDeclaration(elseLabel)],
+        else_c_ir,
+       [new LabelDeclaration(endLabel)]
+    );
+
+    return result_c_ir;
+}
+
+export function compileBlock(block:Block):C_ir_instruction[]{
+    //We compile its statements in a different scope:
+    Env.pushBlockScope();
+    let stmts_c_ir = new Array<C_ir_instruction>();
+    for (const stmt of block.statements) {
+        stmts_c_ir = stmts_c_ir.concat(compileStatement(stmt));
+    }
+    Env.popScope();
+
+    let result_c_ir = new Array<C_ir_instruction>();
+    result_c_ir = result_c_ir.concat(
+        stmts_c_ir,
+    );
+
+    return result_c_ir;
 }

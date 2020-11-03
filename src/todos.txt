@@ -16,6 +16,8 @@ BIG TODO:
 MEJORA GENERAL: Que los errores de compilacion tengan mejor definidos los tipos
                 de errores que son posibles (ejemplo: error de tipos, const no inicializada, etc)
 
+    //TERRIBLE: perf. tiene que exister una manera 
+    //     de evitar hacer tantos nuevos arreglos (para casi todos los arreglos de c_ir)
 
 BIG TODO
 BIG MEJORA GENERAL:
@@ -65,6 +67,8 @@ TODO: cambiar AND a &&, OR a || y NOT a !
 
 TODO: fix the graphviz library thing
 
+TODO: recuperarse de errores sintacticos?
+
 MEJORA: clean up the switches, put things in different functions when its appropiate
 
 MEJORA?????: We are not consistent when we compare types, sometimes we use the function
@@ -76,3 +80,27 @@ TODO: quitar constExpr o ver si siquiera lo usamos
 //MEJORA: We could do the boolean expr evaluation optimizations described in the dragon
 //        book near section 6.6.5 in some easy cases like:
 //        while(HERE) for(;HERE;) ... etc
+
+
+QUICK TODO: probar el == con arreglos y con types y con todo
+
+
+TODO: when we finally implement the case insensitive thing we have to go through
+      every comparisson we did between strings and see if we need to make it a case 
+      insensitive comparason
+
+PELIGRO:
+TODO: revisar que cada vez que agregemos cosas al owedTemps creemos un nuevo arreglo
+
+
+MEJORA: 
+para no tener que hacer un if cada vez que agregamos a un owed temps hacer una funcion
+que solita chequee si es instance of String hace un nuevo owedTemps y lo agrega
+de lo contrario solo retornar el mismo owedTemps
+
+
+!!!!!!!!!!!!!!!!!!!
+BIG BIG BIG STUPID TODO:
+NO POEMOS HACER ASIGNACIONES 'MEM = MEM'
+CORREGIR TODO CODIGO GENERADO QUE HAGA ESO (Buscar Mem. ...)
+Y EL CODIGO NATIVO QUE HAGA ESO TAMBIEN!!!! (poner un monton de _nativeTemp y ya)

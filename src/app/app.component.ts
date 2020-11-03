@@ -419,7 +419,6 @@ console.log(h());
     `;
     }
 
-    //PASS. :D!
     //OLD BUG: printed nothing, because we didnt add the arg c_ir when generating
     //         call to a function
     {
@@ -441,7 +440,90 @@ for(let i:number = 0; i < a.length; i++){
     `;
     }
 
-    //Ver si todavia falta algo para las anidadas
+    {
+    let testString = `
+let s:string = " Es un numero";
+let a:number = 1234;
+let b:number = -1234;
+let c:number = 12345678.12345;
+let d:number = -12345678.12345;
+let e:number = 87654321.65432;
+let f:number = -87654321.65432;
+let g:number = 0;
+let h:number = 0.12345;
+let i:number = -0.12345;
+console.log(a + s);
+console.log(b + s);
+console.log(c + s);
+console.log(d + s);
+console.log(e + s);
+console.log(f + s);
+console.log(g + s);
+console.log(h + s);
+console.log(i + s);;
+// 1234 Es un numero
+// -1234 Es un numero
+// 12345678.12345 Es un numero
+// -12345678.12345 Es un numero
+// 87654321.65432 Es un numero
+// -87654321.65432 Es un numero
+// 0 Es un numero
+// 0.12345 Es un numero
+// -0.12345 Es un numero
+    }
+    `;
+    }
+
+    //string concatenation with '+'
+    {
+  let testString = `
+console.log(10 + 10);//20
+console.log(10 + true);//11
+console.log(false + 10);//10
+console.log("This a number: " + 10);//This is a number 10
+console.log(10 + ", is a number");//10, is a number
+console.log("This a bool: " + true);//This is a bool 10
+console.log(false + ", is a bool");//false, is a bool
+console.log("This a string: " + "string");//This is a string string
+console.log("string" + ", is a string");//string, is a string
+  `;
+    }
+
+    //'if' test
+    {
+    let testString = `
+let a:boolean = true;
+if(a){
+  console.log("PASS");
+}
+a = false;
+if(a){
+  console.log("FAIL");
+}
+else{
+  console.log("PASS");
+}
+let b:number = 10;
+if(b == 10){
+  console.log("b es 10");
+}else if(b == 20){
+  console.log("b es 20");
+}else if(b == 30){
+  console.log("b es 30");
+}else{
+  console.log("b no es ni 10, ni 20, ni 30");
+}
+    `;
+    }
+
+    {
+    let testString = `
+console.log(2 ** 24);
+//16777216
+    `;
+    }
+
+    //REMEMBER: it threw segfault when we ran it
     {
     let testString = `
 function tail(strs:string[]):string[]{
@@ -461,6 +543,17 @@ function ml_list_constructor(head:string, tail:string[]):string[]{
         result[i+1] = tail[i];
     }
     return result;
+}
+function compare_strings(left:string, right:string):boolean{
+  if(left.length != right.length){
+    return false;
+  }
+  for(let i:number = 0; i < left.length; i++){
+    if(left.charAt(i) != right.charAt(i)){
+      return false
+    }
+  }
+  return true;
 }
 function contains(str:string, strs:Array<string>):boolean{
     function imp(strs:Array<string>):boolean{
@@ -701,53 +794,69 @@ print_list_of_lists(replaceInListOfLists("Bicho", ":O", [["Pasta", "Ganar", "Bic
   `;
     }
 
+    //BUG: we should print true the second time we call contains
+    //     la comparacion de strings en nuestro lenguaje es por direcciones de mem solamente. 
+    //     Y EL CHAR_AT RETORNA STRING => NO PODEMOS COMPARAR STRINGS!!!!!!
+    //     SO WE CANT TEST NESTED FUNCS WITH THE PROGRAM OF OUR LAST PROYECT :(
+    //OPTIONS: change it so it uses ints
+    //         change it so it uses ?Types? with a string field that gets printed and a num field that is used to compara things
+    //         write a new program to test it. (There is one uploaded in the github)
     {
     let testString = `
-let s:string = " Es un numero";
-let a:number = 1234;
-let b:number = -1234;
-let c:number = 12345678.12345;
-let d:number = -12345678.12345;
-let e:number = 87654321.65432;
-let f:number = -87654321.65432;
-let g:number = 0;
-let h:number = 0.12345;
-let i:number = -0.12345;
-console.log(a + s);
-console.log(b + s);
-console.log(c + s);
-console.log(d + s);
-console.log(e + s);
-console.log(f + s);
-console.log(g + s);
-console.log(h + s);
-console.log(i + s);;
-
-// 1234 Es un numero
-// -1234 Es un numero
-// 12345678.12345 Es un numero
-// -12345678.12345 Es un numero
-// 87654321.65432 Es un numero
-// -87654321.65432 Es un numero
-// 0 Es un numero
-// 0.12345 Es un numero
-// -0.12345 Es un numero
-    }
-    `;
+  function tail(strs:string[]):string[]{
+      let result:string[] = new Array(strs.length - 1);
+      for(let i:number = 1; i < strs.length; i++){
+          result[i - 1] = strs[i];
+      }
+      return result;
   }
+  function head(strs:string[]):string{
+      return strs[0];
+  }
+  function contains(str:string, strs:Array<string>):boolean{
+      function imp(strs:Array<string>):boolean{
+          if(strs.length == 0){
+              return false;
+          }
+          else{
+              let head_strs:string = head(strs);
+              let tail_strs:string[] = tail(strs);
+              if(head_strs == str){
+                  return true;
+              }
+              else{
+                  return imp(tail_strs);
+              }
+          }
+      }
+      return imp(strs);
+  }
+  console.log(contains("Pararrayos", ["Pasta", "Ceremonia", "Ganancias", "Disciplina", "Bicho", "Bicho", "Mercado", "Pararrayos", "Agua", "Bicho"]));
+  console.log(contains("Alvarez", ["Pasta", "Ceremonia", "Ganancias", "Disciplina", "Bicho", "Bicho", "Mercado", "Pararrayos", "Agua", "Bicho"]));
+    `;
+    }
 
-  let testString = `
-console.log(10 + 10);//20
-console.log(10 + true);//11
-console.log(false + 10);//10
-console.log("This a number: " + 10);//This is a number 10
-console.log(10 + ", is a number");//10, is a number
-console.log("This a bool: " + true);//This is a bool 10
-console.log(false + ", is a bool");//false, is a bool
-console.log("This a string: " + "string");//This is a string string
-console.log("string" + ", is a string");//string, is a string
-  `;
+    {
+    let testString = `
+let s:string = "Hello.";
+console.log(s.charAt(1));//e
+console.log(s.toUpperCase());//HELLO.
+console.log(s.toLowerCase());//hello.
+console.log(s.concat(" And Goodbye!"));//Hello. And Goodbye!
+    `;
+    }
 
+    //probar el == de string
+    //y el != de string
+    let testString = `
+let a:string = "hello";
+console.log(a == "hello");//true
+console.log(a.toUpperCase().toLowerCase() == "hello");//true
+console.log("hello" == "hellO");//false
+console.log("hello" == "hellos");//false
+    `;
+
+    //Ver si todavia falta algo para las anidadas
     this.sourceString = testString;
     wasmFolder('https:cdn.jsdelivr.net/npm/@hpcc-js/wasm@0.3.13/dist');
 

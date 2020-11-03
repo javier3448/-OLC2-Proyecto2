@@ -1094,3 +1094,10 @@
     let r = "s" + myEmptyArray;//string
     console.log(r);
 }
+
+//if the double has a number than is greater than the max integer
+//that we can represent accurately in a double but it is still an 
+//integer 'unnecessarly' print a wrong value in log_number()
+{
+
+}
