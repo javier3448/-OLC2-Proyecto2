@@ -1,17 +1,13 @@
 //TODO (eventually): ordenar y tratar de separar en diferentes archivos
-
 import { RuntimeInterface, TsEntry } from "../app/app.component";
 import { Env, ReturnJumper, VarLocation } from "./Environment";
 import { Variable } from "./Variable";
 import { Global_c_ir } from "./Global_c_ir";
 import { Native_c_ir } from "./Native_c_ir";
-
 import { ForStatement, IfStatement, Block, Statement, StatementKind, WhileStatement } from "../Ast/Statement";
-
 import { MyType, MyTypeKind, TypeSignature } from "./MyType";
 import { MyError, MyErrorKind } from './MyError';
 import { StringLiteralByte } from './StringLiteralByte';
-
 import { Expression, ExpressionKind, LiteralExpression, StringLiteral,
          IdentifierExpression, BinaryExpression, UnaryExpression, MemberAccessExpression,
          FunctionCallExpression, 
@@ -28,48 +24,39 @@ import { ArithOp, Assignment, _3AddrAssignment, Cond_goto,
          C_ir_instruction, c_ir_instructions_toString, Goto, 
          Label, LabelDeclaration, RelOp, Mem, FunctionCall, FuncOpening, FuncClose, Comment, MemKind } from './C_ir_instruction';
 import { AccessKind, AttributeAccess, FunctionAccess, IndexAccess } from 'src/Ast/MemberAccess';
-import { ErrorStateMatcher } from '@angular/material/core';
-import { Template } from '@angular/compiler/src/render3/r3_ast';
+import { MyFunction } from './MyFunction';
 
-//TODO: agregar un comentario con el c_ir deseado en todos 
-//      los lugares en los que generamos c_ir
-
-//SOME GENERAL NOTES:
-//statements dont need their caller to pass a list of owedTemps because
-//they dont use temps at all?
+//GENERAL DOC:
+//TERMINOLOGY:Display means something very similar to what the dragon book describes in section 7.3.8
 
 let runtimeInterface:RuntimeInterface;
 
-//TODO: algo que indique las diferentes llamadas a graficar_ts
-//      que sea un monton de asteriscos que llenen todo perfectamente
-//      cambiar el font a algo monospaced 
 export function graficar_ts():void{
     console.log(Env.current);
 
     let iter = Env.current;
-    let count = 0;
+
+    //agregamos una fila de asteriscos para idicar que estamos empezando otra tabla:
+    runtimeInterface.tsDataSet.push(new TsEntry("••••", "••••", "••••", "••••"));
 
     //type signatures
     for (const key in Env.typeSignatures) {
         let typeSignature = Env.typeSignatures[key];
-        runtimeInterface.tsDataSet.push(new TsEntry("top-"+count.toString(), key, "-", typeSignature.getName()));
+        runtimeInterface.tsDataSet.push(new TsEntry(Env.global.getName(), key, "-", typeSignature.getName()));
     }
 
-    //TODO: que el scope no diga count. que use el nombre 
     while(iter != null){
         //Function signatures
         for (const key in iter.myFunctions) {
             let funcSignature = iter.myFunctions[key];
-            runtimeInterface.tsDataSet.push(new TsEntry("top-"+count.toString(), key, funcSignature.getTypeString(), "-"));
+            runtimeInterface.tsDataSet.push(new TsEntry(iter.getName(), key, funcSignature.getTypeString(), "-"));
         }
         //Variables:
         for (const key in iter.myVariables) {
             let variable = iter.myVariables[key];
-            //@FIXME
-            runtimeInterface.tsDataSet.push(new TsEntry("top-"+count.toString(), key, variable.myType.getName(), variable.offset.toString()));
+            runtimeInterface.tsDataSet.push(new TsEntry(iter.getName(), key, variable.myType.getName(), variable.offset.toString()));
         }
         iter = iter.previous;
-        count++;
     }
 }
 export function resetRuntimeInterface():void{
@@ -84,7 +71,7 @@ export function resetRuntimeInterface():void{
 //generamos c_ir que meta todo este array en el heap, teniendo encuenta
 //que cuando terminemos de meterlo tenemos que dejar el heap pointer en 
 //la primera posicion vacia
-export let stringLiteralsBuffer:StringLiteralByte[] = [];
+let stringLiteralsBuffer:StringLiteralByte[] = [];
 
 //Tienen el ultimo temp que fue utilizado
 //Si estan en 0 es porque no se utilizo ningun temp o label
@@ -93,7 +80,7 @@ export let labelCount = 0;
 
 function getNextTemp():String{
     tempCount += 1;
-    if(tempCount === 26){
+    if(tempCount == 98){
         console.log("lol");
     }
     return new String("T" + tempCount);
@@ -104,9 +91,7 @@ function getNextLabel():String{
     return new String("L" + labelCount);
 }
 
-//MEJORA?: escribir porque son const string 
-//kinda similar to special purpose regs is x86
-
+//son const String porque los temps (desgraciadamente) los guardamos siempre como String
 //pointer the beggining of the current stackframe
 export const REG_P:String = new String("p");
 //pointer the fist free position in the heap
@@ -114,21 +99,16 @@ export const REG_H:String = new String("h");
 
 function construct_c_ir_header_and_funcs(funcs_c_ir:C_ir_instruction[]):string{
     //El primer numero entero que un IEEE754 no puede 
-    //representar exactamente: https://stackoverflow.com/questions/3793838/which-is-the-first-integer-that-an-ieee-754-float-is-incapable-of-representing-e
-    //For float, 16,777,217 (2^24 + 1).        
-    //For double, 9,007,199,254,740,993 (2^53 + 1).
+    //For double, 9,007,199,254,740,993 (2^53 + 1). entonces no tenemos que preocuparnos de: 'stack[(int) someDoube]'
     let header = `#include <stdio.h> 
 //TODO: Ver que tamano de stack es mejor (deberia ser mucho mas pequenno que el heap)
-double heap[0xfffff];
+double heap[0xffffff];
 double stack[0xfffff];
 double p = 0;
 double h = 0;
 `;
 
     let temps = "";
-    //temps.reverse(tempcount * algo que te diga el numero de caracteres por tep)
-    //TERRIBLE PERF: si se hace un malloc cada 
-    //               concatenacion de string y no hacemos el reserve
     for(let i = 1; i <= tempCount; i++){
         temps += "T" + i.toString() + ", ";
     }
@@ -153,12 +133,18 @@ double h = 0;
     header += "//Non native string literals:\n";
     for(let i = 0; i < stringLiteralsBuffer.length; i++){
         let stringLitByte = stringLiteralsBuffer[i];
-        //TODO?: pad the number string with 0s so its easier to read?
         let charRepresentation = (stringLitByte.isSize ? 'size' : String.fromCharCode(stringLitByte.val));
-        //[!]we need to add the number of bytes used for native string literals here:
-        //TODO: que los caracteres de escape los imprima en la forma \n y, una vez hecho eso
-        //      cambiar a que sea un commentario de una linea estilo: //coment
-        header += `heap[${i + Native_c_ir.stringLitsSize}] = ${stringLitByte.val};/*'${charRepresentation}'*/\n`
+        //chapuz para que no imprima literalmente un salgo de line
+        if(charRepresentation == "\n"){
+            charRepresentation = "\\n";
+        }
+        else if(charRepresentation == "\r"){
+            charRepresentation = "\\r";
+        }
+        else if(charRepresentation == "\t"){
+            charRepresentation = "\\t";
+        }
+        header += `heap[${i + Native_c_ir.stringLitsSize}] = ${stringLitByte.val};//'${charRepresentation}'\n`
     }
     //we place the heap pointer in the first available position
     header += `h = ${stringLiteralsBuffer.length + Native_c_ir.stringLitsSize};\n\n`
@@ -172,8 +158,8 @@ function construct_c_ir_foot():string{
     //DEBUG: para debuggear facilmente las expresiones imprimimos el valor
     //       del ultimo temporal
     //       Si es T0 nuesto c_ir no compila
-    foot += "\n";
-    foot += `printf("%f\\n", T${tempCount});\n`;
+    //foot += "\n";
+    //foot += `printf("%f\\n", T${tempCount});\n`;
 
     foot += "\nreturn 0;\n}";
 
@@ -201,7 +187,6 @@ export function compile(root:GlobalInstructions, _runtimeInterface:RuntimeInterf
     runtimeInterface.intermediateRepresentation += c_ir_instructions_toString(global_c_ir.statements_c_ir);
     runtimeInterface.intermediateRepresentation += construct_c_ir_foot();
 
-    //Corremos el graficar_ts() solo porque si
     graficar_ts();
 }
 
@@ -221,7 +206,7 @@ export function compileGlobalInstructions(globalInstructions:GlobalInstructions)
     //globales
     declarationsPrepass(globalInstructions.statements);
 
-    funcs_c_ir = compileFunctionDefs(globalInstructions.functionDefs, 0);
+    funcs_c_ir = compileFunction(globalInstructions.functionDefs, 0);
 
     statements_c_ir = compileStatements(globalInstructions.statements);
 
@@ -268,7 +253,6 @@ export function declarationsPrepass(statements:Statement[]):void{
     //se puede hacer el reservado de espacio
 
     //Vamos a usar un array auxiliar para ir quitando los nodos que tengan error
-    //MEJORA: reserve
     let tempStatements:Statement[] = new Array();
 
     for (const stmt of statements) {
@@ -329,9 +313,49 @@ export function declarationsPrepass(statements:Statement[]):void{
 
 }
 
-export function compileFunctionDefs(functionDefs:FunctionDef[], nestingDepth:number):C_ir_instruction[]{
+export class SaneParam{
+    constructor(
+        public name:string,
+        public myType:MyType
+    ) {   }
+}
+
+//MEJORA: better name
+//BAD: quite messy and weird struct. Maybe we need to see if we can put all this in the
+//     MyFunction class? todo: Check if ever need all this info in MyFunction after we 
+//     do the compileFunctionDef
+export class SaneFunc{
+    constructor(
+        //chapuz para que podamos hacer el pushScope desde compileFunctionDef
+        public programmerName:string,
+        //chapuz porque signature solo tiene los tipos de los parametros, no
+        //su nombre
+        public paramNames:string[],
+        //func signature already inserted in the appropiate Scope
+        public signature:MyFunction,
+        //sub functions defs without preprocessing
+        public funcDefs:FunctionDef[],
+        //statements inside the function (they havent been compiled yet)
+        public statements:Statement[],
+    ) {   }
+}
+
+export function compileFunction(functions:FunctionDef[], nestingDepth:number):C_ir_instruction[]{
+    let saneFuncs = new Array<SaneFunc>();
+    for (const functionDecl of functions) {
+        //no tira exception porque el solito reporta cualquier error que ocurra
+        let funcSignature = compileFunctionDecl(functionDecl, nestingDepth);
+        if(funcSignature !== null){
+            //conseguimos los nombres de los params nada mas, el map es bastante
+            //caro, pero la unica manera de evitarlo es cambiando como guardamos el FuncSignature
+            //o cambiando como interectua compileFunctionDecl y compileFunctionDef
+            let saneFunc = new SaneFunc(functionDecl.name, functionDecl.params.map((paramNode) => paramNode.name), funcSignature, functionDecl.functionDefs, functionDecl.statements)
+            saneFuncs.push(saneFunc);
+        }
+    }
+
     let c_ir = new Array<C_ir_instruction>()
-    for (const functionDef of functionDefs) {
+    for (const functionDef of saneFuncs) {
         try {
             c_ir = c_ir.concat(compileFunctionDef(functionDef, nestingDepth));
         } catch (error) {
@@ -347,9 +371,9 @@ export function compileFunctionDefs(functionDefs:FunctionDef[], nestingDepth:num
     return c_ir;
 }
 
-export function compileFunctionDef(functionDefNode:FunctionDef, nestingDepth:number):C_ir_instruction[]{
+//retorna null si no pudo hacer la declaracion de la funcion
+export function compileFunctionDecl(functionDefNode:FunctionDef, nestingDepth:number):(MyFunction | null){
     let name = functionDefNode.name;
-    //MEJORA: reserve a paramTypes
 
     //REVISAR QUE LA SIGNATURE SEA VALIDA: nombre unico, tipos validos, paramNames no repetidos
     let paramNames:string[] = new Array();
@@ -368,7 +392,7 @@ export function compileFunctionDef(functionDefNode:FunctionDef, nestingDepth:num
             );
             console.log(myError);
             runtimeInterface.errorDataSet.push(myError);
-            return [];
+            return null;
         }
 
         //MEJORA: esto es O^2 revisar si hay una mejor forma de buscar repetidos
@@ -382,11 +406,12 @@ export function compileFunctionDef(functionDefNode:FunctionDef, nestingDepth:num
                 );
                 console.log(myError);
                 runtimeInterface.errorDataSet.push(myError);
-                return [];
+                return null;
             }
         }
         paramNames.push(paramNode.name);
     }
+
     //return type
     try{
         returnType = functionDefNode.returnType === null ? MyType.VOID : compileTypeNode(functionDefNode.returnType);
@@ -401,13 +426,13 @@ export function compileFunctionDef(functionDefNode:FunctionDef, nestingDepth:num
         myError.setLocation(functionDefNode.astNode);
         console.log(myError);
         runtimeInterface.errorDataSet.push(myError);
-        return [];
+        return null;
     }
 
     //METERLA LA FUNCSIGNATURE EN LA TABLA DE SIMBOLOS
-    let c_irFuncName:string;
+    let funcSignature:MyFunction;
     try{
-        c_irFuncName = Env.addFuncSignature(nestingDepth, name, paramTypes, returnType);
+        funcSignature = Env.addFuncSignature(nestingDepth, name, paramTypes, returnType);
     }catch(error){
         if(!(error instanceof MyError)){
             throw error;
@@ -416,12 +441,18 @@ export function compileFunctionDef(functionDefNode:FunctionDef, nestingDepth:num
         error.setLocation(functionDefNode.astNode);
         console.log(error);
         runtimeInterface.errorDataSet.push(error);
-        return [];
+        return null;
     }
+
+    return funcSignature;
+}
+
+//[!!!] Asume que la funcion ya esta metida a su Scope correspondiente
+export function compileFunctionDef(saneFunc:SaneFunc, nestingDepth:number):C_ir_instruction[]{
 
     //PONER OTRO FUNC SCOPE
     let returnLabel = new Label(getNextLabel());
-    Env.pushFuncScope(functionDefNode.name, nestingDepth, returnType, returnLabel);
+    Env.pushFuncScope(saneFunc.programmerName, nestingDepth, saneFunc.signature.returnType, returnLabel);
 
     //METER LOS PARAMETROS EN LA TABLA DE SIMBOLOS
     //RECORDAR: todos los tipos en nuestro lenguaje tienen tamanno 1 o son punteros
@@ -430,31 +461,31 @@ export function compileFunctionDef(functionDefNode:FunctionDef, nestingDepth:num
     Env.current.size += nestingDepth;
     //BADish perf: recorremos 2 veces los parametros
     //reservamos el espacio de los argumentos
-    for (let i = 0; i < paramNames.length; i++) {
-        //@Volatile @addVariable once we know its symbolo in myVariables is undefined
+    for (let i = 0; i < saneFunc.signature.paramTypes.length; i++) {
+        //@Volatile @addVariable once we know its symbol in myVariables is undefined
         let varOffset = Env.current.size
-        Env.current.myVariables[paramNames[i]] = new Variable(false, false, paramTypes[i], varOffset);
+        Env.current.myVariables[saneFunc.paramNames[i]] = new Variable(false, false, saneFunc.signature.paramTypes[i], varOffset);
         Env.current.size += 1;
     }
     //reservamos espacio para el return Y lo ponemos en la tabla de simbolos tambien!
-    if(returnType.kind !== MyTypeKind.VOID){
+    if(saneFunc.signature.returnType.kind !== MyTypeKind.VOID){
         let varOffset = Env.current.size
-        //MEJORA: "@return is a hard code constant!"
+        //MEJORA: "@return is a hard coded constant!"
         //MEJORA!: honestly @return is not a real variable and it doesnt make sence for it to be in
         //         in the variableTable, its also quite to search for it in the hash table as well!
         //the isConst and isUndeclared are completely invalid here, we only save the
         //@return "variable" to easily know its offset when we are generating the c_ir for the
         //         instruction
-        Env.current.myVariables["@return"] = new Variable(false, false, returnType, varOffset);
+        Env.current.myVariables["@return"] = new Variable(false, false, saneFunc.signature.returnType, varOffset);
         Env.current.size += 1;
     }
     
     //prepass de declaracion. 
-    declarationsPrepass(functionDefNode.statements);
+    declarationsPrepass(saneFunc.statements);
     //luego compilamos sus otras funciones 
-    let nestedFuncs_c_ir = compileFunctionDefs(functionDefNode.functionDefs, nestingDepth + 1);
+    let nestedFuncs_c_ir = compileFunction(saneFunc.funcDefs, nestingDepth + 1);
     //Luego compilamos sus statements
-    let statements_c_ir = compileStatements(functionDefNode.statements);
+    let statements_c_ir = compileStatements(saneFunc.statements);
 
     Env.popScope();//pop al scope de la funcion
 
@@ -462,7 +493,7 @@ export function compileFunctionDef(functionDefNode:FunctionDef, nestingDepth:num
     let c_ir = new Array<C_ir_instruction>();
     return c_ir.concat(
         nestedFuncs_c_ir,
-       [new FuncOpening(c_irFuncName)],
+       [new FuncOpening(saneFunc.signature.realName)],
         statements_c_ir,
        [new LabelDeclaration(returnLabel),
         new FuncClose()],
@@ -627,7 +658,7 @@ export function compileExpression(expr:Expression, owedTemps:String[]):ExprResul
             if(expr.expressionKind === ExpressionKind.ASSIGNMENT){
                 return compileAssignment(expr.specification, owedTemps);
             }
-            //potencia porque el orden en el que se compilan los operandos es diferente (primero der luego izq)
+            //potencia porque el orden en el que se compilan los operandos es diferente (primero derecho luego izquierdo)
             if(expr.expressionKind === ExpressionKind.POWER){
 
                 let rightResult = compileExpression(expr.specification.right, owedTemps);
@@ -871,7 +902,28 @@ export function compileExpression(expr:Expression, owedTemps:String[]):ExprResul
                     if(leftResult.myType.kind !== MyTypeKind.VOID  &&
                             rightResult.myType.kind !== MyTypeKind.VOID){
 
-                        return generateComparisonExprResult(leftResult.c_ir, leftResult.val, RelOp.EQUAL_EQUAL, rightResult.c_ir, rightResult.val);
+                        if(leftResult.myType.kind === rightResult.myType.kind){
+                            //then it means they are both string
+                            if(leftResult.myType.kind === MyTypeKind.STRING){
+                                let temp = getNextTemp();
+                                let c_ir = new Array<C_ir_instruction>();
+
+                                c_ir = c_ir.concat(
+                                    leftResult.c_ir,
+                                    rightResult.c_ir,
+                                   [new Assignment(Native_c_ir._param1, leftResult.val),
+                                    new Assignment(Native_c_ir._param2, rightResult.val),
+                                    new FunctionCall(Native_c_ir.stringEqualString),
+                                    new Assignment(temp, Native_c_ir._return1)]
+                                );
+
+                                return new ExprResult(MyType.BOOLEAN, false, temp, c_ir);
+                            }
+                            else{
+                                //For every other case other than string:
+                                return generateComparisonExprResult(leftResult.c_ir, leftResult.val, RelOp.EQUAL_EQUAL, rightResult.c_ir, rightResult.val);
+                            }
+                        }
                     }
                     //else: goto @Tag: return with error BinaryExpr
                 }break;
@@ -880,7 +932,28 @@ export function compileExpression(expr:Expression, owedTemps:String[]):ExprResul
                     if(leftResult.myType.kind !== MyTypeKind.VOID  &&
                             rightResult.myType.kind !== MyTypeKind.VOID){
 
-                        return generateComparisonExprResult(leftResult.c_ir, leftResult.val, RelOp.NOT_EQUAL, rightResult.c_ir, rightResult.val);
+                        if(leftResult.myType.kind === rightResult.myType.kind){
+                            //then it means they are both string
+                            if(leftResult.myType.kind === MyTypeKind.STRING){
+                                let temp = getNextTemp();
+                                let c_ir = new Array<C_ir_instruction>();
+
+                                c_ir = c_ir.concat(
+                                    leftResult.c_ir,
+                                    rightResult.c_ir,
+                                   [new Assignment(Native_c_ir._param1, leftResult.val),
+                                    new Assignment(Native_c_ir._param2, rightResult.val),
+                                    new FunctionCall(Native_c_ir.stringNotEqualString),
+                                    new Assignment(temp, Native_c_ir._return1)]
+                                );
+
+                                return new ExprResult(MyType.BOOLEAN, false, temp, c_ir);
+                            }
+                            else{
+                                //For every other case other than string:
+                                return generateComparisonExprResult(leftResult.c_ir, leftResult.val, RelOp.EQUAL_EQUAL, rightResult.c_ir, rightResult.val);
+                            }
+                        }
                     }
                     //else: goto @Tag: return with error BinaryExpr
                 }break;
@@ -966,15 +1039,6 @@ export function compileExpression(expr:Expression, owedTemps:String[]):ExprResul
                         let end_label = new Label(getNextLabel());
 
                         let c_ir = new Array();
-                        /*
-                            ...operand.c_ir...
-                            if (operand.val == 1) goto L1;
-                            T1 = 1;
-                            goto END;
-                            L1:
-                            T1=0;
-                            END:
-                        */
                         c_ir = c_ir.concat(
                             operand.c_ir,
                            [new Cond_goto(operand.val, RelOp.EQUAL_EQUAL, new Number(1), false_label),
@@ -1082,8 +1146,6 @@ function generateSimpleArithExprResult(left_c_ir:C_ir_instruction[], left_val:(S
     //generamos el c_ir y retornamos el ExprResult
     let temp = getNextTemp();
 
-    //TERRIBLE: perf. tiene que exister una manera 
-    //     de evitar hacer tantos nuevos arreglos
     let c_ir:C_ir_instruction[] = new Array();
 
     c_ir = c_ir.concat(
@@ -1124,8 +1186,6 @@ function generateAndExprResult(left_c_ir:C_ir_instruction[], left_val:(String | 
     let false_label = new Label(getNextLabel());
     let end_label = new Label(getNextLabel());
 
-    //TERRIBLE: perf. tiene que exister una manera 
-    //     de evitar hacer tantos nuevos arreglos
     let c_ir:C_ir_instruction[] = new Array();
 
     //MEJORA?: no tenemos ifFalse pero si tenemos if foo.val==0 goto L_FOO
@@ -1232,6 +1292,7 @@ export function generateComparisonExprResult(left_c_ir:C_ir_instruction[], left_
 
     return new ExprResult(MyType.BOOLEAN, false, temp, c_ir);;
 }
+
 function compileAssignment(binaryExpr:BinaryExpression, owedTemps:String[]):ExprResult{
     let lvalue = compileLValue(binaryExpr.left, owedTemps);
 
@@ -1426,7 +1487,6 @@ function compileLValue(expr:Expression, owedTemps:String[]):LValueResult{
     }
 }
 
-
 export function compileFuncCall(funcCall:FunctionCallExpression, owedTemps:String[]):ExprResult{
     //Chapuz: I dont know how funcCall.name end up as a String. Either way
     //        we cant use the === operator. So... idfk :(
@@ -1442,7 +1502,6 @@ export function compileFuncCall(funcCall:FunctionCallExpression, owedTemps:Strin
         return new ExprResult(MyType.VOID, false, null, []);
     }
 
-
     //tira myError si no existe ese nombre
     let calleeSignature = Env.getFunction(funcCall.name);
     if(calleeSignature === null){
@@ -1450,8 +1509,8 @@ export function compileFuncCall(funcCall:FunctionCallExpression, owedTemps:Strin
     }
 
     //revisiones que podemos hacer de antemano
-    if(funcCall.functionArgs.length !== calleeSignature.params.length){
-        throw new MyError(`Numero de argumentos incorrecto: se esperaban '${calleeSignature.params.length} y se tienen '${funcCall.functionArgs.length}'`);
+    if(funcCall.functionArgs.length !== calleeSignature.paramTypes.length){
+        throw new MyError(`Numero de argumentos incorrecto: se esperaban '${calleeSignature.paramTypes.length} y se tienen '${funcCall.functionArgs.length}'`);
     }
 
     //conseguimos el nestingDepth de caller para ver si tenemos que pasarle caller.stackFrame (current p)
@@ -1459,94 +1518,135 @@ export function compileFuncCall(funcCall:FunctionCallExpression, owedTemps:Strin
     //The .getCurrentDepth asserts that we are inside a function
     //tenemos que recorrer el stack de scopes de manera no necesaria
     let callerDepth:number = Env.getCallerNestingDepth();
-    // ASSERT THAT A FUNC (caller) CAN ONLY CALL A FUNCS (callee) WITH NESTING DEPTH LESS THAN caller.nestingDepth + 1
-    // ie: calleeDepth <= callerDepth + 1
-    if(!(calleeSignature.nestingDepth <= callerDepth + 1)){
-        //TODO: better error message
-        throw new Error("ASSERTION THAT A FUNC (caller) CAN ONLY CALL A FUNCS (callee) WITH NESTING DEPTH LESS THAN caller.nestingDepth + 1 FAILED");
-    }
 
     let c_ir = new Array<C_ir_instruction>();
 
-    //TERMINOLOGY:Display means something very similar to what the dragon book describes in section 7.3.8
+    //MEJORA: the way we use the Env.current.size is quite messy, change it or at least document it
 
     //back up temps (need a Tm to find the first free space in the stack)
-    //cambio simulado de p: Tn = p + Env.current.size + #ofBackedUpTemps [???Do we need to back up Tn AND Tm from now on? emmm... yeah]
+    //cambio simulado de p: Tn = p + Env.current.size + #ofBackedUpTemps
     //push the 'display' the ancestor stackframes
-    //compile and push the args (doing typechecking)
+    //compile and push the args (doing typechecking) 
+    //    (be mindful that we must the all the args that the space they will be pushed into is ocuppied)
     //do the p change for realz this time
     //call
     //RECOVER THE RETURNED VALUE Tx = stack[new_p + display.length + params.length]
     //restore backedup temps 
-    //restor p: p = p - Env.current.size + #ofBackedUpTemps 
+    //restore p: p = p - Env.current.size + #ofBackedUpTemps 
 
     // if anything here throws a myError because, even tho we wont finish doing the c_ir, 
     // that incomplete c_ir wont be added to the finished result
 
     //conseguimos la primera p a donde podamos hacer el backup sin sobreescribir las var locales
-    let beginingOfTempBackUp = getNextTemp();//CHAPUZ: lo generamos aunque no tengamos nada en owedTemps porque hace el backUp mas adelante mas sencillo
     if(owedTemps.length > 0){
-        let backedTempIndex = getNextTemp();//The same reg for all owedTemp, different val foreach owedTemp
+        let backedTempIndex = getNextTemp();
         c_ir = c_ir.concat(
-        [new _3AddrAssignment(beginingOfTempBackUp, REG_P, ArithOp.ADDITION, new Number(Env.current.size))]
+           [new _3AddrAssignment(backedTempIndex, REG_P, ArithOp.ADDITION, new Number(Env.current.size))]
         );
         for (let i = 0; i < owedTemps.length; i++) {
             //pusheamos cada owedTemp en el stack
             c_ir = c_ir.concat(
-            [new _3AddrAssignment(backedTempIndex, REG_P, ArithOp.ADDITION, new Number(i)),
+               [new _3AddrAssignment(backedTempIndex, backedTempIndex, ArithOp.ADDITION, new Number(i)),
                 new Assignment(Mem.stackAccess(backedTempIndex), owedTemps[i])]
             );
         } 
     }
 
-    //Cambio simulado de p (stupid name)
+    //Cambio simulado de p 
     let nextStackFrameBegining = getNextTemp();
     c_ir = c_ir.concat(
         [new _3AddrAssignment(nextStackFrameBegining, REG_P, ArithOp.ADDITION, new Number(Env.current.size + owedTemps.length))]
     );
 
     //push the ancestor stack
-    let callerDisplayIndex = getNextTemp();
-    let calleeDisplayIndex = getNextTemp();
     //el for va hasta (calleeNestingDepth - 1) porque la ultima posicion del display
     //Puede o no ser el stackFrame de la funcion actual
-    if(callerDepth !== -1){//si caller es global (nestingDepth=-1) tenemos que dejar un display vacio
-        for (let i = 0; i < calleeSignature.nestingDepth - 1; i++) {
-            //NEEDS A LOT OF WORK! IS NOT REALLY CORRECT. CHECK THE NOTEBOOK.
-            //IM CONFUSED AND TIRED 
-            c_ir = c_ir.concat(
-                [new _3AddrAssignment(calleeDisplayIndex, nextStackFrameBegining, ArithOp.ADDITION, new Number(i)),
-                new _3AddrAssignment(callerDisplayIndex, REG_P, ArithOp.ADDITION, new Number(i)),
-                new Assignment(Mem.stackAccess(calleeDisplayIndex), Mem.stackAccess(callerDisplayIndex))]
-            );
+    if(callerDepth !== -1){//si caller es global (nestingDepth=-1) tenemos que dejar el display vacio
+
+        // I think the commeted code also works? and it duplicates less. but is harder to follow: Idfk:
+        // for (let i = 0; i < calleeSignature.nestingDepth - 1; i++) {
+        //     c_ir = c_ir.concat(
+        //         [new _3AddrAssignment(calleeDisplayIndex, nextStackFrameBegining, ArithOp.ADDITION, new Number(i)),
+        //         new _3AddrAssignment(callerDisplayIndex, REG_P, ArithOp.ADDITION, new Number(i)),
+        //         new Assignment(Mem.stackAccess(calleeDisplayIndex), Mem.stackAccess(callerDisplayIndex))]
+        //     );
+        // }
+        // if(calleeSignature.nestingDepth === callerDepth + 1){
+        //     c_ir = c_ir.concat(
+        //         //(calleeSignature.nestingDepth - 1) = la ultima posion del display
+        //     [new _3AddrAssignment(calleeDisplayIndex, nextStackFrameBegining, ArithOp.ADDITION, new Number(calleeSignature.nestingDepth - 1)),
+        //         new Assignment(Mem.stackAccess(calleeDisplayIndex), REG_P)]
+        //     );
+        // }
+        // else if(calleeSignature.nestingDepth != 0){
+        //     c_ir = c_ir.concat(
+        //         //(calleeSignature.nestingDepth - 1) = la ultima posion del display
+        //     [new _3AddrAssignment(calleeDisplayIndex, nextStackFrameBegining, ArithOp.ADDITION, new Number(calleeSignature.nestingDepth - 1)),
+        //         new _3AddrAssignment(callerDisplayIndex, REG_P, ArithOp.ADDITION, new Number(calleeSignature.nestingDepth - 1)),
+        //         new Assignment(Mem.stackAccess(calleeDisplayIndex), Mem.stackAccess(callerDisplayIndex))]
+        //     );
+        // }
+
+        //SAD! :(  : se complica mucho tratar que solo se generen temporales si se van a usar
+        //           por ahora vamos a dejar que genere temporales aunque no los use
+        let callerDisplayIndex = getNextTemp();
+        let calleeDisplayIndex = getNextTemp();
+        //chapuz porque no quiero generar temps a menos que se vaya a utililzar!:
+        if(calleeSignature.nestingDepth <= callerDepth){
+            for (let i = 0; i < calleeSignature.nestingDepth; i++) {
+                c_ir = c_ir.concat(
+                   [new _3AddrAssignment(calleeDisplayIndex, nextStackFrameBegining, ArithOp.ADDITION, new Number(i)),
+                    new _3AddrAssignment(callerDisplayIndex, REG_P, ArithOp.ADDITION, new Number(i)),
+                    new Assignment(Mem.stackAccess(calleeDisplayIndex), Mem.stackAccess(callerDisplayIndex))]
+                );
+            }
         }
-        if(calleeSignature.nestingDepth === callerDepth + 1){
+        else if(calleeSignature.nestingDepth == callerDepth + 1){
+            for (let i = 0; i < callerDepth; i++) {
+                c_ir = c_ir.concat(
+                   [new _3AddrAssignment(calleeDisplayIndex, nextStackFrameBegining, ArithOp.ADDITION, new Number(i)),
+                    new _3AddrAssignment(callerDisplayIndex, REG_P, ArithOp.ADDITION, new Number(i)),
+                    new Assignment(Mem.stackAccess(calleeDisplayIndex), Mem.stackAccess(callerDisplayIndex))]
+                );
+            }
             c_ir = c_ir.concat(
                 //(calleeSignature.nestingDepth - 1) = la ultima posion del display
-            [new _3AddrAssignment(calleeDisplayIndex, nextStackFrameBegining, ArithOp.ADDITION, new Number(calleeSignature.nestingDepth - 1)),
+               [new _3AddrAssignment(calleeDisplayIndex, nextStackFrameBegining, ArithOp.ADDITION, new Number(calleeSignature.nestingDepth - 1)),
                 new Assignment(Mem.stackAccess(calleeDisplayIndex), REG_P)]
             );
         }
         else{
-            c_ir = c_ir.concat(
-                //(calleeSignature.nestingDepth - 1) = la ultima posion del display
-            [new _3AddrAssignment(calleeDisplayIndex, nextStackFrameBegining, ArithOp.ADDITION, new Number(calleeSignature.nestingDepth - 1)),
-                new _3AddrAssignment(callerDisplayIndex, REG_P, ArithOp.ADDITION, new Number(calleeSignature.nestingDepth - 1)),
-                new Assignment(Mem.stackAccess(calleeDisplayIndex), Mem.stackAccess(callerDisplayIndex))]
-            );
+            // ASSERT THAT A FUNC (caller) CAN ONLY CALL A FUNCS (callee) WITH NESTING DEPTH LESS THAN caller.nestingDepth + 1
+            // ie: calleeDepth <= callerDepth + 1
+            //TODO: better error message
+            //BUG?: this assertion cant happen if caller === -1
+            throw new Error("ASSERTION THAT A FUNC (caller) CAN ONLY CALL A FUNCS (callee) WITH NESTING DEPTH LESS THAN caller.nestingDepth + 1 FAILED");
         }
     }
 
     //compile and push the args (doing typechecking)
-    let argOwedTemps = [nextStackFrameBegining, beginingOfTempBackUp];
+    let argOwedTemps = [nextStackFrameBegining];
     let funcArgs = funcCall.functionArgs;
     let argIndex = getNextTemp();
+    //[!!!] fucken dangerous as fuck. might be a horrible budge, might be exactly what we need
+    //      to do. I dont fucking know :((((
+    //We dont want a funcCall inside the args to overwrite the backedUp temps in the stack
+    //so we also have to increase the size of the current BUT put it back to where it was after we
+    //are done compiling the args
+    //[!!!] If we dont put the owedTemps.length there. we dont have a failing test, so I just dont fukcing
+    //      know what the fuck is going on anymore
+    Env.current.size += (owedTemps.length + funcArgs.length);
     for (let i = 0; i < funcArgs.length; i++) {
-        //its ok if this throws an exception, beacause, the c_ir in this function is no longer valid. it
-        //will not be add to the global c_ir so we are OK
-        let argResult = compileExpression(funcArgs[i], argOwedTemps);
-        if(!MyType.compareTypes(calleeSignature.params[i], argResult.myType)){
-            throw new MyError(`Argumento numero ${i} no es un tipo compatible. se esperaba: ${calleeSignature.params[i].getName()}. y se obtuvo: ${argResult.myType.getName()}`);
+        let argResult:ExprResult;
+        try{
+            argResult = compileExpression(funcArgs[i], argOwedTemps);
+        }catch(error){
+            Env.current.size -= owedTemps.length;
+            throw error;
+        }
+        if(!MyType.compareTypes(calleeSignature.paramTypes[i], argResult.myType)){
+            Env.current.size -= owedTemps.length;
+            throw new MyError(`Argumento numero ${i} no es un tipo compatible. se esperaba: ${calleeSignature.paramTypes[i].getName()}. y se obtuvo: ${argResult.myType.getName()}`);
         }
         c_ir = c_ir.concat(
             //(calleeSignature.nestingDepth - 1) = la ultima posion del display
@@ -1555,16 +1655,41 @@ export function compileFuncCall(funcCall:FunctionCallExpression, owedTemps:Strin
             new Assignment(Mem.stackAccess(argIndex), argResult.val)]
         );
     }
+    //Im not sure but
+    //instead of doing + owedTemps.length when we have to switch the stackFrame we could just
+    //put this last after we are defnitely done with this func call
+    Env.current.size -= (owedTemps.length + funcArgs.length)
 
     //do the stackFrame switch AND the call. FINALLYYY!
     c_ir = c_ir.concat(
         [new Assignment(REG_P, nextStackFrameBegining),
         new FunctionCall(calleeSignature.realName),
-        new _3AddrAssignment(REG_P, REG_P, ArithOp.SUBSTRACTION, new Number(Env.current.size - owedTemps.length))]
+        new _3AddrAssignment(REG_P, REG_P, ArithOp.SUBSTRACTION, new Number(Env.current.size + owedTemps.length))]
     );  
 
     //put the backedup regs back
+    if(owedTemps.length > 0){
+        let backedTempIndex = getNextTemp();
+        c_ir = c_ir.concat(
+           [new _3AddrAssignment(backedTempIndex, REG_P, ArithOp.ADDITION, new Number(Env.current.size))]
+        );
+        for (let i = 0; i < owedTemps.length; i++) {
+            //recuperamos cada owedTemp del stack
+            c_ir = c_ir.concat(
+               [new _3AddrAssignment(backedTempIndex, backedTempIndex, ArithOp.ADDITION, new Number(i)),
+                new Assignment(owedTemps[i], Mem.stackAccess(backedTempIndex))]
+            );
+        } 
+    }
     
+    // We DO need it because the fucking FunctionCall itself can destroy it!!!!!!!!!!
+    // and because we didnt put it in owedTemps we gotta recover it!
+    // Idk if its cheaper to calculate it again or to add to owedTemps
+    nextStackFrameBegining = getNextTemp();
+    c_ir = c_ir.concat(
+        [new _3AddrAssignment(nextStackFrameBegining, REG_P, ArithOp.ADDITION, new Number(Env.current.size + owedTemps.length))]
+    );
+
     //pick up the return value (if any) and return the exprResult
     let returnTemp:(String | null);
     if(calleeSignature.returnType.kind !== MyTypeKind.VOID){
@@ -1590,7 +1715,7 @@ export function compileIdentifierExpr(identExp:IdentifierExpression, owedTemps:S
     }
     //SOLO PODEMOS TIRAR ERROR DE 'NO INICIALIZADA' si esta en el stack actual.
     //De lo contrario es posible que este o no inicilizada a la hora que se 
-    //EJECUTE el c_ir que esta funcion genera
+    //EJECUTE el c_ir que esta 'compileIdentifierExpr' generaria
     if(getVarResult.variable.isUndeclared === true &&
         getVarResult.location === VarLocation.CURRENT_STACK_FRAME){
         throw new MyError(`La varialbe: '${identExp.name}' no esta inicializada`);
@@ -1810,6 +1935,35 @@ export function compileDeclaration(declaration:Declaration):C_ir_instruction[]{
         ];
         return generateDeclaration_c_ir(exprVal, exprC_ir, variable);
     }
+}
+
+//dado un temp con el valor de la expresion derecha y una variable
+//genera el c_ir de una declaracion sirve para simplificar un poco el flujo de
+//compileDeclaration
+export function generateDeclaration_c_ir(exprVal:(String | Number), exprC_ir:C_ir_instruction[], variable:Variable):C_ir_instruction[]{
+
+    //MEJORA: explicar porque no importa que trae la expression
+    //We dont have to know if the expr is a pointer to a heap or whatever
+    //if it is a pointer to the heap, we still have to store that pointer in the stack
+    //If it is an imm we have to store the value itself in the stack
+    //If it is a temp that doesnt have a pointer we copy still have to copy the value of the temp
+    //exactly the same as if it were a temp with a pointer
+    //"the expr deals with the allocation and we know the meaning of its T with the type"
+
+    //we need to put the value of the variable in stack[p+varOffset]
+    //but c_ir doesnt only allows stack[temp|imm] so we must put 
+    //p+varOffset in a temp
+    let varPointerTemp = getNextTemp();
+
+    let c_ir:C_ir_instruction[] = new Array();
+
+    c_ir = c_ir.concat(
+        exprC_ir,
+       [new _3AddrAssignment(varPointerTemp, REG_P, ArithOp.ADDITION, variable.offset),
+        new Assignment(Mem.stackAccess(varPointerTemp), exprVal)],
+    );
+
+    return c_ir;
 }
 
 export function compileMemberAccess(memberAccessExpr:MemberAccessExpression, owedTemps:String[]):ExprResult{
@@ -2089,36 +2243,6 @@ export function compileMemberAccess(memberAccessExpr:MemberAccessExpression, owe
             throw new Error(`compileExpr de ${memberAccessExpr.memberAccess.accessKind} no implementado todavia`);
             break;
     }
-
-}
-
-//dado un temp con el valor de la expresion derecha y una variable
-//genera el c_ir de una declaracion sirve para simplificar un poco el flujo de
-//compileDeclaration
-export function generateDeclaration_c_ir(exprVal:(String | Number), exprC_ir:C_ir_instruction[], variable:Variable):C_ir_instruction[]{
-
-    //MEJORA: explicar porque no importa que trae la expression
-    //We dont have to know if the expr is a pointer to a heap or whatever
-    //if it is a pointer to the heap, we still have to store that pointer in the stack
-    //If it is an imm we have to store the value itself in the stack
-    //If it is a temp that doesnt have a pointer we copy still have to copy the value of the temp
-    //exactly the same as if it were a temp with a pointer
-    //"the expr deals with the allocation and we know the meaning of its T with the type"
-
-    //we need to put the value of the variable in stack[p+varOffset]
-    //but c_ir doesnt only allows stack[temp|imm] so we must put 
-    //p+varOffset in a temp
-    let varPointerTemp = getNextTemp();
-
-    let c_ir:C_ir_instruction[] = new Array();
-
-    c_ir = c_ir.concat(
-        exprC_ir,
-       [new _3AddrAssignment(varPointerTemp, REG_P, ArithOp.ADDITION, variable.offset),
-        new Assignment(Mem.stackAccess(varPointerTemp), exprVal)],
-    );
-
-    return c_ir;
 }
 
 //[throws] myError if a custom type doesnt exist

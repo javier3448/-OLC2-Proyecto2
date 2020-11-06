@@ -104,3 +104,20 @@ BIG BIG BIG STUPID TODO:
 NO POEMOS HACER ASIGNACIONES 'MEM = MEM'
 CORREGIR TODO CODIGO GENERADO QUE HAGA ESO (Buscar Mem. ...)
 Y EL CODIGO NATIVO QUE HAGA ESO TAMBIEN!!!! (poner un monton de _nativeTemp y ya)
+
+
+TODO: leer de nuevo todo el proyecto antes de entregar
+
+TODO: ver que tan grandes puede ser el stack y el heap y ver que tantos temps
+      podemos tener realmente
+
+
+TODO: Parece que compila el c aunque tenga el error: conflicting types, cuando llamamos
+      una func antes de definirla. pero igual hay que ponder en el header todas las declaraciones
+      de funciones, podriamos hacer una lista de string global con los realnames o algo asi, no se :(
+
+
+TODO: QUE LOS MENSAJES DE ERROR SI TENGAN KIND
+
+
+BIG TODO: correr todos los archivos de entrada del proyecto pasado y revisar con la hoja de calificacion a la mano

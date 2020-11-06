@@ -107,7 +107,7 @@ export class Scope{
     //TODO: Assert the following invariant in the constructor or something
     //MEJORA?: seria mejor que esto solo fuera un puntero a la functionSignature
     //null para todo scopeKind excepto function
-    public name:(string | null);
+    private name:(string | null);
     //null para todo scopeKind excepto FUNCTION_SCOPE y GLOBAL
     public nestingDepth:(number | null);
 
@@ -173,7 +173,7 @@ export class Scope{
     public getName():string{
         switch (this.kind) {
             case ScopeKind.FUNCTION_SCOPE:
-                return "Function_scope"
+                return this.name;
             case ScopeKind.IF:
                 return "If"
             case ScopeKind.WHILE:
@@ -269,8 +269,8 @@ export module Env{
 
     //[throws_MyError]
     //Atrapa si ya exite el id en el current scope
-    //retorna el c_ir_name generado
-    export function addFuncSignature(level:number, name:string, paramTypes:MyType[], returnType:MyType):string{
+    //retorna un puntero a la funcSignature recien insertado
+    export function addFuncSignature(level:number, name:string, paramTypes:MyType[], returnType:MyType):(MyFunction | null){
         //ASSERTION:
         //solo se pueden agrear funcSignatures a Scopes con kind: GLOBAL o FUNCTION_SCOPE.
         if(current.kind !== ScopeKind.GLOBAL && current.kind !== ScopeKind.FUNCTION_SCOPE){
@@ -283,10 +283,9 @@ export module Env{
             throw new MyError(`No se agregar una funcion con el nombre '${name}' porque existe una funcion con el mismo nomber en el mismo scope`);
         }
 
-        let varOffset = current.size
         let c_ir_name = getFunc_c_ir_name(name);
         current.myFunctions[name] = new MyFunction(level, c_ir_name, paramTypes, returnType);
-        return c_ir_name;
+        return current.myFunctions[name];
     }
 
     let funcNameCount:number = 1;

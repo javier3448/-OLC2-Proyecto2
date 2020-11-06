@@ -544,17 +544,6 @@ function ml_list_constructor(head:string, tail:string[]):string[]{
     }
     return result;
 }
-function compare_strings(left:string, right:string):boolean{
-  if(left.length != right.length){
-    return false;
-  }
-  for(let i:number = 0; i < left.length; i++){
-    if(left.charAt(i) != right.charAt(i)){
-      return false
-    }
-  }
-  return true;
-}
 function contains(str:string, strs:Array<string>):boolean{
     function imp(strs:Array<string>):boolean{
         if(strs.length == 0){
@@ -794,13 +783,43 @@ print_list_of_lists(replaceInListOfLists("Bicho", ":O", [["Pasta", "Ganar", "Bic
   `;
     }
 
-    //BUG: we should print true the second time we call contains
-    //     la comparacion de strings en nuestro lenguaje es por direcciones de mem solamente. 
-    //     Y EL CHAR_AT RETORNA STRING => NO PODEMOS COMPARAR STRINGS!!!!!!
-    //     SO WE CANT TEST NESTED FUNCS WITH THE PROGRAM OF OUR LAST PROYECT :(
-    //OPTIONS: change it so it uses ints
-    //         change it so it uses ?Types? with a string field that gets printed and a num field that is used to compara things
-    //         write a new program to test it. (There is one uploaded in the github)
+    {
+    let testString = `
+let s:string = "Hello.";
+console.log(s.charAt(1));//e
+console.log(s.toUpperCase());//HELLO.
+console.log(s.toLowerCase());//hello.
+console.log(s.concat(" And Goodbye!"));//Hello. And Goodbye!
+    `;
+    }
+
+    //Test: STRING == STRING
+    {
+    let testString = `
+let a:string = "hello";
+console.log(a == "hello");//true
+console.log(a.toUpperCase().toLowerCase() == "hello");//true
+console.log("hello" == "hellO");//false
+console.log("hello" == "hellos");//false
+console.log("hello" == "");//false
+    `;
+    }
+
+    //Test: STRING != STRING
+    {
+    let testString = `
+let a:string = "hello";
+console.log(a != "hello");//false
+console.log(a.toUpperCase().toLowerCase() != "hello");//false
+console.log("hello" != "hellO");//true
+console.log("hello" != "hellos");//true
+console.log("hello" != "");//true
+`;
+    }
+
+    //OLD BUG: prints false for both contains (first should be true)
+    //         it was because we didnt pass the current stack frame when we do compileFuncCall
+    //         with callee.depth == caller.depth + 1
     {
     let testString = `
   function tail(strs:string[]):string[]{
@@ -831,30 +850,584 @@ print_list_of_lists(replaceInListOfLists("Bicho", ":O", [["Pasta", "Ganar", "Bic
       }
       return imp(strs);
   }
-  console.log(contains("Pararrayos", ["Pasta", "Ceremonia", "Ganancias", "Disciplina", "Bicho", "Bicho", "Mercado", "Pararrayos", "Agua", "Bicho"]));
-  console.log(contains("Alvarez", ["Pasta", "Ceremonia", "Ganancias", "Disciplina", "Bicho", "Bicho", "Mercado", "Pararrayos", "Agua", "Bicho"]));
+  console.log(contains("Pararrayos", ["Pasta", "Ceremonia", "Ganancias", "Disciplina", "Bicho", "Bicho", "Mercado", "Pararrayos", "Agua", "Bicho"]));//true
+  console.log(contains("Alvarez", ["Pasta", "Ceremonia", "Ganancias", "Disciplina", "Bicho", "Bicho", "Mercado", "Pararrayos", "Agua", "Bicho"]));//false
     `;
     }
+
+    //OLD BUG: ruins everything as soon as we call replace
+    //OLD BUG: replace doesnt work when it matches and it doesnt work when it doesnt
+    //         many many things didnt work because we didnt back up things properly and
+    //         we didnt tell the rest of the AST "we have used some additional stack
+    //         space, please dont use, for it is ours"
+    //PASSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
+    //FUCKING PASSSSSSSS! :D
+    //USE IT AS REGRESION TEST PLEASE. BEFORE YOU CHECKIN and whenever you make a big change
+    let testString = `
+function tail(strs:string[]):string[]{
+    let result:string[] = new Array(strs.length - 1);
+    for(let i:number = 1; i < strs.length; i++){
+        result[i - 1] = strs[i];
+    }
+    return result;
+}
+function head(strs:string[]):string{
+    return strs[0];
+}
+function ml_list_constructor(head:string, tail:string[]):string[]{
+    let result:string[] = new Array(tail.length + 1);
+    result[0] = head;
+    for(let i:number = 0; i < tail.length; i++){
+        result[i+1] = tail[i];
+    }
+    return result;
+}
+function contains(str:string, strs:Array<string>):boolean{
+    function imp(strs:Array<string>):boolean{
+        if(strs.length == 0){
+            return false;
+        }
+        else{
+            let head_strs:string = head(strs);
+            let tail_strs:string[] = tail(strs);
+            if(head_strs == str){
+                return true;
+            }
+            else{
+                return imp(tail_strs);
+            }
+        }
+    }
+    return imp(strs);
+}
+function replace(target:string, replacement:string, strs:Array<string>):string[]{
+    function imp(strs:Array<string>):string[]{
+        if(strs.length == 0){
+            return [];
+        }
+        else{
+            let head_strs:string = head(strs);
+            let tail_strs:string[] = tail(strs);
+            if(head_strs == target){
+                return ml_list_constructor(replacement, tail_strs);
+            }
+            else{
+                return ml_list_constructor(head_strs, imp(tail_strs));
+            }
+        }
+    }
+    return imp(strs);
+}
+function replaceAll(target:string, replacement:string, strs:Array<string>):string[]{
+    function imp(strs:Array<string>):string[]{
+        if(strs.length == 0){
+            return [];
+        }
+        else{
+            let head_strs:string = head(strs);
+            let tail_strs:string[] = tail(strs);
+            if(head_strs == target){
+                return ml_list_constructor(replacement, imp(tail_strs));
+            }
+            else{
+                return ml_list_constructor(head_strs, imp(tail_strs));
+            }
+        }
+    }
+    return imp(strs);
+}
+function replaceInListOfLists(target:string, replacement:string, lists_of_strs:string[][]):string[][]{
+    function helper_head(list_of_lists:string[][]):string[]{
+        return list_of_lists[0];
+    }
+    function helper_tail(list_of_lists:string[][]):string[][]{
+        let result:string[][] = new Array(list_of_lists.length - 1);
+        for(let i:number = 1; i < list_of_lists.length; i++){
+            result[i-1] = list_of_lists[i];
+        }
+        return result;
+    }
+    function helper_ml_list_constructor(head:string[], tail:string[][]):string[][]{
+        let result:string[][] = new Array(tail.length + 1);
+        result[0] = head;
+        for(let i:number = 0; i < tail.length; i++){
+            result[i+1] = tail[i];
+        }
+        return result;
+    }
+    function imp(lists_of_strs:string[][]):string[][]{
+        function helperReplaceAll(strs:string[]):string[]{
+            function imp(strs:Array<string>):string[]{
+                if(strs.length == 0){
+                    return [];
+                }
+                else{
+                    let head_strs:string = head(strs);
+                    let tail_strs:string[] = tail(strs);
+                    if(head_strs == target){
+                        return ml_list_constructor(replacement, imp(tail_strs));
+                    }
+                    else{
+                        return ml_list_constructor(head_strs, imp(tail_strs));
+                    }
+                }
+            }
+            return imp(strs);
+        }
+        if(lists_of_strs.length == 0){
+            return [];
+        }
+        else{
+            let head_list_of_strings:string[] = helper_head(lists_of_strs);
+            let tail_list_of_strings:string[][] = helper_tail(lists_of_strs);
+            return helper_ml_list_constructor(helperReplaceAll(head_list_of_strings), imp(tail_list_of_strings));
+        }
+    }
+    return imp(lists_of_strs);
+}
+//No la vamos a hacer estilo funcional por ahora porque que hueva
+function print_list(list:string[]):void{
+    console.log("[");
+    for(let i:number = 0; i < list.length; i++){
+        console.log("  [" + i + "]:" + list[i]);
+    }
+    console.log("]");
+}
+//No la vamos a hacer estilo funcional por ahora porque que hueva
+function print_list_of_lists(list:string[][]):void{
+    function print_list(list:string[]):void{
+        console.log("  [");
+        for(let i:number = 0; i < list.length; i++){
+            console.log("    [" + i + "]:" + list[i]);
+        }
+        console.log("  ]");
+    }
+    console.log("[");
+    for(let i:number = 0; i < list.length; i++){
+        console.log("  [" + i + "]:");
+        print_list(list[i]);
+    }
+    console.log("]");
+}
+print_list(ml_list_constructor("head", ["tail", "tail2"]));
+console.log(contains("Pararrayos", ["Pasta", "Ceremonia", "Ganancias", "Disciplina", "Bicho", "Bicho", "Mercado", "Pararrayos", "Agua", "Bicho"]));
+console.log(contains("Alvarez", ["Pasta", "Ceremonia", "Ganancias", "Disciplina", "Bicho", "Bicho", "Mercado", "Pararrayos", "Agua", "Bicho"]));
+//we already print something wrong at this point and maybe we corrupted the heap
+//or god knows what
+print_list(replace("Bicho", ":)", ["Pasta", "Ceremonia", "Ganancias", "Disciplina", "Bicho", "Bicho", "Mercado", "Pararrayos", "Agua", "Bicho"]));
+print_list(replaceAll("Bicho", ":D", ["Pasta", "Ceremonia", "Ganancias", "Disciplina", "Bicho", "Bicho", "Mercado", "Pararrayos", "Agua", "Bicho"]));
+print_list(replace("nan", "FAIL", ["Pasta", "Ceremonia", "Ganancias", "Disciplina", "Bicho", "Bicho", "Mercado", "Pararrayos", "Agua", "Bicho"]));
+print_list(replaceAll("nan", "FAIL", ["Pasta", "Ceremonia", "Ganancias", "Disciplina", "Bicho", "Bicho", "Mercado", "Pararrayos", "Agua", "Bicho"]));
+print_list_of_lists(replaceInListOfLists("Bicho", ":O", [["Pasta", "Ganar", "Bicho", "Bicho", "Mercado", "Rayos", "Agua", "Bicho"],
+                                                         ["Mono","Bicho","Alpaca","Buey","Ratón","Yak","Chinchilla","Bicho"],
+                                                         ["Bicho", "Erizo", "Mariposa", "Pez" , "betta", "Hurón", "Bicho", "Serpiente", "Ciervo"],
+                                                         ["Calamar", "Cisne", "Bicho", "Tigre", "Perico", "Bicho", "Poni", "Canario"]]));
+// [
+//   [0]:head,
+//   [1]:tail,
+//   [2]:tail2
+// ]
+// true
+// false
+// [
+//   [0]:Pasta,
+//   [1]:Ceremonia,
+//   [2]:Ganancias,
+//   [3]:Disciplina,
+//   [4]::),
+//   [5]:Bicho,
+//   [6]:Mercado,
+//   [7]:Pararrayos,
+//   [8]:Agua,
+//   [9]:Bicho
+// ]
+// [
+//   [0]:Pasta,
+//   [1]:Ceremonia,
+//   [2]:Ganancias,
+//   [3]:Disciplina,
+//   [4]::D,
+//   [5]::D,
+//   [6]:Mercado,
+//   [7]:Pararrayos,
+//   [8]:Agua,
+//   [9]::D
+// ]
+// [
+//   [0]:Pasta,
+//   [1]:Ceremonia,
+//   [2]:Ganancias,
+//   [3]:Disciplina,
+//   [4]:Bicho,
+//   [5]:Bicho,
+//   [6]:Mercado,
+//   [7]:Pararrayos,
+//   [8]:Agua,
+//   [9]:Bicho
+// ]
+// [
+//   [0]:Pasta,
+//   [1]:Ceremonia,
+//   [2]:Ganancias,
+//   [3]:Disciplina,
+//   [4]:Bicho,
+//   [5]:Bicho,
+//   [6]:Mercado,
+//   [7]:Pararrayos,
+//   [8]:Agua,
+//   [9]:Bicho
+// ]
+// [
+//   [0]:[
+//     [0]:Pasta,
+//     [1]:Ganar,
+//     [2]::O,
+//     [3]::O,
+//     [4]:Mercado,
+//     [5]:Rayos,
+//     [6]:Agua,
+//     [7]::O
+//   ],
+//   [1]:[
+//     [0]:Mono,
+//     [1]::O,
+//     [2]:Alpaca,
+//     [3]:Buey,
+//     [4]:Ratón,
+//     [5]:Yak,
+//     [6]:Chinchilla,
+//     [7]::O
+//   ],
+//   [2]:[
+//     [0]::O,
+//     [1]:Erizo,
+//     [2]:Mariposa,
+//     [3]:Pez,
+//     [4]:betta,
+//     [5]:Hurón,
+//     [6]::O,
+//     [7]:Serpiente,
+//     [8]:Ciervo
+//   ],
+//   [3]:[
+//     [0]:Calamar,
+//     [1]:Cisne,
+//     [2]::O,
+//     [3]:Tigre,
+//     [4]:Perico,
+//     [5]::O,
+//     [6]:Poni,
+//     [7]:Canario
+//   ]
+// ]
+    `;
+
+    //OLD BUG: we coulnt call functions from another function where both funcs had
+    //         diplay.size = 0
+    {
+    let testString = `
+function aux(a:number):void{
+    console.log(a);
+}
+function log(a:number):void{
+    aux(a);
+}
+log(30);
+    `;
+    }
+
+    //OLD BUG: it would just print 2
+    //         Honestly I dont even remember what was the problem, we didnt recover the backedUp
+    //         regs I think?
+    //         Then it happened because we didnt calculate again the value of nextStackFrameBegin
+    {
+    let testString = `
+function factorial(a:number):number{
+    if(a < 2){
+        return 1;
+    }
+    return a * factorial(a-1);
+}
+console.log(factorial(10));//3628800 
+`;
+  }
 
     {
     let testString = `
-let s:string = "Hello.";
-console.log(s.charAt(1));//e
-console.log(s.toUpperCase());//HELLO.
-console.log(s.toLowerCase());//hello.
-console.log(s.concat(" And Goodbye!"));//Hello. And Goodbye!
+function tail(strs:string[]):string[]{
+    let result:string[] = new Array(strs.length - 1);
+    for(let i:number = 1; i < strs.length; i++){
+        result[i - 1] = strs[i];
+    }
+    return result;
+}
+function head(strs:string[]):string{
+    return strs[0];
+}
+function ml_list_constructor(head:string, tail:string[]):string[]{
+    let result:string[] = new Array(tail.length + 1);
+    result[0] = head;
+    for(let i:number = 0; i < tail.length; i++){
+        result[i+1] = tail[i];
+    }
+    return result;
+}
+function contains(str:string, strs:Array<string>):boolean{
+    function imp(strs:Array<string>):boolean{
+        if(strs.length == 0){
+            return false;
+        }
+        else{
+            let head_strs:string = head(strs);
+            let tail_strs:string[] = tail(strs);
+            if(head_strs == str){
+                return true;
+            }
+            else{
+                return imp(tail_strs);
+            }
+        }
+    }
+    return imp(strs);
+}
+function replace(target:string, replacement:string, strs:Array<string>):string[]{
+    function imp(strs:Array<string>):string[]{
+        if(strs.length == 0){
+            return [];
+        }
+        else{
+            let head_strs:string = head(strs);
+            let tail_strs:string[] = tail(strs);
+            if(head_strs == target){
+                return ml_list_constructor(replacement, tail_strs);
+            }
+            else{
+                return ml_list_constructor(head_strs, imp(tail_strs));
+            }
+        }
+    }
+    return imp(strs);
+}
+function replaceAll(target:string, replacement:string, strs:Array<string>):string[]{
+    function imp(strs:Array<string>):string[]{
+        if(strs.length == 0){
+            return [];
+        }
+        else{
+            let head_strs:string = head(strs);
+            let tail_strs:string[] = tail(strs);
+            if(head_strs == target){
+                return ml_list_constructor(replacement, imp(tail_strs));
+            }
+            else{
+                return ml_list_constructor(head_strs, imp(tail_strs));
+            }
+        }
+    }
+    return imp(strs);
+}
+function replaceInListOfLists(target:string, replacement:string, lists_of_strs:string[][]):string[][]{
+    function helper_head(list_of_lists:string[][]):string[]{
+        return list_of_lists[0];
+    }
+    function helper_tail(list_of_lists:string[][]):string[][]{
+        let result:string[][] = new Array(list_of_lists.length - 1);
+        for(let i:number = 1; i < list_of_lists.length; i++){
+            result[i-1] = list_of_lists[i];
+        }
+        return result;
+    }
+    function helper_ml_list_constructor(head:string[], tail:string[][]):string[][]{
+        let result:string[][] = new Array(tail.length + 1);
+        result[0] = head;
+        for(let i:number = 0; i < tail.length; i++){
+            result[i+1] = tail[i];
+        }
+        return result;
+    }
+    function imp(lists_of_strs:string[][]):string[][]{
+        function helperReplaceAll(strs:string[]):string[]{
+            function imp(strs:Array<string>):string[]{
+                if(strs.length == 0){
+                    return [];
+                }
+                else{
+                    let head_strs:string = head(strs);
+                    let tail_strs:string[] = tail(strs);
+                    if(head_strs == target){
+                        return ml_list_constructor(replacement, imp(tail_strs));
+                    }
+                    else{
+                        return ml_list_constructor(head_strs, imp(tail_strs));
+                    }
+                }
+            }
+            return imp(strs);
+        }
+        if(lists_of_strs.length == 0){
+            return [];
+        }
+        else{
+            let head_list_of_strings:string[] = helper_head(lists_of_strs);
+            let tail_list_of_strings:string[][] = helper_tail(lists_of_strs);
+            return helper_ml_list_constructor(helperReplaceAll(head_list_of_strings), imp(tail_list_of_strings));
+        }
+    }
+    return imp(lists_of_strs);
+}
+//No la vamos a hacer estilo funcional por ahora porque que hueva
+function print_list(list:string[]):void{
+    console.log("[");
+    for(let i:number = 0; i < list.length; i++){
+        console.log("  [" + i + "]:" + list[i]);
+    }
+    console.log("]");
+}
+//No la vamos a hacer estilo funcional por ahora porque que hueva
+function print_list_of_lists(list:string[][]):void{
+    function print_list(list:string[]):void{
+        console.log("  [");
+        for(let i:number = 0; i < list.length; i++){
+            console.log("    [" + i + "]:" + list[i]);
+        }
+        console.log("  ]");
+    }
+    console.log("[");
+    for(let i:number = 0; i < list.length; i++){
+        console.log("  [" + i + "]:");
+        print_list(list[i]);
+    }
+    console.log("]");
+}
+print_list(ml_list_constructor("head", ["tail", "tail2"]));
+console.log(contains("Pararrayos", ["Pasta", "Ceremonia", "Ganancias", "Disciplina", "Bicho", "Bicho", "Mercado", "Pararrayos", "Agua", "Bicho"]));
+console.log(contains("Alvarez", ["Pasta", "Ceremonia", "Ganancias", "Disciplina", "Bicho", "Bicho", "Mercado", "Pararrayos", "Agua", "Bicho"]));
+print_list(replace("Bicho", ":)", ["Pasta", "Ceremonia", "Ganancias", "Disciplina", "Bicho", "Bicho", "Mercado", "Pararrayos", "Agua", "Bicho"]));
+print_list(replaceAll("Bicho", ":D", ["Pasta", "Ceremonia", "Ganancias", "Disciplina", "Bicho", "Bicho", "Mercado", "Pararrayos", "Agua", "Bicho"]));
+print_list(replace("nan", "FAIL", ["Pasta", "Ceremonia", "Ganancias", "Disciplina", "Bicho", "Bicho", "Mercado", "Pararrayos", "Agua", "Bicho"]));
+print_list(replaceAll("nan", "FAIL", ["Pasta", "Ceremonia", "Ganancias", "Disciplina", "Bicho", "Bicho", "Mercado", "Pararrayos", "Agua", "Bicho"]));
+print_list_of_lists(replaceInListOfLists("Bicho", ":O", [["Pasta", "Ganar", "Bicho", "Bicho", "Mercado", "Rayos", "Agua", "Bicho"],
+                                                         ["Mono","Bicho","Alpaca","Buey","Ratón","Yak","Chinchilla","Bicho"],
+                                                         ["Bicho", "Erizo", "Mariposa", "Pez" , "betta", "Hurón", "Bicho", "Serpiente", "Ciervo"],
+                                                         ["Calamar", "Cisne", "Bicho", "Tigre", "Perico", "Bicho", "Poni", "Canario"]]));
+// [
+//   [0]:head
+//   [1]:tail
+//   [2]:tail2
+// ]
+// true
+// false
+// [
+//   [0]:Pasta
+//   [1]:Ceremonia
+//   [2]:Ganancias
+//   [3]:Disciplina
+//   [4]::)
+//   [5]:Bicho
+//   [6]:Mercado
+//   [7]:Pararrayos
+//   [8]:Agua
+//   [9]:Bicho
+// ]
+// [
+//   [0]:Pasta
+//   [1]:Ceremonia
+//   [2]:Ganancias
+//   [3]:Disciplina
+//   [4]::D
+//   [5]::D
+//   [6]:Mercado
+//   [7]:Pararrayos
+//   [8]:Agua
+//   [9]::D
+// ]
+// [
+//   [0]:Pasta
+//   [1]:Ceremonia
+//   [2]:Ganancias
+//   [3]:Disciplina
+//   [4]:Bicho
+//   [5]:Bicho
+//   [6]:Mercado
+//   [7]:Pararrayos
+//   [8]:Agua
+//   [9]:Bicho
+// ]
+// [
+//   [0]:Pasta
+//   [1]:Ceremonia
+//   [2]:Ganancias
+//   [3]:Disciplina
+//   [4]:Bicho
+//   [5]:Bicho
+//   [6]:Mercado
+//   [7]:Pararrayos
+//   [8]:Agua
+//   [9]:Bicho
+// ]
+// [
+//   [0]:
+//   [
+//     [0]:Pasta
+//     [1]:Ganar
+//     [2]::O
+//     [3]::O
+//     [4]:Mercado
+//     [5]:Rayos
+//     [6]:Agua
+//     [7]::O
+//   ]
+//   [1]:
+//   [
+//     [0]:Mono
+//     [1]::O
+//     [2]:Alpaca
+//     [3]:Buey
+//     [4]:Rat≤n
+//     [5]:Yak
+//     [6]:Chinchilla
+//     [7]::O
+//   ]
+//   [2]:
+//   [
+//     [0]::O
+//     [1]:Erizo
+//     [2]:Mariposa
+//     [3]:Pez
+//     [4]:betta
+//     [5]:Hur≤n
+//     [6]::O
+//     [7]:Serpiente
+//     [8]:Ciervo
+//   ]
+//   [3]:
+//   [
+//     [0]:Calamar
+//     [1]:Cisne
+//     [2]::O
+//     [3]:Tigre
+//     [4]:Perico
+//     [5]::O
+//     [6]:Poni
+//     [7]:Canario
+//   ]
+// ]
     `;
     }
 
-    //probar el == de string
-    //y el != de string
+    //BUG: El c_ir generado tira error pero igual pareciera compilar y funcionar bien. :/
+    //     es por el orden en que definimos y llamamos a lol1
+    {
     let testString = `
-let a:string = "hello";
-console.log(a == "hello");//true
-console.log(a.toUpperCase().toLowerCase() == "hello");//true
-console.log("hello" == "hellO");//false
-console.log("hello" == "hellos");//false
-    `;
+function lol():void{
+    lol1();
+}
+function lol1():void{
+    console.log("lol");
+}
+lol();
+`;
+    }
 
     //Ver si todavia falta algo para las anidadas
     this.sourceString = testString;

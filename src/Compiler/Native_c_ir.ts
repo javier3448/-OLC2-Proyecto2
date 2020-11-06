@@ -336,6 +336,48 @@ export module Native_c_ir{
         _end_loop:
         return;
     }
+
+    //_param1:  leftString
+    //_param2:  rightString
+    //_return1  0: they are not equal
+    //          1: they are equal
+    void _string_equal_string(){
+        _local3 = _param1 + heap[(int)_param1];//pointer to end of first string
+        _local3 = _local3 + 1;        
+        _loop_back:
+        if(_param1 == _local3) goto _return_true;
+        _local1 = heap[(int)_param1];
+        _local2 = heap[(int)_param2];
+        if(_local1 != _local2) goto _return_false;
+        _param1 = _param1 + 1;
+        _param2 = _param2 + 1;
+        goto _loop_back;
+        
+        _return_true:
+        _return1 = 1;
+        goto _end;
+        
+        _return_false:
+        _return1 = 0;
+        
+        _end:
+        return;
+    }
+    
+    //_param1: leftString
+    //_param2: rightString
+    void _string_not_equal_string(){
+         //chapuz: solo negamos el return _string_equal_string
+         _string_equal_string();
+         if(_return1 == 1) goto _return_false;
+         _return1 = 1;
+         goto _end;
+        _return_false:
+        _return1 = 0;
+        _end:
+        return;
+    }
+
 `;
 
     export const stringLitsInitialization = `
@@ -363,7 +405,9 @@ heap[10] = 101;//'e'
     export let numberToString = "_number_to_string";
     export let power = "_number_pow_number";
     export let stringConcat = "_string_Concat";
-    export let stringCharAt = "_string_CharAt"
-    export let stringToUpperCase = "_string_ToUpper"
-    export let stringToLowerCase = "_string_ToLower"
+    export let stringCharAt = "_string_CharAt";
+    export let stringToUpperCase = "_string_ToUpper";
+    export let stringToLowerCase = "_string_ToLower";
+    export let stringEqualString = "_string_equal_string";
+    export let stringNotEqualString = "_string_not_equal_string";
 }   

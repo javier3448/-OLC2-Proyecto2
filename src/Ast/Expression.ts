@@ -121,9 +121,10 @@ export class Expression {
     public expressionKind: ExpressionKind;
     public specification: (UnaryExpression | BinaryExpression | TernaryExpression | 
                            IdentifierExpression | LiteralExpression | MemberAccessExpression | 
-                           ObjectLiteralExpression | ArrayLiteralExpression | NewArrayExpression);
+                           ObjectLiteralExpression | ArrayLiteralExpression | NewArrayExpression |
+                           FunctionCallExpression);
 
-    constructor(expressionKind:ExpressionKind, specification:(UnaryExpression | BinaryExpression | TernaryExpression | IdentifierExpression | LiteralExpression | MemberAccessExpression | ObjectLiteralExpression | ArrayLiteralExpression),
+    constructor(expressionKind:ExpressionKind, specification:(UnaryExpression | BinaryExpression | TernaryExpression | IdentifierExpression | LiteralExpression | MemberAccessExpression | ObjectLiteralExpression | ArrayLiteralExpression | FunctionCallExpression),
                 firstLine:number, firstColumn:number, lastLine:number, lastColumn:number){
 
         this.astNode = new AstNode(firstLine, firstColumn, lastLine, lastColumn);
