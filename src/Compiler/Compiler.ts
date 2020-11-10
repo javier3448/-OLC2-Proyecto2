@@ -4,7 +4,7 @@ import { Env, ReturnJumper, VarLocation } from "./Environment";
 import { Variable } from "./Variable";
 import { Global_c_ir } from "./Global_c_ir";
 import { Native_c_ir } from "./Native_c_ir";
-import { ForStatement, IfStatement, Block, Statement, StatementKind, WhileStatement } from "../Ast/Statement";
+import { ForStatement, IfStatement, Block, Statement, StatementKind, WhileStatement, DoWhileStatement, SwitchStatement, ForOfStatement, ForInStatement, SwitchCase, SwitchDefault } from "../Ast/Statement";
 import { MyType, MyTypeKind, TypeSignature } from "./MyType";
 import { MyError, MyErrorKind } from './MyError';
 import { StringLiteralByte } from './StringLiteralByte';
@@ -12,9 +12,11 @@ import { Expression, ExpressionKind, LiteralExpression, StringLiteral,
          IdentifierExpression, BinaryExpression, UnaryExpression, MemberAccessExpression,
          FunctionCallExpression, 
          ArrayLiteralExpression,
-         NewArrayExpression} from '../Ast/Expression';
+         NewArrayExpression,
+         ObjectLiteralExpression,
+         TernaryExpression } from '../Ast/Expression';
 import { Declaration,  UnprocessedDeclData, ProcessedDeclData } from '../Ast/Declaration';
-import { ArrayTypeNode, MyTypeNode, MyTypeNodeKind } from 'src/Ast/MyTypeNode';
+import { ArrayTypeNode, MyTypeNode, MyTypeNodeKind, CustomTypeNode } from 'src/Ast/MyTypeNode';
 import { GlobalInstructions } from 'src/Ast/GlobalInstructions';
 import { TypeDef } from "../Ast/TypeDef";
 import { FunctionDef } from "../Ast/FunctionDef";
@@ -42,7 +44,7 @@ export function graficar_ts():void{
     //type signatures
     for (const key in Env.typeSignatures) {
         let typeSignature = Env.typeSignatures[key];
-        runtimeInterface.tsDataSet.push(new TsEntry(Env.global.getName(), key, "-", typeSignature.getName()));
+        runtimeInterface.tsDataSet.push(new TsEntry(Env.global.getName(), key, "-", typeSignature.getTypeDescription()));
     }
 
     while(iter != null){
@@ -80,9 +82,6 @@ export let labelCount = 0;
 
 function getNextTemp():String{
     tempCount += 1;
-    if(tempCount == 98){
-        console.log("lol");
-    }
     return new String("T" + tempCount);
 }
 
@@ -227,11 +226,18 @@ export function compileTypeDefs(typeDefs:TypeDef[]):void{
             }
         }
     }
+    //COMPROMISE: Vamos a poner que si un tipo al que se le hizo
+    //referencia no tiene definicio, solo lo definimos como un type con un solo
+    //atributo number o con ningun atributo no se todavia.
+
+    //[!] what happens if we define an empty type
+    //REVISIT: when we figure out what happens to empty types
+
     //revisamos si quedo algun tipo sin definir
     for (const key in Env.typeSignatures) {
         let myType = Env.typeSignatures[key]
         if(myType.kind === MyTypeKind.WAITING){
-            let myError = new MyError(`No se encontro definicion para el tipo: '${key}'. Se definira con {} para continuar la ejecucion`);
+            let myError = new MyError(`No se encontro definicion para el tipo: '${key}'. Se definira con {} para continuar la compilacion`);
             //This error doesnt have a location
             console.log(myError);
             runtimeInterface.errorDataSet.push(myError);
@@ -264,7 +270,7 @@ export function declarationsPrepass(statements:Statement[]):void{
         let unprocessedDeclData = decl.data as UnprocessedDeclData;
 
         //we check that if it has const modifier it cant have .expr set to null
-        if(unprocessedDeclData.isConst){
+        if(unprocessedDeclData.isConst && decl.expression === null){
             //reportamos el error
             //MEJORA: better error message and better error kind
             let myError = MyError.makeMyError(MyErrorKind.TYPE_ERROR, "Variables const deben ser inicializadas");
@@ -382,10 +388,12 @@ export function compileFunctionDecl(functionDefNode:FunctionDef, nestingDepth:nu
     for (const paramNode of functionDefNode.params) {
         try{
             paramTypes.push(compileTypeNode(paramNode.myTypeNode));
-        }catch(error){
-            if(!(error instanceof MyError)){
-                throw error;
+        }catch(originalError){
+            if(!(originalError instanceof MyError)){
+                throw originalError;
             }
+            console.log(originalError);
+            runtimeInterface.errorDataSet.push(originalError);
             let myError = MyError.makeMyError(
                 MyErrorKind.DEFINITION, 
                 `No se puede definir la funcion:${name} porque el parametro: ${paramNode.name} no tiene un tipo valido`
@@ -415,10 +423,12 @@ export function compileFunctionDecl(functionDefNode:FunctionDef, nestingDepth:nu
     //return type
     try{
         returnType = functionDefNode.returnType === null ? MyType.VOID : compileTypeNode(functionDefNode.returnType);
-    }catch(error){
-        if(!(error instanceof MyError)){
-            throw error;
+    }catch(originalError){
+        if(!(originalError instanceof MyError)){
+            throw originalError;
         }
+        console.log(originalError);
+        runtimeInterface.errorDataSet.push(originalError);
         let myError = MyError.makeMyError(
             MyErrorKind.DEFINITION, 
             `No se puede definir la funcion:${name} tipo de retorno no valido`,
@@ -501,7 +511,29 @@ export function compileFunctionDef(saneFunc:SaneFunc, nestingDepth:number):C_ir_
 }
 
 export function compileTypeDef(typeDef:TypeDef):void{
-    throw new Error("Not implemented yet!");
+
+    let newTypeSignature = new TypeSignature(typeDef.name);
+
+    for (const attribute of typeDef.attributes) {
+        //we need to compile typeNode differently if its inse a TypeDef
+        let attributeType:MyType = compileTypeNode_fromTypeDef(attribute.myTypeNode);
+        if(!newTypeSignature.tryAddAttribute(attribute.name, attributeType)){
+            throw new MyError(`No se pudo definir el tipo: '${typeDef.name}'. atributo duplicado: '${attribute.name}'`)
+        }
+    }
+
+    let typeInTable = Env.typeSignatures[typeDef.name];
+    if(typeInTable !== undefined){
+        if(typeInTable.kind === MyTypeKind.WAITING){
+            typeInTable.kind = MyTypeKind.CUSTOM;
+            typeInTable.specification = newTypeSignature;
+        }
+        else{
+            throw new MyError(`Ya existe un tipo con el nombre: ${typeDef.name}`);
+        }
+    }else{
+        Env.typeSignatures[typeDef.name] = MyType.makeCustomType(newTypeSignature);
+    }
 }
 
 export function compileStatements(statements:Statement[]):C_ir_instruction[]{
@@ -531,14 +563,26 @@ export function compileStatement(statement:Statement):C_ir_instruction[]{
             case StatementKind.WhileKind:
                 return compileWhile(child as WhileStatement);
 
+            case StatementKind.DoWhileKind:
+                return compileDoWhile(child as DoWhileStatement);
+
             case StatementKind.ForKind:
                 return compileFor(child as ForStatement);
+
+            case StatementKind.ForOfKind:
+                return compileForOfStatement(child as ForOfStatement);
+
+            case StatementKind.ForInKind:
+                return compileForInStatement(child as ForInStatement);
 
             case StatementKind.IfKind:
                 return compileIf(child as IfStatement);
 
             case StatementKind.BlockKind:
                 return compileBlock(child as Block);
+
+            case StatementKind.SwitchKind:
+                return compileSwitchStatement(child as SwitchStatement);
 
             //jumpers
             //TODO: put each case in a different func just to be consistent and to 
@@ -899,36 +943,14 @@ export function compileExpression(expr:Expression, owedTemps:String[]):ExprResul
                 }break;
                 case ExpressionKind.EQUAL_EQUAL:
                 {
-                    if(leftResult.myType.kind !== MyTypeKind.VOID  &&
-                            rightResult.myType.kind !== MyTypeKind.VOID){
-
-                        if(leftResult.myType.kind === rightResult.myType.kind){
-                            //then it means they are both string
-                            if(leftResult.myType.kind === MyTypeKind.STRING){
-                                let temp = getNextTemp();
-                                let c_ir = new Array<C_ir_instruction>();
-
-                                c_ir = c_ir.concat(
-                                    leftResult.c_ir,
-                                    rightResult.c_ir,
-                                   [new Assignment(Native_c_ir._param1, leftResult.val),
-                                    new Assignment(Native_c_ir._param2, rightResult.val),
-                                    new FunctionCall(Native_c_ir.stringEqualString),
-                                    new Assignment(temp, Native_c_ir._return1)]
-                                );
-
-                                return new ExprResult(MyType.BOOLEAN, false, temp, c_ir);
-                            }
-                            else{
-                                //For every other case other than string:
-                                return generateComparisonExprResult(leftResult.c_ir, leftResult.val, RelOp.EQUAL_EQUAL, rightResult.c_ir, rightResult.val);
-                            }
-                        }
-                    }
-                    //else: goto @Tag: return with error BinaryExpr
+                    return generateEqualEqualOperation(leftResult, rightResult);
+                    //does need the else: got @Tag annotation because the function itself can throw an error
                 }break;
                 case ExpressionKind.NOT_EQUAL:
                 {
+                    //MEJORA:
+                    //do a compileNotEqualOperation function do be consistent or 
+                    //make 1 func that works for EQUAL_EQUAL and NOT_EQUAL
                     if(leftResult.myType.kind !== MyTypeKind.VOID  &&
                             rightResult.myType.kind !== MyTypeKind.VOID){
 
@@ -961,7 +983,10 @@ export function compileExpression(expr:Expression, owedTemps:String[]):ExprResul
                 default:
                     throw new Error(`operacion binaria: ${expr.expressionKind} no implementada todavia`);
             }
+            //BIG MEJORA: place this 'binaryExpr error in a function or something because we use it
+            //in different places. (i.e. try to get rig of that @Volatile)
             //@Tag: return with error BinaryExpr
+            //@Volatile: Throw BinaryExpr error
             throw MyError.makeMyError(MyErrorKind.TYPE_ERROR, 
                                 `No se puede realizar la operacion: '${expr.expressionKind}' con los tipos: '${leftResult.myType.getName()} y '${rightResult.myType.getName()}'`);
         }
@@ -1085,7 +1110,7 @@ export function compileExpression(expr:Expression, owedTemps:String[]):ExprResul
             }break;
             case ExpressionKind.OBJECT_LITERAL:
             {
-                throw new Error(`compileExpr de ${expr.expressionKind} no implementado todavia`);
+                return compileObjectLitExpression(expr.specification as ObjectLiteralExpression, owedTemps);
             }break;
             case ExpressionKind.ARRAY_LITERAL:
             {
@@ -1097,7 +1122,120 @@ export function compileExpression(expr:Expression, owedTemps:String[]):ExprResul
             }break;
             case ExpressionKind.TERNARY:
             {
-                throw new Error(`compileExpr de ${expr.expressionKind} no implementado todavia`);
+                let ternaryExpr = expr.specification as TernaryExpression;
+
+                let temp = getNextTemp();
+                let c_ir = new Array<C_ir_instruction>();
+
+                let condResult = compileExpression(ternaryExpr.left, owedTemps);
+                if(condResult.myType.kind !== MyTypeKind.BOOLEAN){
+                    throw new MyError(`Se esperaba 'BOOLEAN' en la condicion de 'ternary'. Se obtuvo: ${condResult.myType.getName()}`);
+                }
+                let trueResult = compileExpression(ternaryExpr.middle, owedTemps);
+                let trueType = trueResult.myType;
+                let falseResult = compileExpression(ternaryExpr.right, owedTemps);
+                let falseType = falseResult.myType;
+
+                let ternaryType:MyType;
+
+                //MEJORA: SUPER HAIRY flow and logic on them cases. Improve it. 
+                //We cant just use MyType.comapreTypes with trueResult and falseResult because 
+                //we have to figure out the 'dominat type' for example (pseudo code):
+                //someBool ? null : new MyObj();
+                //The resultingType of the previous expression would be MyObj NOT null
+                //Also MyType.comapreTypes needs to have a well defined leftType and rightType (like in an assigment or something)
+                //which doesnt work for the ternary operator
+                //TODO: FULL 'Branch coverage' TEST FOR THIS HAIRINESS
+                switch (trueType.kind) {
+                    case MyTypeKind.NUMBER:
+                    case MyTypeKind.BOOLEAN:
+                    case MyTypeKind.VOID:
+                    {
+                        if(trueType.kind !== falseType.kind){
+                            throw new MyError(`Tipos no compatibles en ternary expression: '${trueType.getName()}' y '${falseType.getName()}'`)
+                        }
+                        ternaryType = trueType;
+                    }break;
+
+                    case MyTypeKind.MY_CONSOLE:
+                    {
+                        if(!(falseType.kind === MyTypeKind.MY_CONSOLE || falseType.kind === MyTypeKind.NULL)){
+                            throw new MyError(`Tipos no compatibles en ternary expression: '${trueType.getName()}' y '${falseType.getName()}'`)
+                        }
+                        ternaryType = trueType;
+                    }break;
+                    case MyTypeKind.STRING:
+                    {
+                        if(!(falseType.kind === MyTypeKind.STRING || falseType.kind === MyTypeKind.NULL)){
+                            throw new MyError(`Tipos no compatibles en ternary expression: '${trueType.getName()}' y '${falseType.getName()}'`)
+                        }
+                        ternaryType = trueType;
+                    }break;
+
+                    case MyTypeKind.NULL:
+                    {
+                        if(!(falseType.kind === MyTypeKind.NULL || falseType.kind === MyTypeKind.STRING || 
+                            falseType.kind === MyTypeKind.CUSTOM || falseType.kind === MyTypeKind.MY_CONSOLE || 
+                            falseType.kind === MyTypeKind.ARRAY || falseType.kind === MyTypeKind.ALPHA_ARRAY)){
+
+                            throw new MyError(`Tipos no compatibles en ternary expression: '${trueType.getName()}' y '${falseType.getName()}'`)
+                        }
+                        ternaryType = falseType;
+                    }
+
+                    case MyTypeKind.ARRAY:
+                    {
+                        //we need to compare the arrays' subTypes 'recursively'
+                        if(!(falseType.kind === MyTypeKind.NULL || falseType.kind === MyTypeKind.ALPHA_ARRAY || MyType.compareTypes(trueType, falseType))){
+                            throw new MyError(`Tipos no compatibles en ternary expression: '${trueType.getName()}' y '${falseType.getName()}'`)
+                        }
+                        ternaryType = trueType;
+                    }break;
+
+                    case MyTypeKind.ALPHA_ARRAY:
+                    {
+                        if(falseType.kind === MyTypeKind.NULL){
+                            //alphaArray type is dominant over null type
+                            ternaryType = trueType;
+                        }
+                        else if(!(falseType.kind === MyTypeKind.ARRAY || falseType.kind === MyTypeKind.ALPHA_ARRAY)){
+                            throw new MyError(`Tipos no compatibles en ternary expression: '${trueType.getName()}' y '${falseType.getName()}'`)
+                        }
+                        else{
+                            ternaryType = falseType;
+                        }
+                    }
+
+                    case MyTypeKind.CUSTOM:
+                    {
+                        //we need to compare the arrays' subTypes 'recursively'
+                        if(!(falseType.kind === MyTypeKind.NULL || MyType.compareTypes(trueType, falseType))){
+                            throw new MyError(`Tipos no compatibles en ternary expression: '${trueType.getName()}' y '${falseType.getName()}'`)
+                        }
+                        ternaryType = trueType;
+                    }break;
+
+                    default:
+                        throw new Error(`compareTypes en ternaryExpression no implementado para leftType: ${trueType}`)
+                        break;
+                }
+
+                let falseLabel = new Label(getNextLabel());
+                let endLabel = new Label(getNextLabel());
+
+                c_ir = c_ir.concat(
+                    condResult.c_ir,
+                   [new Cond_goto(condResult.val, RelOp.NOT_EQUAL, new Number(1), falseLabel)],
+                    trueResult.c_ir,
+                   [new Assignment(temp, trueResult.val),
+                    new Goto(endLabel),
+                    new LabelDeclaration(falseLabel)],
+                    falseResult.c_ir,
+                   [new Assignment(temp, falseResult.val),
+                    new LabelDeclaration(endLabel)]
+               );
+
+                return new ExprResult(ternaryType, false, temp, c_ir);
             }break;
 
             default:
@@ -1293,8 +1431,47 @@ export function generateComparisonExprResult(left_c_ir:C_ir_instruction[], left_
     return new ExprResult(MyType.BOOLEAN, false, temp, c_ir);;
 }
 
+//BADish name: kinda inconsistent with the other 'generate' methods
+function generateEqualEqualOperation(leftResult:ExprResult, rightResult:ExprResult):ExprResult{
+    if(leftResult.myType.kind !== MyTypeKind.VOID  &&
+        rightResult.myType.kind !== MyTypeKind.VOID){
+
+        if(leftResult.myType.kind === rightResult.myType.kind){
+            //then it means they are both string
+            if(leftResult.myType.kind === MyTypeKind.STRING){
+                let temp = getNextTemp();
+                let c_ir = new Array<C_ir_instruction>();
+
+                c_ir = c_ir.concat(
+                    leftResult.c_ir,
+                    rightResult.c_ir,
+                    [new Assignment(Native_c_ir._param1, leftResult.val),
+                    new Assignment(Native_c_ir._param2, rightResult.val),
+                    new FunctionCall(Native_c_ir.stringEqualString),
+                    new Assignment(temp, Native_c_ir._return1)]
+                );
+
+                return new ExprResult(MyType.BOOLEAN, false, temp, c_ir);
+            }
+            else{
+                //For every other case other than string:
+                return generateComparisonExprResult(leftResult.c_ir, leftResult.val, RelOp.EQUAL_EQUAL, rightResult.c_ir, rightResult.val);
+            }
+        }
+    }
+    else{
+        //@Volatile: Throw BinaryExpr error
+        throw MyError.makeMyError(MyErrorKind.TYPE_ERROR, 
+                            `No se puede realizar la operacion: '${ExpressionKind.EQUAL_EQUAL}' con los tipos: '${leftResult.myType.getName()} y '${rightResult.myType.getName()}'`);
+    }
+}
+
 function compileAssignment(binaryExpr:BinaryExpression, owedTemps:String[]):ExprResult{
     let lvalue = compileLValue(binaryExpr.left, owedTemps);
+
+    if(lvalue.isConst){
+        throw new MyError(`No se pueden asignar valores a una variable con modificador 'const'`);
+    }
 
     //si lvalue es immediate, no necesitamos hacerle backup al registro
     let newOwedTemps:String[]
@@ -1355,7 +1532,7 @@ function compileLValue(expr:Expression, owedTemps:String[]):LValueResult{
         //local
         //@Volatile @generateC_ir of a getVarResult (its slightly different if we are getting it as al lvalue)
         if(varLocation === VarLocation.GLOBAL){
-            return new LValueResult(variable.myType, false, MemKind.STACK, new Number(variable.offset), []);
+            return new LValueResult(variable.myType, variable.isConst, MemKind.STACK, new Number(variable.offset), []);
         }
         else if(varLocation === VarLocation.CURRENT_STACK_FRAME){
             let tempResult = getNextTemp();
@@ -1363,7 +1540,7 @@ function compileLValue(expr:Expression, owedTemps:String[]):LValueResult{
                 new _3AddrAssignment(tempResult, REG_P, ArithOp.ADDITION, variable.offset),
             ];
 
-            return new LValueResult(variable.myType, false, MemKind.STACK, tempResult, c_ir);
+            return new LValueResult(variable.myType, variable.isConst, MemKind.STACK, tempResult, c_ir);
         }
         else if(varLocation === VarLocation.ANCESTOR_STACK_FRAME){
             let displayOffset = getVarResult.displayIndex; 
@@ -1376,7 +1553,7 @@ function compileLValue(expr:Expression, owedTemps:String[]):LValueResult{
                 new _3AddrAssignment(tempVarIndex, Mem.stackAccess(tempDisplayIndex), ArithOp.ADDITION, new Number(variable.offset)),
             ];
 
-            return new LValueResult(variable.myType, false, MemKind.STACK, tempVarIndex, c_ir);
+            return new LValueResult(variable.myType, variable.isConst, MemKind.STACK, tempVarIndex, c_ir);
         }
         else{//a 'type switch' or 'match' assertion
             throw new Error(`No implementado para VarLocation: ${varLocation} todavia`);
@@ -1417,7 +1594,21 @@ function compileLValue(expr:Expression, owedTemps:String[]):LValueResult{
                     }break;
                     case MyTypeKind.CUSTOM:
                     {
-                        throw new Error(`lvalue member access para custom no implementado todavia`);
+                        let leftSignature = leftExprResult.myType.specification as TypeSignature;
+
+                        let [attributeOffset, attributeType] = leftSignature.getAttributeOffsetAndType(attributeAccess.name.valueOf());
+                        if(attributeOffset == -1){
+                            throw new MyError(`No existe un atributo con el nombre: '${attributeAccess.name}' para el tipo: '${leftExprResult.myType.getName()}`);
+                        }
+                        let temp = getNextTemp();
+                        let c_ir = new Array<C_ir_instruction>();
+
+                        c_ir = c_ir.concat(
+                            leftExprResult.c_ir,
+                           [new _3AddrAssignment(temp, leftExprResult.val, ArithOp.ADDITION, attributeOffset)]
+                        );
+
+                        return new LValueResult(attributeType, false, MemKind.HEAP, temp, c_ir);
                     }break;
                     default:
                         throw new Error(`compileLValue, No implementado para el '${leftExprResult.myType.getName()}'`);
@@ -1784,10 +1975,116 @@ export function compileLitExpression(lit:LiteralExpression, owedTemps:String[]):
         let val = (lit.literal.valueOf() ? 1 : 0);
         return new ExprResult(MyType.BOOLEAN, true, val, []);
     }
+    else if(lit.literal == null){
+        return new ExprResult(MyType.NULL, true, new Number(-1), []);
+    }
     else{
         throw new Error(`expression literal no implementado para: ${lit.literal}`);
     }
 
+}
+
+//MEJORA: muchas copias de name y type volando por ahi
+//        talvez lo mejor seria tener 2 arreglos estilo SoA y que
+//        cuando ordene el de NameAndType se ordene el de ExprResultTambien
+//        otro problema es que exprResult tiene el type
+//        The problem is that we have to build the typeSignature of this literal
+//        as we will build a sorted array that will be useful to generate correct
+//        c_ir later.
+//        an that in PropertyResult we only  need the name to sort the array to generate
+//        correct c_ir, that sorting already occurs once when we are building the typeSignature
+export function compileObjectLitExpression(objLiteral:ObjectLiteralExpression, owedTemps:String[]):ExprResult{
+
+    class PropertyResult{
+        constructor(
+            public name:string,
+            public exprResult:ExprResult
+        ) {   }
+    }
+
+    let propertyNodes = objLiteral.propertyNodes;
+    let typeSignature = new TypeSignature(null);
+    //MEJORA?: better name and create a real struct instead of using a tuple?
+    let propertyResults:Array<PropertyResult> = [];
+
+    //compile expressions for each property, being mindful of the heapIterator we will now owe,
+    //check that we dont have repeated property names, if so we just throw MyError gracefully
+    //sort the [name, exprResult] pairs alphabetically by name
+    //put them in the heap in that order
+    //return a pointer to the begging of that object with an 
+    //anon type that has the TypeSignature: 
+    //property.name, property.exprResult.myType
+
+    // we will need this temp later to itarate through the reserved heap space
+    // for this objLit and we dont want the subExpressions to mangle it
+    let tempIterator = getNextTemp();
+    let newOwedTemps = owedTemps.concat([tempIterator]);
+    if(propertyNodes.length > 0){
+        for (let i = 0; i < propertyNodes.length; i++) {
+
+            let exprResult = compileExpression(propertyNodes[i].expr, newOwedTemps);
+
+            if(!typeSignature.tryAddAttribute(propertyNodes[i].id, exprResult.myType)){
+                throw new MyError(`ObjectLitaral tiene la propiedad con el nombre: ${propertyNodes[i].id} definida 2 veces`);
+            }
+
+            propertyResults.push(new PropertyResult(propertyNodes[i].id, exprResult));
+
+            //you should really be ashamed of yourself
+            //AGAIN!
+            propertyResults.sort(function (a:PropertyResult, b:PropertyResult):number{
+                if(a.name > b.name){
+                    return 1;
+                }
+                if(a.name < b.name){
+                    return -1;
+                }
+                return 0;
+            });
+        }
+    }
+    else{
+        //@FIXME:
+        //honestly I dont fucking know what to do in this case. 
+        //what the fuck does '{}' mean???? should it be null??
+        //should it be a pointer to a heap structure that has size
+        //0? what does that even mean??
+        //what its type
+        //does it generate c_ir? shoud it not?
+        //I mean its kinda useless c_ir
+        //aaaaaahhhhh
+        //for now its just a compilation error :(
+        throw new MyError("Object literal debe de tener almenos 1 propiedad definida");
+    }
+
+    //THE SPACE IN THE HEAP FOR THIS OBJ MUST BE CONTIGUOS SO WE GOTTA DO THE 
+    //HEAP RESERVATION IN 'ONE GO' h = h + SIZE 
+    //then we can put all c_ir of the expression because that c_ir need some heap
+    //as well 
+
+    let c_ir = new Array<C_ir_instruction>();
+
+    //if types could have different sizes in our lang we would need 
+    //this 'heap allocation' wouldnt be as straight foward
+    c_ir = c_ir.concat(
+       [new Assignment(tempIterator, REG_H),
+        new _3AddrAssignment(REG_H, REG_H, ArithOp.ADDITION, new Number(propertyResults.length))]
+    );
+
+    for (const propResult of propertyResults) {
+        c_ir = c_ir.concat(
+            propResult.exprResult.c_ir,
+           [new Assignment(Mem.heapAccess(tempIterator), propResult.exprResult.val),
+            new _3AddrAssignment(tempIterator, tempIterator, ArithOp.ADDITION, new Number(1))]
+        );
+    }
+
+    let tempResult = getNextTemp();
+    c_ir = c_ir.concat(
+       [new _3AddrAssignment(tempResult, tempIterator, ArithOp.SUBSTRACTION, new Number(propertyResults.length))]
+    )
+    
+    return new ExprResult(MyType.makeCustomType(typeSignature), false, tempResult, c_ir);
 }
 
 export function compileArrayLitExpr(arrayLit:ArrayLiteralExpression, owedTemps:String[]):ExprResult{
@@ -1907,8 +2204,7 @@ export function compileDeclaration(declaration:Declaration):C_ir_instruction[]{
         //we must check types
         if(!MyType.compareTypes(variable.myType, exprResult.myType)){
             //reportamos el error de tipos e indicamos que vamos a usar el valor default del tipo.
-            let error = MyError.makeMyError(
-                MyErrorKind.TYPE_ERROR, 
+            let error = MyError.makeMyError( MyErrorKind.TYPE_ERROR, 
                 `Tipos no compatibles en declaracion: '${variable.myType.getName()} y '${exprResult.myType.getName()}'. Se utilizara el valor default del tipo: ${variable.myType.getName()}`
             );
             error.setLocation(declaration.astNode);
@@ -2000,7 +2296,25 @@ export function compileMemberAccess(memberAccessExpr:MemberAccessExpression, owe
                     //else: goto @Tag: non valid attributeAccessName
                 }break;
                 case MyTypeKind.CUSTOM:
-                    throw new Error(`Attribute access no implementado para ${leftExprResult.myType.getName()} todavia`);
+                {
+                    let leftSignature = leftExprResult.myType.specification as TypeSignature;
+
+                    let [attributeOffset, attributeType] = leftSignature.getAttributeOffsetAndType(attributeAccess.name.valueOf());
+                    if(attributeOffset == -1){
+                        throw new MyError(`No existe un atributo con el nombre: '${attributeAccess.name}' para el tipo: '${leftExprResult.myType.getName()}`);
+                    }
+                    let temp = getNextTemp();
+                    let memberIndexTemp = getNextTemp();
+                    let c_ir = new Array<C_ir_instruction>();
+
+                    c_ir = c_ir.concat(
+                        leftExprResult.c_ir,
+                       [new _3AddrAssignment(memberIndexTemp, leftExprResult.val, ArithOp.ADDITION, attributeOffset),
+                        new Assignment(temp, Mem.heapAccess(memberIndexTemp))]
+                    );
+
+                    return new ExprResult(attributeType, false, temp, c_ir);
+                }break;
                 default:
                     throw new Error(`Attribute access no implementado para ${leftExprResult.myType.getName()} todavia`);
             }
@@ -2248,13 +2562,12 @@ export function compileMemberAccess(memberAccessExpr:MemberAccessExpression, owe
 //[throws] myError if a custom type doesnt exist
 export function compileTypeNode(myTypeNode:MyTypeNode):MyType{
     if(myTypeNode.kind === MyTypeNodeKind.CUSTOM){
-        // let customTypeNode = myTypeNode.spec as CustomTypeNode;
-        // let myType = Env.global.myTypeSignatures[customTypeNode.name];
-        // if(myType === undefined){
-        //     throw new MyError(`No existe el tipo: '${customTypeNode.name}'.`);
-        // }
-        // return myType;
-        throw new Error(`compileTypeNode no implementado para typenode: ${myTypeNode.kind}`)
+        let customTypeNode = myTypeNode.spec as CustomTypeNode;
+        let myType = Env.typeSignatures[customTypeNode.name];
+        if(myType === undefined){
+            throw new MyError(`No existe el tipo: '${customTypeNode.name}'.`);
+        }
+        return myType;
     }
     if(myTypeNode.kind === MyTypeNodeKind.GENERIC_ARRAY || myTypeNode.kind === MyTypeNodeKind.BOXY_ARRAY){
         let arrayTypeNode = myTypeNode.spec as ArrayTypeNode;
@@ -2270,14 +2583,47 @@ export function compileTypeNode(myTypeNode:MyTypeNode):MyType{
         case MyTypeNodeKind.BOOLEAN:
             return MyType.BOOLEAN;
         default:
-            throw new Error(`compileMyTypeNode no implementado para ${myTypeNode.kind}`);
+            throw new Error(`compileMyTypeNode no implementado para primitive: ${myTypeNode.kind}`);
+    }
+}
+
+//NUNCA DEBERIA DE TIRAR MYERROR!
+export function compileTypeNode_fromTypeDef(typeNode:MyTypeNode):MyType{
+    if(typeNode.kind === MyTypeNodeKind.CUSTOM){
+        //Chequeamos si ya existe ese typedef en la tabla
+        let customTypeNode = typeNode.spec as CustomTypeNode;
+        if(Env.typeSignatures[customTypeNode.name] === undefined){
+            Env.typeSignatures[customTypeNode.name] = MyType.makeWaitingType(); 
+            return Env.typeSignatures[customTypeNode.name];
+        }else{
+            return Env.typeSignatures[customTypeNode.name]; 
+        }
+    }
+    if(typeNode.kind === MyTypeNodeKind.GENERIC_ARRAY || typeNode.kind === MyTypeNodeKind.BOXY_ARRAY){
+        let arrayTypeNode = typeNode.spec as ArrayTypeNode;
+        //It is very important that we dont call runNonPropertyMyTypeNode. Here. If we do we will get a pretty nasty bug
+        return MyType.makeArrayType(compileTypeNode_fromTypeDef(arrayTypeNode.subType));
+    }
+
+    //it must be primitive
+    switch (typeNode.kind) {
+        case MyTypeNodeKind.NUMBER:
+            return MyType.NUMBER;
+        case MyTypeNodeKind.STRING: 
+            return MyType.STRING;
+        case MyTypeNodeKind.BOOLEAN:
+            return MyType.BOOLEAN;
+        case MyTypeNodeKind.NULL:
+            return MyType.NULL;
+        default:
+            throw new Error(`runMyTypeNode no implementado para ${typeNode.kind}`);
     }
 }
 
 export function compileWhile(whileStatement:WhileStatement):C_ir_instruction[]{
     //Tenemos que chequear los tipos antes de poder tocar el Env
     let condResult = compileExpression(whileStatement.expr, []);
-    if(!MyType.compareTypes(condResult.myType, MyType.BOOLEAN)){
+    if(!MyType.compareTypes(MyType.BOOLEAN, condResult.myType)){
         throw new MyError(`La condicion de un statement while debe ser de tipo booleana, se encontro: ${condResult.myType.getName()}`);
     }
 
@@ -2303,6 +2649,43 @@ export function compileWhile(whileStatement:WhileStatement):C_ir_instruction[]{
         statements_c_ir,
        [new Goto(begLabel),
         new LabelDeclaration(endLabel)]
+    );
+
+    Env.popScope();
+
+    return c_ir;
+}
+
+export function compileDoWhile(whileStatement:WhileStatement):C_ir_instruction[]{
+    //Tenemos que chequear los tipos antes de poder tocar el Env
+    let condResult = compileExpression(whileStatement.expr, []);
+    if(!MyType.compareTypes(MyType.BOOLEAN, condResult.myType)){
+        throw new MyError(`La condicion de un statement while debe ser de tipo booleana, se encontro: ${condResult.myType.getName()}`);
+    }
+
+    let begLabel = new Label(getNextLabel());
+    let continueLabel = new Label(getNextLabel());
+    let breakLabel = new Label(getNextLabel());
+
+    //[!!!] Important we tell the Env that it has started generating instructions
+    //      inside a a while
+    
+    Env.pushDoWhileScope(continueLabel, breakLabel);
+
+    //MEJORA: hacer un reserve
+    let statements_c_ir:C_ir_instruction[] = new Array();
+    for (const statement of whileStatement.statements) {
+        statements_c_ir = statements_c_ir.concat(compileStatement(statement));
+    }
+
+    let c_ir:C_ir_instruction[] = new Array();
+    c_ir = c_ir.concat(
+       [new LabelDeclaration(begLabel)],
+        statements_c_ir,
+       [new LabelDeclaration(continueLabel)],
+        condResult.c_ir,
+       [new Cond_goto(condResult.val, RelOp.EQUAL_EQUAL, new Number(1), begLabel),
+        new LabelDeclaration(breakLabel)],
     );
 
     Env.popScope();
@@ -2404,6 +2787,318 @@ export function compileFor(forStatement:ForStatement):C_ir_instruction[]{
     return c_ir;
 }
 
+export function compileForOfStatement(forOfStatement:ForOfStatement):C_ir_instruction[]{
+
+    // in pointer to size because we add before we use the pointer
+    // continue goes to beg
+    // we will leave @iterator pointing to size of array because we always add to iter first
+
+    /*
+    ---AuxScope
+    iterableExpression.c_ir, (i.e. arrayExpression) 
+    iterator = iterable.val
+    end = iterable.val + heap[iterable.val] + 1
+    _Beg:
+    add to iterator(heap pointer)
+    check with end(heap pointer)
+    if (vars.get(@iter) == vars.get(@end)) goto _Break
+    programmerVar(heap[iterator])// declaration of the forof var WITH c_ir
+    ---ForOfScope
+    stmts.c_irs,
+    goto _Beg;
+    _Break://
+    */
+
+    //TERMINOLOGY: programmerVar is:
+    //for(let programmerVar:aType of )
+    //         ^
+
+    let c_ir = new Array<C_ir_instruction>();
+    let continueLabel = new Label(getNextLabel());
+    let breakLabel = new Label(getNextLabel());
+
+    //REMEMBER: once we generate the code the scopes are completely
+    //meaningless
+
+    Env.pushAuxForScope();
+    try {
+        let iterableExprResult = compileExpression(forOfStatement.iterable, []);
+        //we do all possible type checking here (including: 'iterable.subType is compatible with programmerVarType')
+        let programmerVarType = compileTypeNode(forOfStatement.variableType);
+        //MEJORA?: Very hard to follow branching
+        if(iterableExprResult.myType.kind === MyTypeKind.ARRAY){
+            //comparamos subType con programmerType
+            if(!MyType.compareTypes(programmerVarType, (iterableExprResult.myType.specification as MyType))){
+                //TODO: error message que indique algo de que estamos en forof y que es con el subtype que tienen que coincidir
+                throw new MyError(`Tipos no compatibles: '${programmerVarType.getName()}' y '${(iterableExprResult.myType.specification as MyType).getName}'`)
+            }
+        }
+        else if(iterableExprResult.myType.kind !== MyTypeKind.ALPHA_ARRAY){
+            //Not an iterable
+            throw new MyError(`forof espera un tipo arreglo, se obtuvo: '${iterableExprResult.myType.getName()}'`);
+        }
+        //if iterableExprResult is ALPHA_ARRAY programmerType could be anything
+
+        //we reserve stack space (as variables) for @index, @end, iterator(the one the programmer wrote)
+
+        //the type doesnt matter because this var is hidden to the programmer
+        //TODO?: poner un MyType especial para 'variables invisibles' (tendriamos que revisar muchos
+        //switches y todo eso, entonces por ahora lo vamos a dejar asi)
+        //@Volatile @addVariable once we know its symbol in myVariables is undefined
+        let endVarOffset = Env.current.size;
+        Env.current.myVariables["@end"] = new Variable(false, false, MyType.NUMBER, endVarOffset);
+        Env.current.size += 1;
+
+        //we try to add the var the programmer wrote. we can do it unsafely because we are 
+        //in a brand new scope
+        //@Volatile @addVariable once we know its symbol in myVariables is undefined
+        let iteratorVarOffset = Env.current.size;
+        Env.current.myVariables["@iterator"] = new Variable(false, false, MyType.NUMBER, Env.current.size);
+        Env.current.size += 1;
+
+        //@Volatile @addVariable once we know its symbol in myVariables is undefined
+        Env.current.myVariables[forOfStatement.variableId] = new Variable(false, false, programmerVarType, Env.current.size);
+        Env.current.size += 1;
+        let programmerVar = Env.current.myVariables[forOfStatement.variableId];
+
+        let iteratorVarStackIndex = getNextTemp();
+
+        let endVarStackIndex = getNextTemp();
+        let endVarAux1 = getNextTemp();//this one will carry the result
+        let endVarAux2 = getNextTemp();
+
+        let iteratorVarAux1 = getNextTemp();
+
+        let programmerVarStackIndex = getNextTemp();
+        let programmerVarAux1 = getNextTemp();
+
+        c_ir = c_ir.concat(
+            //calculamos iterable
+            iterableExprResult.c_ir,
+            //le damos valor a iterator
+            //stack[p+iteratorOffset]=iterable.val
+           [new _3AddrAssignment(iteratorVarStackIndex, REG_P, ArithOp.ADDITION, iteratorVarOffset),
+            new Assignment(Mem.stackAccess(iteratorVarStackIndex), iterableExprResult.val),
+
+
+            //le damos valor a end
+            //stack[p+endOffset] = iterable + heap[iterable] + 1
+            new Assignment(endVarAux1, iterableExprResult.val),
+            new Assignment(endVarAux2, Mem.heapAccess(endVarAux1)),
+            new _3AddrAssignment(endVarAux1, endVarAux1, ArithOp.ADDITION, endVarAux2),
+            new _3AddrAssignment(endVarAux1, endVarAux1, ArithOp.ADDITION, new Number(1)),
+            new _3AddrAssignment(endVarStackIndex, REG_P, ArithOp.ADDITION, endVarOffset),
+            new Assignment(Mem.stackAccess(endVarStackIndex), endVarAux1),
+
+            new LabelDeclaration(continueLabel),
+
+            //add to iterator
+            //stack[p+iteratorOffset] = stack[p+iteratorOffset] + 1
+            //we need to recaculate the iteratorVarStackIndex of the variable because we might have destroyed
+            //that temp by the time we jump back to 'begLabel'
+            new _3AddrAssignment(iteratorVarStackIndex, REG_P, ArithOp.ADDITION, iteratorVarOffset),
+            new Assignment(iteratorVarAux1, Mem.stackAccess(iteratorVarStackIndex)),
+            new _3AddrAssignment(iteratorVarAux1, iteratorVarAux1, ArithOp.ADDITION, new Number(1)),
+            new Assignment(Mem.stackAccess(iteratorVarStackIndex), iteratorVarAux1),
+
+            //check with end
+            //if(iterVarAux1 == stack[p + endOffset]) goto breakLabel
+            //                   ^--we need to recalculate end because we might have destroyed 
+            //that temp by the time we jump back to 'begLabel'
+            new _3AddrAssignment(endVarStackIndex, REG_P, ArithOp.ADDITION, endVarOffset),
+            new Assignment(endVarAux1, Mem.stackAccess(endVarStackIndex)),
+            new Cond_goto(iteratorVarAux1, RelOp.EQUAL_EQUAL, endVarAux1, breakLabel),
+        
+            //stack[p+programmerVarOffset] = heap[iteratorVarAux1]
+            new _3AddrAssignment(programmerVarStackIndex, REG_P, ArithOp.ADDITION, programmerVar.offset),
+            new Assignment(programmerVarAux1, Mem.heapAccess(iteratorVarAux1)),
+            new Assignment(Mem.stackAccess(programmerVarStackIndex), programmerVarAux1),
+        ]
+        );
+    } catch (myError) {
+        Env.popScope();
+        throw myError;
+    }
+
+    Env.pushForOfScope(continueLabel, breakLabel)
+    try {
+        for (const statement of forOfStatement.statements) {
+            c_ir = c_ir.concat(
+                compileStatement(statement)
+            );
+        }
+        c_ir = c_ir.concat(
+           [new Goto(continueLabel),
+            new LabelDeclaration(breakLabel)]
+        )
+    } catch (myError) {
+        Env.popScope();
+        Env.popScope();
+        throw myError;
+    }
+    Env.popScope();
+    Env.popScope();
+
+    return c_ir;
+}
+
+ 
+//CHAPUZ: estamos copiando y pegando mucho de 'forof' hay un monton de cosas
+//        que podemos hacer mas simples aqui porque forin es mas simple
+export function compileForInStatement(forInStatement:ForInStatement):C_ir_instruction[]{
+    // in pointer to size because we add before we use the pointer
+    // continue goes to beg
+    // we will leave @iterator pointing to size of array because we always add to iter first
+
+    /*
+    ---AuxScope
+    iterableExpression.c_ir, (i.e. arrayExpression) 
+    iterator = iterable.val
+    end = iterable.val + heap[iterable.val] + 1
+    _Beg:
+    add to iterator(heap pointer)
+    check with end(heap pointer)
+    if (vars.get(@iter) == vars.get(@end)) goto _Break
+    programmerVar(heap[iterator])// declaration of the forof var WITH c_ir
+    ---ForOfScope
+    stmts.c_irs,
+    goto _Beg;
+    _Break://
+    */
+
+    //TERMINOLOGY: programmerVar is:
+    //for(let programmerVar:aType of )
+    //         ^
+
+    let c_ir = new Array<C_ir_instruction>();
+    let continueLabel = new Label(getNextLabel());
+    let breakLabel = new Label(getNextLabel());
+
+    //REMEMBER: once we generate the code the scopes are completely
+    //meaningless
+
+    Env.pushAuxForScope();
+    try {
+        let enumerableExprResult = compileExpression(forInStatement.enumerable, []);
+        //we do all possible type checking here (including: 'iterable.subType is compatible with programmerVarType')
+        let programmerVarType = compileTypeNode(forInStatement.variableType);
+        //MEJORA?: Very hard to follow branching
+        if(enumerableExprResult.myType.kind !== MyTypeKind.ARRAY && enumerableExprResult.myType.kind !== MyTypeKind.ALPHA_ARRAY){
+            //Not an enumerable
+            throw new MyError(`forin espera un tipo arreglo, se obtuvo: '${enumerableExprResult.myType.getName()}'`);
+        }
+        if(programmerVarType.kind !== MyTypeKind.NUMBER){
+            throw new MyError(`Tipos no compatibles: se esperaba: 'NUMBER' se obtuvo: '${programmerVarType.getName()}'`);
+        }
+
+        //we reserve stack space (as variables) for @index, @end, iterator(the one the programmer wrote)
+
+        //the type doesnt matter because this var is hidden to the programmer
+        //TODO?: poner un MyType especial para 'variables invisibles' (tendriamos que revisar muchos
+        //switches y todo eso, entonces por ahora lo vamos a dejar asi)
+        //@Volatile @addVariable once we know its symbol in myVariables is undefined
+        let endVarOffset = Env.current.size;
+        Env.current.myVariables["@end"] = new Variable(false, false, MyType.NUMBER, endVarOffset);
+        Env.current.size += 1;
+
+        //we try to add the var the programmer wrote. we can do it unsafely because we are 
+        //in a brand new scope
+        //@Volatile @addVariable once we know its symbol in myVariables is undefined
+        let iteratorVarOffset = Env.current.size;
+        Env.current.myVariables["@iterator"] = new Variable(false, false, MyType.NUMBER, Env.current.size);
+        Env.current.size += 1;
+
+        //@Volatile @addVariable once we know its symbol in myVariables is undefined
+        Env.current.myVariables[forInStatement.variableId] = new Variable(false, false, programmerVarType, Env.current.size);
+        Env.current.size += 1;
+        let programmerVar = Env.current.myVariables[forInStatement.variableId];
+
+        let iteratorVarStackIndex = getNextTemp();
+
+        let endVarStackIndex = getNextTemp();
+        let endVarAux1 = getNextTemp();//this one will carry the result
+        let endVarAux2 = getNextTemp();
+
+        let iteratorVarAux1 = getNextTemp();
+
+        let programmerVarStackIndex = getNextTemp();
+        let programmerVarAux1 = getNextTemp();
+
+        c_ir = c_ir.concat(
+            //calculamos iterable
+            enumerableExprResult.c_ir,
+            //le damos valor a iterator
+            //stack[p+iteratorOffset]=iterable.val
+           [new _3AddrAssignment(iteratorVarStackIndex, REG_P, ArithOp.ADDITION, iteratorVarOffset),
+            new Assignment(Mem.stackAccess(iteratorVarStackIndex), enumerableExprResult.val),
+
+
+            //le damos valor a end
+            //stack[p+endOffset] = iterable + heap[iterable] + 1
+            new Assignment(endVarAux1, enumerableExprResult.val),
+            new Assignment(endVarAux2, Mem.heapAccess(endVarAux1)),
+            new _3AddrAssignment(endVarAux1, endVarAux1, ArithOp.ADDITION, endVarAux2),
+            new _3AddrAssignment(endVarAux1, endVarAux1, ArithOp.ADDITION, new Number(1)),
+            new _3AddrAssignment(endVarStackIndex, REG_P, ArithOp.ADDITION, endVarOffset),
+            new Assignment(Mem.stackAccess(endVarStackIndex), endVarAux1),
+
+            //setamos el valor inicial de programmerVar 
+            new _3AddrAssignment(programmerVarStackIndex, REG_P, ArithOp.ADDITION, programmerVar.offset),
+            new Assignment(Mem.stackAccess(programmerVarStackIndex), new Number(-1)),
+
+            new LabelDeclaration(continueLabel),
+
+            //add to iterator
+            //stack[p+iteratorOffset] = stack[p+iteratorOffset] + 1
+            //we need to recaculate the iteratorVarStackIndex of the variable because we might have destroyed
+            //that temp by the time we jump back to 'begLabel'
+            new _3AddrAssignment(iteratorVarStackIndex, REG_P, ArithOp.ADDITION, iteratorVarOffset),
+            new Assignment(iteratorVarAux1, Mem.stackAccess(iteratorVarStackIndex)),
+            new _3AddrAssignment(iteratorVarAux1, iteratorVarAux1, ArithOp.ADDITION, new Number(1)),
+            new Assignment(Mem.stackAccess(iteratorVarStackIndex), iteratorVarAux1),
+
+            //check with end
+            //if(iterVarAux1 == stack[p + endOffset]) goto breakLabel
+            //                   ^--we need to recalculate end because we might have destroyed 
+            //that temp by the time we jump back to 'begLabel'
+            new _3AddrAssignment(endVarStackIndex, REG_P, ArithOp.ADDITION, endVarOffset),
+            new Assignment(endVarAux1, Mem.stackAccess(endVarStackIndex)),
+            new Cond_goto(iteratorVarAux1, RelOp.EQUAL_EQUAL, endVarAux1, breakLabel),
+        
+            //stack[p+programmerVarOffset] = heap[iteratorVarAux1]
+            new _3AddrAssignment(programmerVarStackIndex, REG_P, ArithOp.ADDITION, programmerVar.offset),
+            new Assignment(programmerVarAux1, Mem.stackAccess(programmerVarStackIndex)),
+            new _3AddrAssignment(programmerVarAux1, programmerVarAux1, ArithOp.ADDITION, new Number(1)),
+            new Assignment(Mem.stackAccess(programmerVarStackIndex), programmerVarAux1),
+        ]
+        );
+    } catch (myError) {
+        Env.popScope();
+        throw myError;
+    }
+
+    Env.pushForOfScope(continueLabel, breakLabel)
+    try {
+        for (const statement of forInStatement.statements) {
+            c_ir = c_ir.concat(
+                compileStatement(statement)
+            );
+        }
+        c_ir = c_ir.concat(
+           [new Goto(continueLabel),
+            new LabelDeclaration(breakLabel)]
+        )
+    } catch (myError) {
+        Env.popScope();
+        Env.popScope();
+        throw myError;
+    }
+    Env.popScope();
+    Env.popScope();
+
+    return c_ir;
+}
+
 //MEJORA?: talvez tener un compileBlock nos ayude a quitar codigo similar en 
 //         if, while, for... etc
 export function compileIf(ifStatement:IfStatement):C_ir_instruction[]{
@@ -2458,4 +3153,90 @@ export function compileBlock(block:Block):C_ir_instruction[]{
     );
 
     return result_c_ir;
+}
+
+//MEJORA: owedTemps are very confusing in this function, see if 
+//        we can make it better
+export function compileSwitchStatement(switchStatement:SwitchStatement):C_ir_instruction[]{
+
+    //were we calculate at runtime which label to go
+    let c_ir_switchHeader = new Array<C_ir_instruction>();
+    //it is the last part of the c_ir_switchHeader, if nothing else in c_ir_ matches
+    //we unconditional goto this label
+    let defaultLabel:(Label | null) = null;
+    //it must include the label declaration for each case
+    let statements_c_ir = new Array<C_ir_instruction>();
+    let breakLabel = new Label(getNextLabel());
+
+    let exprToSwitchOnResult = compileExpression(switchStatement.expr, []);
+
+    Env.pushSwitchScope(breakLabel);
+    let newOwedTemps:String[];
+    if(exprToSwitchOnResult.val instanceof String){
+        newOwedTemps = [exprToSwitchOnResult.val];
+    }
+    else{
+        newOwedTemps = [];
+    }
+
+    try {
+        for (const switchInstruction of switchStatement.switchInstructions) {
+            if(switchInstruction instanceof Statement){
+                statements_c_ir = statements_c_ir.concat(
+                    compileStatement(switchInstruction)
+                );
+            }
+            else if(switchInstruction instanceof SwitchCase){
+                //the hard part is to use the == operator. we should have a different function an all               
+                //but dont be shy to copy paste from binary operator fuck it
+                let caseExpr = compileExpression(switchInstruction.expr, newOwedTemps);
+
+                let comparissonResult = generateEqualEqualOperation(exprToSwitchOnResult, caseExpr);
+
+                let caseLabel = new Label(getNextLabel());
+
+                c_ir_switchHeader = c_ir_switchHeader.concat(
+                    caseExpr.c_ir,
+                    comparissonResult.c_ir,
+                   [new Cond_goto(comparissonResult.val, RelOp.EQUAL_EQUAL, new Number(1), caseLabel)]
+                );
+
+                statements_c_ir = statements_c_ir.concat(
+                   [new LabelDeclaration(caseLabel)]
+                )
+            }
+            else if(switchInstruction instanceof SwitchDefault){
+                if(defaultLabel !== null){
+                    throw new MyError(`Switch statement solo puede tener 1 default definido`);
+                }
+                defaultLabel = new Label(getNextLabel());
+                statements_c_ir = statements_c_ir.concat(
+                   [new LabelDeclaration(defaultLabel)]
+                );
+            }
+            else{//Type switch assertion
+                throw new Error(`compileSwitch not implemented for switch instruction: '${switchInstruction}'`);
+            }
+        }
+
+        if(defaultLabel !== null){
+            c_ir_switchHeader = c_ir_switchHeader.concat(
+               [new Goto(defaultLabel)]
+            );
+        }
+        else{
+            c_ir_switchHeader = c_ir_switchHeader.concat(
+               [new Goto(breakLabel)]
+            );
+        }
+    } catch (error) {
+        Env.popScope;
+        throw error;
+    }
+    Env.popScope();
+
+    return c_ir_switchHeader.concat(
+        statements_c_ir,
+       [new LabelDeclaration(breakLabel)]
+    );
 }

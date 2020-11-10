@@ -97,39 +97,6 @@ export function relOpGetSymbol(relationalOperator:RelOp):string{
     }
 }
 
-//por ahora no necesitamos esto porque vamos a usar instanceof 
-//para identificar cada instancia de c_ir_instruction
-// export enum C_ir_kind{
-//     ASSIGNMENT,
-//     LABEL,
-//     GOTO,
-//     COND_GOTO,
-//     FUNC_CALL,
-//     PRINT_F,//Talvez no lo necesitamos
-// }
-
-// export namespace C_ir_kind{
-//     export function toString(c_ir_kind:C_ir_kind){
-//         switch (c_ir_kind) {
-//             case C_ir_kind.ASSIGNMENT:
-//                 return "ASSIGNMENT";
-//             case C_ir_kind.LABEL:
-//                 return "LABEL";
-//             case C_ir_kind.GOTO:
-//                 return "GOTO";
-//             case C_ir_kind.COND_GOTO:
-//                 return "COND_GOTO";
-//             case C_ir_kind.FUNC_CALL:
-//                 return "FUNC_CALL";
-//             case C_ir_kind.PRINT_F:
-//                 return "PRINT_F";
-        
-//             default:
-//                 throw new Error(`RelationalOperator.toString no implementado para '${c_ir_kind}'!`);
-//         }       
-//     }
-// }
-
 export enum MemKind{
     HEAP,
     STACK

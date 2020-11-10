@@ -10,7 +10,7 @@
             WhileStatement, DoWhileStatement, IfStatement, 
             ForStatement, ForOfStatement, ForInStatement, 
             SwitchStatement, SwitchCase, SwitchDefault, 
-            SwitchInstructions } = require('../Ast/Statement');
+            SwitchInstruction } = require('../Ast/Statement');
     const { AssignmentNode } = require('../Ast/AssignmentNode');
     const { Declaration } = require('../Ast/Declaration');
     const { MyTypeNode, MyTypeNodeKind } = require('../Ast/MyTypeNode');
@@ -405,16 +405,26 @@ IfStatement
 ;
 
 ForOfStatement
-    : FOR '(' 'LET' IDENTIFIER 'OF' Expression ')' '{' StatementList_ '}'
+    : FOR '(' 'LET' IDENTIFIER ':' Type 'OF' Expression ')' '{' StatementList_ '}'
     {
-        $$ = new Statement(StatementKind.ForOfKind, new ForOfStatement($4, $6, $9), @1.first_line, @1.first_column, @10.last_line, @10.last_column);
+        //ForOfStatement(isConst, id, MyType, iterableExpression, statements)
+        $$ = new Statement(StatementKind.ForOfKind, new ForOfStatement(false, $4, $6, $8, $11), @1.first_line, @1.first_column, @12.last_line, @12.last_column);
+    }
+    | FOR '(' 'CONST' IDENTIFIER ':' Type 'OF' Expression ')' '{' StatementList_ '}'
+    {
+        //ForOfStatement(isConst, id, MyType, iterableExpression, statements)
+        $$ = new Statement(StatementKind.ForOfKind, new ForOfStatement(true, $4, $6, $8, $11), @1.first_line, @1.first_column, @12.last_line, @12.last_column);
     }
 ;
 
 ForInStatement
-    : FOR '(' 'LET' IDENTIFIER 'IN' Expression ')' '{' StatementList_ '}'
+    : FOR '(' 'LET' IDENTIFIER ':' Type 'IN' Expression ')' '{' StatementList_ '}'
     {
-        $$ = new Statement(StatementKind.ForInKind, new ForInStatement($4, $6, $9), @1.first_line, @1.first_column, @10.last_line, @10.last_column);
+        $$ = new Statement(StatementKind.ForInKind, new ForInStatement(false, $4, $6, $8, $11), @1.first_line, @1.first_column, @12.last_line, @12.last_column);
+    }
+    | FOR '(' 'CONST' IDENTIFIER ':' Type 'IN' Expression ')' '{' StatementList_ '}'
+    {
+        $$ = new Statement(StatementKind.ForInKind, new ForInStatement(true, $4, $6, $8, $11), @1.first_line, @1.first_column, @12.last_line, @12.last_column);
     }
 ;
 
@@ -440,30 +450,30 @@ SwitchInstructions_
 SwitchInstructions
     : 'CASE' Expression ':'
     {
-        $$ = new SwitchInstructions([new SwitchCase($2, 0)],[],[]);
+        $$ = [new SwitchCase($2)];
     }
     | 'DEFAULT' ':'
     {
-        $$ = new SwitchInstructions([],[new SwitchDefault(0)],[]);
+        $$ = [new SwitchDefault()];
     }
     | Statement
     {
-        $$ = new SwitchInstructions([],[],[$3]);
+        $$ = [$1];
     }
     | SwitchInstructions 'CASE' Expression ':'
     {
         $$ = $1;
-        $$.cases.push(new SwitchCase($3, $$.statements.length));
+        $$.push(new SwitchCase($3));
     }
     | SwitchInstructions 'DEFAULT' ':'
     {
         $$ = $1;
-        $$.defaults.push(new SwitchDefault($$.statements.length));
+        $$.push(new SwitchDefault($3));
     }
     | SwitchInstructions Statement
     {
         $$ = $1;
-        $$.statements.push($2);
+        $$.push($2);
     }
 ;
 

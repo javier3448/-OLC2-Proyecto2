@@ -121,3 +121,43 @@ TODO: QUE LOS MENSAJES DE ERROR SI TENGAN KIND
 
 
 BIG TODO: correr todos los archivos de entrada del proyecto pasado y revisar con la hoja de calificacion a la mano
+
+FIX THIS ERROR:
+No script tag of type "javascript/worker" was found and "useWorker" is true. Not using web worker.
+I dont even know if it matter at all :(
+
+
+TODO: mas pruebas para los errores y talvez hasta mas failing tests
+
+TODO: ver si hay algo de las pruebas del proyecto pasado que valga la pena correr
+
+
+MEJORA: incosistencent names between properties and attributes
+
+TODO: better error message when we get an type error between customs:
+      'Tipos no compatibles en declaracion: 'A y 'anonymous'. Se utilizara el valor default del tipo: A'
+      is not a good enough message
+
+MEJORA GENERAL: usar 'instance of' en vez de un enum emparejado con un 'specification'
+
+
+CHECK IF WE *HAVE* TO RECOVER FROM SYNTAX ERRORS
+
+MEJORA: there is a couple of places where we need to catch exceptions in a bunch of different branches
+        see if we can make a bigger try catch, that covers them all, that way we only use 1 try catch
+        example: declarationPrepass
+
+
+IDEA: para el clavo que tenemos que debemos usar temps aux para acceder al stack y al heap
+      poner que _3addrIns solo pueda Temps (String) no memoria (Mem)
+
+[!]:
+solo asi podemos acceder a heap/stack
+Temp = Heap[Temp|imm]
+heap[Temp|imm] = Temp
+
+BIG MEJORA: que el compileFor use la tecnica que usamos en el forOf para hacerle push
+            y pop a los scope sin tener que pensar mucho en que tira MyError y que no
+
+
+TODO: Quitar todo lo marcado con 'debug'

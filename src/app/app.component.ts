@@ -351,7 +351,7 @@ console.log(true||false);//true
 
     //test postFix increment and decrement
     {
-      let tesString = `
+      let testString = `
 let a:number = 1;
 console.log(a++);//prints 1
 console.log(a);//prints 2
@@ -863,6 +863,7 @@ console.log("hello" != "");//true
     //PASSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSSS
     //FUCKING PASSSSSSSS! :D
     //USE IT AS REGRESION TEST PLEASE. BEFORE YOU CHECKIN and whenever you make a big change
+    {
     let testString = `
 function tail(strs:string[]):string[]{
     let result:string[] = new Array(strs.length - 1);
@@ -1121,6 +1122,7 @@ print_list_of_lists(replaceInListOfLists("Bicho", ":O", [["Pasta", "Ganar", "Bic
 //   ]
 // ]
     `;
+    }
 
     //OLD BUG: we coulnt call functions from another function where both funcs had
     //         diplay.size = 0
@@ -1152,7 +1154,6 @@ console.log(factorial(10));//3628800
 `;
   }
 
-    {
     let testString = `
 function tail(strs:string[]):string[]{
     let result:string[] = new Array(strs.length - 1);
@@ -1413,7 +1414,6 @@ print_list_of_lists(replaceInListOfLists("Bicho", ":O", [["Pasta", "Ganar", "Bic
 //   ]
 // ]
     `;
-    }
 
     //BUG: El c_ir generado tira error pero igual pareciera compilar y funcionar bien. :/
     //     es por el orden en que definimos y llamamos a lol1
@@ -1429,7 +1429,503 @@ lol();
 `;
     }
 
-    //Ver si todavia falta algo para las anidadas
+    //TODO revisar que el cambio de orden no afecte el tipo
+    {
+        let testString = `
+type A = {
+    nombre:string,
+    apellido:string,
+}
+
+let a:A = { apellido:"Alvarez", nombre:"Javier" };//This should work perfectly fine
+
+console.log(a.nombre + " " + a.apellido);
+        `;
+    }
+
+    {
+    let testString = `
+type A = {
+    a:string,
+    b:number,
+    c:B
+} 
+type B = {
+    a:boolean
+}
+    `;
+    }
+
+    //TODO:
+    {
+    let testString = `
+type A = {
+    a:string,
+    b:number,
+    c:B
+} 
+type B = {
+    a:boolean
+}
+    `;
+    }
+
+    {
+        let testString = `
+    type A = {
+        a: string;
+        b: B;
+    }
+    type B = {
+        a: A;
+        b: number;
+    }
+    
+    let a:A = {
+        a:"a1", 
+        b : { 
+            a: {
+                a:"a1", 
+                b : { 
+                    a: {
+                        a:"a2", 
+                        b: null
+                    },
+                    b: 30
+                }
+            },
+            b: 20
+        }
+    };
+    //TODO: hacer un logA and logB
+    logA(a);`
+        ;
+        }
+
+        {
+    let testString = `
+type A = {
+    a: number,
+    b: string,
+}
+let a:A = { a: 10, b: "s" };
+console.log("a:" + a.a);//a:10
+console.log("b:" + a.b);//b:s
+console.log("c:" + a.c);//deberia ser error
+a.a = 20;
+a.b = 20;//should be a type error
+a.b = "Javier";
+console.log("a:" + a.a);//a:20
+console.log("b:" + a.b);//b:Javier
+a = null;
+//console.log("a:" + a.a);//undefined behavior 
+//console.log("b:" + a.b);//undefined behavior 
+    `;
+        }
+
+        {
+    let testString = `
+//ERRORS:
+//10 ? "FAIL" : "FAIL";//condicion de ternary no es tipo boolean
+//true ? "FAIL" : 10;//tipos diferentes en expression ternaria
+//let b:string = true ? 10 : 20;//string no compatible con number
+//TODO: test with array, mytype, alpha_array, null, string etc... 
+//TODO: how can we test all that dominat type jazz thingy
+//TODO: probar con ternary type = void
+let flag:boolean = true;
+console.log(flag ? "PASS" : "FAIL");//PASS
+flag = false;
+console.log(flag ? "FAIL" : "PASS");//PASS
+    `;
+        }
+
+    {
+    let testString = `
+let n:number = 0;
+do{
+  console.log("PASS");
+  if(n > 0){
+    console.log("FAIL");
+  }
+  n++;
+}while(false);
+    `
+    }
+
+    {
+        let testString = `
+function aux():boolean{
+    console.log("PASS");
+    return false;
+}
+do{
+    continue;
+    console.log("FAIL");
+}while(aux());
+        `;
+    }
+    
+    {
+    let testString = `
+let a:number = 20;
+switch(a){
+  case 10:
+    console.log("ten");
+  break;
+  case 20:
+    console.log("twenty");
+  break;
+  case 30:
+    console.log("thirty");
+  break;
+  case 40:
+    console.log("forty");
+  break;
+  case 50:
+    console.log("fifty");
+  break;
+  default:
+    console.log("none");
+}
+    `;
+    }
+
+    //TODO:
+    //test correctness of like the 'triple scope' weirdness that happens with for cycles
+    {
+        let testString = `
+let iterator = 10;
+for (const iterator in {a:"javier", b:"antonio"}) {
+    let iterator = 20;
+    console.log(iterator);
+}//should print 20 2 times
+        `;
+    }
+
+    //test de examen final:
+        {
+        let testString = `
+//BUGgy: T1 y T2 estan como al revez
+//BUGgy: T55 esta raro (en los otros casos primero hacemos el + 1)
+function function1(a:number, b:number, c:number):number{
+	let arr:number[][][] = new Array(a);
+    for(let i:number = 0; i < arr.length; i++){
+    	arr[i] = new Array(b);
+        for(let e:number = 0; e < arr[i].length; e++){
+            arr[i][e] = new Array(c);
+        }
+    }
+    arr[3][6][9] = 77;
+    return arr[3][6][9];
+}
+console.log(function1(4,7,10));
+        `;
+        }
+
+        {
+    let testString = `
+console.log("**********forof array**********");
+for (const iterator:number of [1,2,3,4,5]) {
+    console.log(iterator);
+}
+// console.log("**********forin array**********");
+// for (const iterator:number in [1,2,3,4,5]) {
+//     console.log(iterator);
+// }
+//The name of each attribute is lost at compile time so 'forin'
+//doesnt work for arrays
+console.log("**********forin object**********");
+for (const iterator:number in [1,2,3,4,5]) {//should be an error
+    console.log(iterator);
+}
+    `;
+        }
+
+    //PASS: 
+    //pero:
+    //No imprime Aritmeticas 100 porque 36 ** 0.5 no se puede
+    //No imprime Logica 2 porque no podemos hacer && entre boolean y number
+        {
+    let testString = `
+    let val1:number = 0;
+    let val2:number = 0;
+    let val3:number = 0;
+    let a:number = 0;
+    let b:number = 0;
+    val1 = 7 - (5 + 10 * (20 / 5 - 2 + 4 * (5 + 2 * 3)) - 8 * 3 ** 2) + 50 * (6 * 2); //214
+    val2 = 2 ** 4 - 9 * (8 - 6 * (3 ** 2 - 6 * 5 - 7 * (9 + 7 ** 3) + 10) - 5 ) + 8 * (36 / 6 - 5 * ( 2 * 3)); //-133853
+    val3 = (8 ** 3 * 36 ** 0.5 - 2 ** 5 + 2 ** 3 + 16 ** 0.5 + 2) / 3; //-1018 
+    let val4:number = val1+val2+val3+val4; //Error, comentar despues de reportar
+    //let val4 = val1 - val2 + val3; //El resultado es 135085
+    if(val1 - val2 + val3 == 135085){
+        console.log('Aritmeticas 100');
+    }
+    let String_3: string;
+    let String_4: string;
+    let int2_:number;
+    let TRUE :boolean = true;
+    let FALSE :boolean = false;
+    int2_ = 45;
+    int2_ --; 
+    String_3 = (int2_ > 77 || FALSE) + "," + (int2_ < 78 && TRUE) + "," + (int2_ + 10 <= int2_ || FALSE) + "," + (!!!!!!!!!!!! (int2_ + 10 >= int2_));
+    String_4 = (int2_ >= 77 || -1 < 100) + "," + (int2_ > 78 && 100 + 0);
+    console.log("Lógica 1" + " = " + String_3); //false,true,false,true
+    console.log("Lógica 2" + " = " + String_4); //true,false
+    let relacionaes : boolean = (a == 0) != (44.3 < 44.4) == (2**5 == 31 + 2 % 1);
+    relacionaes = relacionaes == (b == a) != ((532 > 532)) == (String_3 == "false,true,false,true") == (String_4 == "true,false");
+    if(relacionaes){
+        console.log("Relacionels 100");
+    }
+    else{
+        console.log("Relacionales 0");
+    }
+    /***********************/
+    const dimension:number = 3;
+    //Error porque una constante debe estar asginada
+    //Si no reporta el error -0.5 en declaracion de variables
+    const dim2:number;
+    let arreglo : string[] = ["Estudiante1", "Estudiante2", "Estudiante3"];
+    //Posicion 0 - 2 para estudiante 1
+    //Posicion 3 - 5 para estudiante 2
+    //Posicion 6 - 8 para estudiante 3
+    let tablero : number[] = [0,0,0,0,0,0,0,0,0];
+    let estado : boolean[] = [false, false, false, false, false, false, false, false, false];
+    function agregar(i : number, j : number, nota : number) : boolean{
+        if(!estado[i * dimension + j]){
+            tablero[i * dimension + j] = nota;
+            estado[i*dimension + j] = true;
+            return true;
+        }
+        console.log("Posicion ocupada");
+        return false;
+    }
+    function imprimirPromedio(estudiante : number):void{
+        let promedio:number = (tablero[estudiante * dimension + 0] + tablero[estudiante * dimension + 1] + tablero[estudiante * dimension + 2])/3;
+        console.log("Promedio Estudiante " + arreglo[estudiante] +  " = " + promedio);
+    }
+    //Error porque es una constante
+    //Si no reporta el error -0.5 en asignacion de variables
+    dimension = 30;
+    //Notas estudiante 1
+    agregar(0,0, 90);
+    agregar(0,1, 95);
+    agregar(0,2, 92);
+    //Notas estudiante 2
+    agregar(1,0, 85);
+    agregar(1,1, 90);
+    agregar(1,2, 100);
+    //Notas estudiante 3
+    agregar(2,0, 20);
+    agregar(2,1, 100);
+    agregar(2,2, 100);
+    //Imprimir Promedios
+    imprimirPromedio(0); //92.33 -> + 0.5
+    imprimirPromedio(1); //91.66 -> + 0.5
+    imprimirPromedio(2); //70 -> + 0.5
+    //Debe imprimir posicion ocupada -> + 0.5
+    agregar(2,0, -1);
+/*
+Aritmeticas 100
+Lógica 1 = false,true,false,true
+Lógica 2 = true,false
+Relacionels 100
+Promedio Estudiante  Estudiante1  =  92.33333333333333
+Promedio Estudiante  Estudiante2  =  91.66666666666667
+Promedio Estudiante  Estudiante3  =  73.33333333333333
+Posicion ocupada
+*/
+    `;
+        }
+
+        //TODO: corregir esta para proyecto 2 y probarla
+        {
+    let testString = `
+    let array = [32, 21, 7, 89, 56, 909, 109, 2];
+    let indice = "indice " + array[0];
+    console.log("***********************************************************************");
+    console.log("***********                TERNARIO                    ****************");
+    console.log("***********************************************************************");
+    console.log(indice == "indice [32]" ? 'TERNARIO BIEN' : 'TERNARIO MALO');
+    console.log('\n');
+    console.log("***********************************************************************");
+    console.log("***********                 IF                         ****************");
+    console.log("***********************************************************************");
+    if (array[4] > 50) {
+        console.log("IF CORRECTO");
+    } else if (array[4] == 56) {
+        console.log("IF INCORRECTO");
+    } else {
+        console.log("IF INCORRECTO");
+    }
+    
+    console.log('\n');
+    console.log("***********************************************************************");
+    console.log("***********                 SWITCH                     ****************");
+    console.log("***********************************************************************");
+    switch (array[array.length - 1] + "") {
+        case "1":
+            console.log("SWITCH MALO");
+        case "2":
+            console.log("SWITCH BIEN");
+        case "3":
+            console.log("SWITCH BIEN");
+        default:
+            console.log("SWITCH BIEN");
+    }
+    
+    
+    console.log('\n');
+    console.log("***********************************************************************");
+    console.log("***********                 WHILE                      ****************");
+    console.log("***********************************************************************");
+    let index = 0;
+    while (index >= 0) {
+        if (index == 0) {
+            index = index + 100;
+        } else if (index > 50) {
+            index = index / 2 - 25;
+        } else {
+            index = (index / 2) - 1;
+        }
+    
+        console.log(index);
+    }
+    
+    console.log('\n');
+    console.log("***********************************************************************");
+    console.log("***********                 doWHILE                    ****************");
+    console.log("***********************************************************************");
+    index = -1;
+    do {
+        index = index + 1;
+        if (index == 0 || index == 1 || index == 11 || index == 12) {
+            console.log('*********************************************************************************************************');
+        } else if (index == 2) {
+            console.log('**********  ***************  ******                 ******                 ******              **********')
+        } else if (index >= 3 && index <= 5) {
+            console.log('**********  ***************  ******  *********************  *************  ******  **********************')
+        } else if (index == 6) {
+            console.log('**********  ***************  ******                 ******                 ******  **********************');
+        } else if (index >= 7 && index <= 9) {
+            console.log('**********  ***************  ********************   ******  *************  ******  **********************');
+        } else if (index == 10) {
+            console.log('**********                   ******                 ******  *************  ******              **********');
+        }
+    } while (index != 12);
+    
+    console.log('\n');
+    
+    
+    console.log('\n');
+    console.log("***********************************************************************");
+    console.log("***********                 FOR LOOP                   ****************");
+    console.log("***********************************************************************");
+    for (let i = 0; i < 10; i++) {
+        let output = '';
+        for (let j = 0; j < 10 - i; j++) {
+            output = output + ' ';
+        }
+        for (let k = 0; k <= i; k++) {
+            output = output + '* ';
+        }
+        console.log(output);
+    }
+    
+    console.log('\n');
+    console.log("***********************************************************************");
+    console.log("***********                 FOR OF                     ****************");
+    console.log("***********************************************************************");
+    let arr = [1,2,3,4,5,6];
+    for(let i in [1,2,3,4,5,6]){
+        console.log(arr[i] == 1, arr[i] == 2, arr[i] == 3, arr[i] == 4, arr[i] == 5, arr[i] == 6);
+    }
+    
+    
+    console.log('\n');
+    console.log("***********************************************************************");
+    console.log("***********                 FOR IN                     ****************");
+    console.log("***********************************************************************");
+    for(let e of [1,2,3,4,5,6]){
+        if(arr.length > e){
+            console.log(e*arr[e],e*arr[e],e*arr[e],e*arr[e],e*arr[e],e*arr[e]);
+        }
+    }
+    
+    /**
+    "***********************************************************************"
+    "***********                TERNARIO                    ****************"
+    "***********************************************************************"
+    "TERNARIO BIEN"
+    "***********************************************************************"
+    "***********                 IF                         ****************"
+    "***********************************************************************"
+    "IF CORRECTO"
+    "***********************************************************************"
+    "***********                 SWITCH                     ****************"
+    "***********************************************************************"
+    "SWITCH BIEN"
+    "SWITCH BIEN"
+    "SWITCH BIEN"
+    "***********************************************************************"
+    "***********                 WHILE                      ****************"
+    "***********************************************************************"
+    100
+    25
+    11.5
+    4.75
+    1.375
+    -0.3125
+    "***********************************************************************"
+    "***********                 doWHILE                    ****************"
+    "***********************************************************************"
+    "*********************************************************************************************************"
+    "*********************************************************************************************************"
+    "**********  ***************  ******                 ******                 ******              **********"
+    "**********  ***************  ******  *********************  *************  ******  **********************"
+    "**********  ***************  ******  *********************  *************  ******  **********************"
+    "**********  ***************  ******  *********************  *************  ******  **********************"
+    "**********  ***************  ******                 ******                 ******  **********************"
+    "**********  ***************  ********************   ******  *************  ******  **********************"
+    "**********  ***************  ********************   ******  *************  ******  **********************"
+    "**********  ***************  ********************   ******  *************  ******  **********************"
+    "**********                   ******                 ******  *************  ******              **********"
+    "*********************************************************************************************************"
+    "*********************************************************************************************************"
+    "***********************************************************************"
+    "***********                 FOR LOOP                   ****************"
+    "***********************************************************************"
+    "          * "
+    "         * * "
+    "        * * * "
+    "       * * * * "
+    "      * * * * * "
+    "     * * * * * * "
+    "    * * * * * * * "
+    "   * * * * * * * * "
+    "  * * * * * * * * * "
+    " * * * * * * * * * * "
+    "***********************************************************************"
+    "***********                 FOR OF                     ****************"
+    "***********************************************************************"
+    DIAGONAL DE TRUE
+    true false false false false false
+    false true false false false false
+    false false true false false false
+    false false false true false false
+    false false false false true false
+    false false false false false true
+    "***********************************************************************"
+    "***********                 FOR IN                     ****************"
+    "***********************************************************************"
+    2 2 2 2 2 2
+    6 6 6 6 6 6
+    12 12 12 12 12 12
+    20 20 20 20 20 20
+    30 30 30 30 30 30
+     */
+    `;
+        }
+
     this.sourceString = testString;
     wasmFolder('https:cdn.jsdelivr.net/npm/@hpcc-js/wasm@0.3.13/dist');
 

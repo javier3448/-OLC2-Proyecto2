@@ -2,6 +2,7 @@ import { AstNode } from "./AstNode";
 import { Expression } from "./Expression"
 import { Declaration } from "./Declaration";
 import { state } from '@angular/animations';
+import { MyTypeNode } from './MyTypeNode';
 
 export enum StatementKind{
     ExpressionKind = 'Expression',
@@ -35,47 +36,22 @@ export class IfStatement {
 export class SwitchStatement {
     constructor(
         public expr:Expression,
-        public switchInstructions:SwitchInstructions,
+        public switchInstructions:SwitchInstruction[],
     ){  }
-}
-
-//Kinda unnecessary I guess but it makes generating the AST in the grammar more ergonomic
-export class SwitchInstructions {
-    constructor(
-        public cases:Array<SwitchCase>,
-        public defaults:Array<SwitchDefault>,
-        public statements:Array<Statement>,
-    ) {   }
-
-    // public addCase(switchCase:SwitchCase){
-    //     this.cases.push(switchCase);
-    // }
-
-    // public addDefault(switchDefault:SwitchDefault){
-    //     this.defaults.push(switchDefault);
-    // }
-
-    // public addStatement(statement:Statement){
-    //     this.statements.push(statement);
-    // }
 }
 
 export class SwitchCase {
     constructor(
-        public expr:Expression,
-        //The index of the statement to be executed next if this case matches
-        //only makes sense inside the context of SwitchInstrucctions
-        public nextStatement:number,
+        public expr:Expression
     ) {   }
 }
 
 export class SwitchDefault {
-    constructor(
-        //The index of the statement to be executed next if this case matches
-        //only makes sense inside the context of SwitchInstrucctions
-        public nextStatement:number,
-    ) {   }
+    //... This class its only here because I want to be able
+    //to use instance of when dealing with a variable type 'SwitchInstruction'
 }
+
+type SwitchInstruction = (Statement | SwitchCase | SwitchDefault)
 
 export class WhileStatement {
     constructor(public expr:Expression, public statements:Array<Statement>){  }
@@ -97,7 +73,9 @@ export class ForStatement {
 
 export class ForInStatement {
     constructor(
+        public isConst:boolean,
         public variableId:string,
+        public variableType:MyTypeNode,
         public enumerable:Expression, 
         public statements:Statement[],
     ){  }
@@ -105,7 +83,9 @@ export class ForInStatement {
 
 export class ForOfStatement {
     constructor(
+        public isConst:boolean,
         public variableId:string,
+        public variableType:MyTypeNode,
         public iterable:Expression, 
         public statements:Statement[],
     ){  }

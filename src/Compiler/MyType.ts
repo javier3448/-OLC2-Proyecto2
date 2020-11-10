@@ -1,3 +1,4 @@
+import { Attribute } from '@angular/core';
 import { MyTypeNode } from 'src/Ast/MyTypeNode';
 
 export enum MyTypeKind {
@@ -28,22 +29,72 @@ export enum MyTypeKind {
     WAITING = 'WAITING'
 }
 
-// there is probably a better way of doing this but fuck it
-// fuck typescript
-export class TypeSignatureTable
-{
-    [key: string]: MyType;
+export class MyAttribute {
+    constructor(
+        public name:string,
+        public myType:MyType
+    ) {   }
 }
 
 export class TypeSignature
 {
     //if null it means it is an 'anonymous' type
     name:(string | null);
-    table:TypeSignatureTable;
+
+    attributes:MyAttribute[];
 
     public constructor(name:(string | null)) {
         this.name = name;
-        this.table = new TypeSignatureTable();
+        this.attributes = [];
+    }
+
+    //BAD: this is not consistent with how we just freaking throw a MyError 
+    //     whenever something bad happens
+    //Agrega de manera ordenada un nuevo atributo con el nombre attributeName y el tipo
+    //attributeType al arreglo: 'attributes'
+    //returns false if it could be added because there is already another
+    //attribute with the same name
+    public tryAddAttribute(attributeName:string, attributeType:MyType):boolean{
+        //REALLY BAD PERF. because the array is sorted we could determine if it
+        //contains an attribute with the same name with a binary search or
+        //something and we could also add the elemente as soon as we know its
+        //not reapeated
+        for (const attribute of this.attributes) {
+            if(attribute.name == attributeName){
+                return false;
+            }
+        }
+
+        this.attributes.push(new MyAttribute(attributeName, attributeType));
+
+        //you should really be ashamed of yourself
+        this.attributes.sort(function (a:MyAttribute, b:MyAttribute):number{
+            if(a.name > b.name){
+                return 1;
+            }
+            if(a.name < b.name){
+                return -1;
+            }
+            return 0;
+        });
+
+        return true;
+    }
+
+    public isAnon():boolean{
+        return this.name === null;
+    }
+
+    //retorna [-1, null] si existe un attributo con ese nombre en este typeSignature
+    //MEJORA: hacer un struct para [number, (MyType | null)]
+    public getAttributeOffsetAndType(name:string):[number, (MyType | null)]{
+        //MEJORA: como el arreglo esta ordenado podriamos hacer una mejor busqueda
+        for (let i = 0; i < this.attributes.length; i++) {
+            if(this.attributes[i].name == name){
+                return [i, this.attributes[i].myType];
+            }
+        }
+        return [-1, null];
     }
 }
 
@@ -128,6 +179,46 @@ export class MyType
         }
     }
 
+    public getTypeDescription():string{
+        switch (this.kind) {
+                
+            case MyTypeKind.NUMBER:
+            case MyTypeKind.STRING:
+            case MyTypeKind.BOOLEAN:
+            case MyTypeKind.NULL:
+            case MyTypeKind.MY_CONSOLE:
+            case MyTypeKind.VOID:
+                return this.kind.toString();
+            case MyTypeKind.ARRAY:
+            {
+                let subType = this.specification as MyType;
+                return `Array<${subType.getName()}>`
+            }break;
+            case MyTypeKind.ALPHA_ARRAY:
+            {
+                return `Array<a'>`
+            }break;
+
+            case MyTypeKind.CUSTOM:
+            {
+                let signature = this.specification as TypeSignature;
+                //MEJORA: reserve
+                let result = "{ ";
+                for (const attribute of signature.attributes) {
+                    result += `${attribute.name}:${attribute.myType.getName()}, `
+                }
+                result += "}"
+                return result;
+            }break;
+
+            case MyTypeKind.WAITING:
+                throw new Error("kind: WAITING NO TIENE METODO getDescription!!!");
+
+            default:
+                throw new Error(`MyType.getName no implementado para ${this.kind}`);
+        }
+    }
+
     public getDefaultVal():Number{
         switch (this.kind) {
             case MyTypeKind.NUMBER:
@@ -168,30 +259,30 @@ export class MyType
         return new MyType(MyTypeKind.ARRAY, subType);
     }
 
+    //TODO: make an assertion that doesnt let us use leftType null and alphaArray and
+    //      see if any part of the compiler fails that assertion
+
     //[ !!! ] compareTypes(A, B) != compareTypes(B, A)
     //Intended use: para declaraciones y asignaciones de variables: 
     //left: varType, right: exprType
+    //DOESNT NOT WORK FOR EVERY TYPE COMPARISSON IN EVERY CIRCUNSTANCE OF THE COMPILATION PROCESS
+    //MEJORA?: IT MIGHT BE A GOOD IDEA TO PUT ALL THE DIFFERENT KINDS OF TYPE COMPARISSONS INTO THIS FILE someday
     public static compareTypes(leftType:MyType, rightType:MyType):boolean{
         switch (leftType.kind) {
             case MyTypeKind.NUMBER:
-            {
-                return rightType.kind === MyTypeKind.NUMBER;
-            }break;
-
             case MyTypeKind.BOOLEAN:
-            {
-                return rightType.kind === MyTypeKind.BOOLEAN;
-            }break;
-
             case MyTypeKind.VOID:
-            {
-                return rightType.kind === MyTypeKind.VOID;
-            }break;
-
+            case MyTypeKind.MY_CONSOLE:
+            //POTENCIAL BUG when leftType is null type (or my_console type):
+            //I dont know if this type comparisson is possible in the lang.
+            //and if it is I dont know it this is how it should behave
+            case MyTypeKind.NULL:
+                return leftType.kind === rightType.kind;
             case MyTypeKind.STRING:
             {
                 return (rightType.kind === MyTypeKind.STRING || rightType.kind === MyTypeKind.NULL);
             }break;
+
 
             case MyTypeKind.ARRAY:
             {
@@ -204,6 +295,9 @@ export class MyType
                 return false;
             }break;
 
+            //POTENCIAL BUG:
+            //I dont know if this type comparisson is possible in the lang.
+            //and if it is I dont know it this is how it should behave
             case MyTypeKind.ALPHA_ARRAY:
             {
                 if(rightType.kind === MyTypeKind.ALPHA_ARRAY || rightType.kind === MyTypeKind.ARRAY){
@@ -212,16 +306,45 @@ export class MyType
                 return false;
             }break;
 
-            
             case MyTypeKind.CUSTOM:
             {
-                throw new Error(`compareTypes no implementado para leftType: ${leftType}`)
+                if(rightType.kind === MyTypeKind.NULL){
+                    return true;
+                }
+                let leftSignature = leftType.specification as TypeSignature;
+                //because the CustomTypes are not tied to a scope, they are global, we can 
+                //just use the names as comparison
+                //IMPORTANT DEFINITION: two types that have the exact same signature are NOT
+                //the same unless one of them is Anon
+                if(rightType.kind === MyTypeKind.CUSTOM){
+                    let rightSignature = rightType.specification as TypeSignature;
+                    //if neither is anon we only need to compare their names
+                    if(!leftSignature.isAnon() && !rightSignature.isAnon()){
+                        return leftSignature.name == rightSignature.name;
+                    }
+                    else{
+                        let leftAttributes = leftSignature.attributes;
+                        let rightAttributes = rightSignature.attributes;
+                        if(leftAttributes.length != rightAttributes.length){
+                            return false;
+                        }
+
+                        for (let i = 0; i < leftAttributes.length; i++) {
+                            if(leftAttributes[i].name != rightAttributes[i].name){
+                                return false;
+                            }   
+                            if(!this.compareTypes(leftAttributes[i].myType, rightAttributes[i].myType)){
+                                return false;
+                            }
+                        }
+                        return true;
+                    }
+                }
+                else{
+                    return false;
+                }
             }break;
 
-            case MyTypeKind.MY_CONSOLE:
-            {
-                throw new Error(`compareTypes no implementado para leftType: ${leftType}`)
-            }break;
 
         
             default:

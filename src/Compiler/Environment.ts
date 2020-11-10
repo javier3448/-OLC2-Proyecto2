@@ -32,13 +32,18 @@ export enum ScopeKind{
     FUNCTION_SCOPE,
     IF,
     WHILE,
+    DO_WHILE,
     FOR,
+    FOR_OF,
+    FOR_IN,
+    SWITCH,
     //el for hace dos scopes diferentes para que cosas como:
     //let i:number = 20;
     //for(let i:number = 0; i < 10; i++){
     //    let i:number = 10;
     //}
     //sean posibles
+    //works for 'forof' and 'forin' as well
     AUX_FOR,
     GLOBAL,
     BLOCK, //a plain old {}
@@ -140,12 +145,28 @@ export class Scope{
         return new Scope(0, ScopeKind.WHILE, new JumperSet(continueJumper, breakJumper, null), null, null, previous);
     }
 
+    public static makeDoWhile(previous:Scope, continueJumper:Label, breakJumper:Label){
+        return new Scope(0, ScopeKind.DO_WHILE, new JumperSet(continueJumper, breakJumper, null), null, null, previous);
+    }
+
     public static makeAuxFor(previous:Scope){
         return new Scope(0, ScopeKind.AUX_FOR, new JumperSet(null, null, null), null, null, previous);
     }
 
     public static makeFor(previous:Scope, continueJumper:Label, breakJumper:Label){
         return new Scope(0, ScopeKind.FOR, new JumperSet(continueJumper, breakJumper, null), null, null, previous);
+    }
+
+    public static makeForOf(previous:Scope, continueJumper:Label, breakJumper:Label){
+        return new Scope(0, ScopeKind.FOR_OF, new JumperSet(continueJumper, breakJumper, null), null, null, previous);
+    }
+
+    public static makeForIn(previous:Scope, continueJumper:Label, breakJumper:Label){
+        return new Scope(0, ScopeKind.FOR_IN, new JumperSet(continueJumper, breakJumper, null), null, null, previous);
+    }
+
+    public static makeSwitch(previous:Scope, breakJumper:Label){
+        return new Scope(0, ScopeKind.SWITCH, new JumperSet(null, breakJumper, null), null, null, previous);
     }
 
     public static makeFunction(previous:Scope, funcName:string, nestingDepth:number, returnType:MyType, returnLabel:Label){
@@ -178,8 +199,14 @@ export class Scope{
                 return "If"
             case ScopeKind.WHILE:
                 return "While"
+            case ScopeKind.DO_WHILE:
+                return "DoWhile"
             case ScopeKind.FOR:
                 return "For"
+            case ScopeKind.FOR_OF:
+                return "ForOf"
+            case ScopeKind.FOR_IN:
+                return "ForIn"
             case ScopeKind.GLOBAL:
                 return "Global"
         
@@ -187,6 +214,7 @@ export class Scope{
                 throw new Error(`Scope.getName() no implementado para: ${this.kind} todavia!`);
         }
     }
+
 }
 
 //MEJORA: better names for ResultingVariable and ResultingVariableKind
@@ -225,6 +253,7 @@ export module Env{
 
     // clears the Environment and adds the default functions and variables
     export function initEnvironment():void{
+        typeSignatures = new SymbolTableTypeSignatures();
         funcNameCount = 1;
         global = Scope.makeGlobal();
 
@@ -484,7 +513,12 @@ export module Env{
     //      funcion a cuando pusheamos cualquier otro scope
 
     export function pushWhileScope(continueJumper:Label, breakJumper:Label){
-        current = Scope.makeWhile(current, continueJumper, breakJumper);
+        current = Scope.makeDoWhile(current, continueJumper, breakJumper);
+        current.size = current.previous.size;
+    }
+
+    export function pushDoWhileScope(continueJumper:Label, breakJumper:Label){
+        current = Scope.makeDoWhile(current, continueJumper, breakJumper);
         current.size = current.previous.size;
     }
 
@@ -511,6 +545,21 @@ export module Env{
 
     export function pushForScope(continueJumper:Label, breakJumper:Label){
         current = Scope.makeFor(current, continueJumper, breakJumper);
+        current.size = current.previous.size;
+    }
+
+    export function pushForOfScope(continueJumper:Label, breakJumper:Label){
+        current = Scope.makeForOf(current, continueJumper, breakJumper);
+        current.size = current.previous.size;
+    }
+
+    export function pushForInScope(continueJumper:Label, breakJumper:Label){
+        current = Scope.makeForIn(current, continueJumper, breakJumper);
+        current.size = current.previous.size;
+    }
+
+    export function pushSwitchScope(breakJumper:Label){
+        current = Scope.makeSwitch(current, breakJumper);
         current.size = current.previous.size;
     }
 

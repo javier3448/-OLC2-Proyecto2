@@ -12,7 +12,6 @@ export enum MyTypeNodeKind {
     BOXY_ARRAY = 'ARRAY', //example: SomeType[]...
     
     NULL = 'NULL', 
-    UNDEFINED = 'UNDEFINED', 
 }
 
 export class CustomTypeNode {
@@ -43,7 +42,6 @@ export class MyTypeNode{
             case MyTypeNodeKind.STRING:
             case MyTypeNodeKind.BOOLEAN:
             case MyTypeNodeKind.NULL:
-            case MyTypeNodeKind.UNDEFINED:
                 if(spec !== null){
                     throw new Error(`constructor de MyTypeNodeKInd espera spec: 'null' para kind: ${kind}`);
                 }

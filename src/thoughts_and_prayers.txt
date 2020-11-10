@@ -62,3 +62,5 @@ no necesario--->let retVar = Env.getReturnOffset();
 Having a a better unitialized (we currently have 0) value would have helped a ton!
 
 
+IDEA ABOUT CASE INSENSITIVE:
+Talvez si convertimos todo identifier a toLower no vamos a tener mayor problema con eso

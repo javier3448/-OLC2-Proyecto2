@@ -3,7 +3,7 @@ import { Expression, ExpressionKind, LiteralExpression,
           IdentifierExpression, BinaryExpression, UnaryExpression, 
           TernaryExpression, MemberAccessExpression, FunctionCallExpression, 
           ObjectLiteralExpression, PropertyNode, ArrayLiteralExpression, StringLiteral, NewArrayExpression } from "./Ast/Expression";
-import { Statement, WhileStatement, Block, StatementKind, IfStatement, ForStatement, ForInStatement, ForOfStatement, SwitchStatement, DoWhileStatement  } from "./Ast/Statement";
+import { Statement, WhileStatement, Block, StatementKind, IfStatement, ForStatement, ForInStatement, ForOfStatement, SwitchStatement, DoWhileStatement, SwitchDefault, SwitchCase  } from "./Ast/Statement";
 import { AstNode } from "./Ast/AstNode";
 
 import { Declaration, UnprocessedDeclData } from './Ast/Declaration';
@@ -14,6 +14,8 @@ import { GlobalInstructions } from './Ast/GlobalInstructions';
 import { AttributeNode, TypeDef } from './Ast/TypeDef';
 import { FunctionDef, ParamNode } from './Ast/FunctionDef';
 import { FunctionDefTranslator } from './Ast/FunctionDefTranslator';
+
+//BUG: forof and forin dont show if they are 'const' or 'let' in the graph
 
 export function graphAst(root:GlobalInstructions):string{
     const g = digraph('G');
@@ -958,46 +960,29 @@ function graphSwitch(g:Digraph, switchStatement:SwitchStatement):INode{
     let expressionNode = graphExpression(g, switchStatement.expr);
     g.createEdge([result, expressionNode]);
 
-    let stmts = switchStatement.switchInstructions.statements;
-    let cases = switchStatement.switchInstructions.cases;
-    let defaults = switchStatement.switchInstructions.defaults;
-
-    let stmtIndex = 0;
-    let caseIndex = 0;
-    let defaultIndex = 0;
-    //NOTE: if a case and a default are written next to each other we can no longer
-    //guarantee they will be graphed in the order they were originally written.
-    //this doesn't affect the behaviour when running tho
-    //TODO: honestly this whole 'for' needs some serious testing
-    for(;stmtIndex < stmts.length || caseIndex < cases.length || defaultIndex < defaults.length;){//maybe we dont need the for condition to be so 'exhaustive'
-
-        if(caseIndex < cases.length && 
-            cases[caseIndex].nextStatement <= stmtIndex){
-
-
-            const caseNode = g.createNode(`case_node${AstNode.getNextAstNodeId()}`, {
-                [attribute.label]: "case",
+    for (const switchInstruction of switchStatement.switchInstructions) {
+        if(switchInstruction instanceof Statement){
+            let statementNode = graphStatement(g, switchInstruction);
+            g.createEdge([result, statementNode]);
+        }
+        else if(switchInstruction instanceof SwitchCase){
+            let caseExprNodeName = g.createNode(`switch_case${AstNode.getNextAstNodeId()}`, {
+                [attribute.label]: "case:",
                 [attribute.shape]: 'box',
             });
-            g.createEdge([result, caseNode]);
-            const caseExprNode = graphExpression(g, cases[caseIndex].expr);
-            g.createEdge([caseNode, caseExprNode]);
-            caseIndex++;
+            let caseExprNode = graphExpression(g, switchInstruction.expr);
+            g.createEdge([result, caseExprNodeName]);
+            g.createEdge([result, caseExprNode]);
         }
-        else if(defaultIndex < defaults.length && 
-            defaults[defaultIndex].nextStatement <= stmtIndex){
-
-            const defaultNode = g.createNode(`default_node${AstNode.getNextAstNodeId()}`, {
-                [attribute.label]: "default",
+        else if(switchInstruction instanceof SwitchDefault){
+            let defaultNode = g.createNode(`switch_default${AstNode.getNextAstNodeId()}`, {
+                [attribute.label]: "default:",
                 [attribute.shape]: 'box',
             });
             g.createEdge([result, defaultNode]);
-            defaultIndex++;
         }
-        else{
-            const defaultNode = graphStatement(g, stmts[stmtIndex]);
-            g.createEdge([result, defaultNode]);
-            stmtIndex++;
+        else{//Type switch assertion
+            throw new Error(`graphSwitch not implemented for ${switchInstruction}`);
         }
     }
 
