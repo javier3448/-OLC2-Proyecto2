@@ -7,8 +7,9 @@ export enum MyErrorKind{
     LEXICAL = 'Lexico',
     SINTACTIC = 'Sintactico',
     TYPE_ERROR= 'TypeError',
+    //TODO: error kind muy generico
     //Solo para mientras arreglamos el constructor de MyError:
-    UNDEF = 'UNDEF',
+    COMPILATION = 'Compilacion',
     DEFINITION = 'DEFINITION'// cuando algo como un tipo o una funcion no se pueden definir
 }
 
@@ -22,7 +23,7 @@ export class MyError{
 
     constructor(message:string) {
         this.message = message;
-        this.kind = MyErrorKind.UNDEF;
+        this.kind = MyErrorKind.COMPILATION;
         this.firstLine = null;
         this.firstColumn = null;
     }

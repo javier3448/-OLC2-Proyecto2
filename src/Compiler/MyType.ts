@@ -273,11 +273,19 @@ export class MyType
             case MyTypeKind.BOOLEAN:
             case MyTypeKind.VOID:
             case MyTypeKind.MY_CONSOLE:
-            //POTENCIAL BUG when leftType is null type (or my_console type):
-            //I dont know if this type comparisson is possible in the lang.
-            //and if it is I dont know it this is how it should behave
-            case MyTypeKind.NULL:
                 return leftType.kind === rightType.kind;
+            //TODO: ver en que lugares del compilador es posible que se de este caso
+            //      (ademas de == y !=) y ver hay posibles problemas
+            case MyTypeKind.NULL:
+            {
+                if(rightType.kind === MyTypeKind.ALPHA_ARRAY || rightType.kind === MyTypeKind.ARRAY || 
+                    rightType.kind === MyTypeKind.CUSTOM || rightType.kind === MyTypeKind.STRING || 
+                    rightType.kind === MyTypeKind.MY_CONSOLE){
+
+                    return true;
+                }
+                return false;
+            }
             case MyTypeKind.STRING:
             {
                 return (rightType.kind === MyTypeKind.STRING || rightType.kind === MyTypeKind.NULL);
@@ -300,7 +308,7 @@ export class MyType
             //and if it is I dont know it this is how it should behave
             case MyTypeKind.ALPHA_ARRAY:
             {
-                if(rightType.kind === MyTypeKind.ALPHA_ARRAY || rightType.kind === MyTypeKind.ARRAY){
+                if(rightType.kind === MyTypeKind.ALPHA_ARRAY || rightType.kind === MyTypeKind.ARRAY || rightType.kind === MyTypeKind.NULL){
                     return true;
                 }
                 return false;

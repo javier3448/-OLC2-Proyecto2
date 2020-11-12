@@ -1,4 +1,5 @@
-BIG BIG BIG BIG TODO: test nested function with variables and all that. (particulary the Env.getVariable)
+//BIG BIG BIG BIG TODO: test nested function with variables and all that. (particulary the Env.getVariable)
+//We pass all the tests we threw at it so for now we are ok
 
 MEJORA GENERAL: ver como hacer reserves de dynamic arrays en ts 
                 y aplicarlo donde sea posible
@@ -15,9 +16,6 @@ MEJORA GENERAL: Todo lo que es codigo generado automaticamente (funciones
 BIG TODO:
 MEJORA GENERAL: Que los errores de compilacion tengan mejor definidos los tipos
                 de errores que son posibles (ejemplo: error de tipos, const no inicializada, etc)
-
-    //TERRIBLE: perf. tiene que exister una manera 
-    //     de evitar hacer tantos nuevos arreglos (para casi todos los arreglos de c_ir)
 
 BIG TODO
 BIG MEJORA GENERAL:
@@ -45,8 +43,6 @@ TODO: un dibujo ascii que explique porque y como tienen que correr todas las dec
       del scope global antes de poder generar mas c_ir
 
 
-BIG TODO SOON: it is getting out of hand. add c_ir comments where they are needed pls
-
 the biggest perfs hits (just a guess): the way we concant c_ir 
                         the way we handle the owedTemps we make tons extra arrays
                         using a linked list for the StackOfScopes
@@ -54,18 +50,13 @@ the biggest perfs hits (just a guess): the way we concant c_ir
 
 TODO: limpear los comentarios y poner aqui los que se repiten mucho y son importantes
 
+BUG: Nuestro switch accepta cualquier tipo, no solo boolean y number
 
 MEJORA: Environment needs quite a bit of rework now that we know how the global and the nested functions 
         work.
 
 
 TODO: que sea case insensitive
-
-TODO: que siempre grafique la tabla de simbolos de ultimo
-
-TODO: cambiar AND a &&, OR a || y NOT a !
-
-TODO: fix the graphviz library thing
 
 TODO: recuperarse de errores sintacticos?
 
@@ -82,9 +73,6 @@ TODO: quitar constExpr o ver si siquiera lo usamos
 //        while(HERE) for(;HERE;) ... etc
 
 
-QUICK TODO: probar el == con arreglos y con types y con todo
-
-
 TODO: when we finally implement the case insensitive thing we have to go through
       every comparisson we did between strings and see if we need to make it a case 
       insensitive comparason
@@ -98,29 +86,41 @@ para no tener que hacer un if cada vez que agregamos a un owed temps hacer una f
 que solita chequee si es instance of String hace un nuevo owedTemps y lo agrega
 de lo contrario solo retornar el mismo owedTemps
 
-
-!!!!!!!!!!!!!!!!!!!
-BIG BIG BIG STUPID TODO:
-NO POEMOS HACER ASIGNACIONES 'MEM = MEM'
-CORREGIR TODO CODIGO GENERADO QUE HAGA ESO (Buscar Mem. ...)
-Y EL CODIGO NATIVO QUE HAGA ESO TAMBIEN!!!! (poner un monton de _nativeTemp y ya)
-
+HERE HERE HERE
 
 TODO: leer de nuevo todo el proyecto antes de entregar
-
-TODO: ver que tan grandes puede ser el stack y el heap y ver que tantos temps
-      podemos tener realmente
-
-
+CHECK IF WE *HAVE* TO RECOVER FROM SYNTAX ERRORS
 TODO: Parece que compila el c aunque tenga el error: conflicting types, cuando llamamos
       una func antes de definirla. pero igual hay que ponder en el header todas las declaraciones
       de funciones, podriamos hacer una lista de string global con los realnames o algo asi, no se :(
-
-
 TODO: QUE LOS MENSAJES DE ERROR SI TENGAN KIND
+TODO: hacer un regresion testing con TODOS los archivos de entrada que tengamos
+TODO TODO TODO: HOYYYYYY Hacer un buen deploy
+TODO: Quitar todo lo marcado con 'debug'
 
+!!!!!!!!!!!!!!!!!!!
+BIG BIG BIG TODO:
+NO POEMOS HACER ASIGNACIONES 'MEM = MEM'
+CORREGIR TODO CODIGO GENERADO QUE HAGA ESO (Buscar Mem. ...)
+Y EL CODIGO NATIVO QUE HAGA ESO TAMBIEN!!!! (poner un monton de _nativeTemp y ya)
+IDEA: para el clavo que tenemos que debemos usar temps aux para acceder al stack y al heap
+      poner que _3addrIns solo pueda Temps (String) no memoria (Mem)
+IDEA: para la limitacion de acceso a mem: solo hacer mucho muchos temps.
+      no ponerles nombre, cada vez que necesitemos uno hacer getNextTemp y ponerlo
+      en una var con nombre temp1
+[!]:
+solo asi podemos acceder a heap/stack
+Temp = Heap[Temp|imm]
+heap[Temp|imm] = Temp
 
-BIG TODO: correr todos los archivos de entrada del proyecto pasado y revisar con la hoja de calificacion a la mano
+END HERE HERE HERE
+
+//TODO: ver que tan grandes puede ser el stack y el heap y ver que tantos temps
+//      podemos tener realmente
+// hasta ahora no hemos tenido ningun problema con es
+
+//BIG TODO: correr todos los archivos de entrada del proyecto pasado y revisar con la hoja de calificacion a la mano
+//ya lo hicimos todos funcionan :D
 
 FIX THIS ERROR:
 No script tag of type "javascript/worker" was found and "useWorker" is true. Not using web worker.
@@ -128,9 +128,6 @@ I dont even know if it matter at all :(
 
 
 TODO: mas pruebas para los errores y talvez hasta mas failing tests
-
-TODO: ver si hay algo de las pruebas del proyecto pasado que valga la pena correr
-
 
 MEJORA: incosistencent names between properties and attributes
 
@@ -141,23 +138,11 @@ TODO: better error message when we get an type error between customs:
 MEJORA GENERAL: usar 'instance of' en vez de un enum emparejado con un 'specification'
 
 
-CHECK IF WE *HAVE* TO RECOVER FROM SYNTAX ERRORS
-
 MEJORA: there is a couple of places where we need to catch exceptions in a bunch of different branches
         see if we can make a bigger try catch, that covers them all, that way we only use 1 try catch
         example: declarationPrepass
 
 
-IDEA: para el clavo que tenemos que debemos usar temps aux para acceder al stack y al heap
-      poner que _3addrIns solo pueda Temps (String) no memoria (Mem)
-
-[!]:
-solo asi podemos acceder a heap/stack
-Temp = Heap[Temp|imm]
-heap[Temp|imm] = Temp
-
 BIG MEJORA: que el compileFor use la tecnica que usamos en el forOf para hacerle push
             y pop a los scope sin tener que pensar mucho en que tira MyError y que no
 
-
-TODO: Quitar todo lo marcado con 'debug'

@@ -290,7 +290,7 @@ export module Env{
                 return current.myVariables[id];
             }
             else{
-                throw new MyError(`No se agregar una variable con el nombre '${id}' porque existe un variable con el mismo nomber en el mismo scope`);
+                throw new MyError(`No se puede agregar una variable con el nombre '${id}' porque existe un variable con el mismo nomber en el mismo scope`);
             }
         }
 
@@ -309,7 +309,7 @@ export module Env{
         //MEJORA: hacer la consulta a la hashtable solo una vez.
         //        no lo hago asi porque no se si typescript devuelbe una copia o algo asi? :(
         if(current.myFunctions[name] !== undefined){
-            throw new MyError(`No se agregar una funcion con el nombre '${name}' porque existe una funcion con el mismo nomber en el mismo scope`);
+            throw new MyError(`No se puede agregar una funcion con el nombre '${name}' porque existe una funcion con el mismo nomber en el mismo scope`);
         }
 
         let c_ir_name = getFunc_c_ir_name(name);
@@ -336,7 +336,7 @@ export module Env{
         }
 
         if(current.myVariables[id] !== undefined){
-            throw new MyError(`No se agregar una variable con el nombre '${id}' porque existe un variable con el mismo nomber en el mismo scope`);
+            throw new MyError(`No se puede agregar una variable con el nombre '${id}' porque existe un variable con el mismo nomber en el mismo scope`);
         }
 
         let varOffset = current.size;

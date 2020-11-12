@@ -44,7 +44,7 @@ export function graficar_ts():void{
     //type signatures
     for (const key in Env.typeSignatures) {
         let typeSignature = Env.typeSignatures[key];
-        runtimeInterface.tsDataSet.push(new TsEntry(Env.global.getName(), key, "-", typeSignature.getTypeDescription()));
+        runtimeInterface.tsDataSet.push(new TsEntry("Tipo", key, "-", typeSignature.getTypeDescription()));
     }
 
     while(iter != null){
@@ -100,6 +100,7 @@ function construct_c_ir_header_and_funcs(funcs_c_ir:C_ir_instruction[]):string{
     //El primer numero entero que un IEEE754 no puede 
     //For double, 9,007,199,254,740,993 (2^53 + 1). entonces no tenemos que preocuparnos de: 'stack[(int) someDoube]'
     let header = `#include <stdio.h> 
+#include <math.h>
 //TODO: Ver que tamano de stack es mejor (deberia ser mucho mas pequenno que el heap)
 double heap[0xffffff];
 double stack[0xfffff];
@@ -689,7 +690,9 @@ export function compileExpression(expr:Expression, owedTemps:String[]):ExprResul
         return compileExpressionImp(expr, owedTemps);
     }catch(myError){
         if(myError instanceof MyError){
-            myError.setLocation(expr.astNode);
+            if(myError.isLocationNull()){
+                myError.setLocation(expr.astNode);
+            }
         }
         throw myError;
     }
@@ -948,15 +951,16 @@ export function compileExpression(expr:Expression, owedTemps:String[]):ExprResul
                 }break;
                 case ExpressionKind.NOT_EQUAL:
                 {
-                    //MEJORA:
+                    //MEJORA!:
                     //do a compileNotEqualOperation function do be consistent or 
                     //make 1 func that works for EQUAL_EQUAL and NOT_EQUAL
                     if(leftResult.myType.kind !== MyTypeKind.VOID  &&
                             rightResult.myType.kind !== MyTypeKind.VOID){
 
-                        if(leftResult.myType.kind === rightResult.myType.kind){
-                            //then it means they are both string
-                            if(leftResult.myType.kind === MyTypeKind.STRING){
+                        if(MyType.compareTypes(leftResult.myType, rightResult.myType)){
+                            
+                            //if either is string we have a special case because we have to call the nativefunc: stringNotEqualString
+                            if(leftResult.myType.kind === MyTypeKind.STRING || rightResult.myType.kind === MyTypeKind.STRING){
                                 let temp = getNextTemp();
                                 let c_ir = new Array<C_ir_instruction>();
 
@@ -972,10 +976,11 @@ export function compileExpression(expr:Expression, owedTemps:String[]):ExprResul
                                 return new ExprResult(MyType.BOOLEAN, false, temp, c_ir);
                             }
                             else{
-                                //For every other case other than string:
-                                return generateComparisonExprResult(leftResult.c_ir, leftResult.val, RelOp.EQUAL_EQUAL, rightResult.c_ir, rightResult.val);
+                                //For every other case other than string, we simply compare the exprResult.val 
+                                return generateComparisonExprResult(leftResult.c_ir, leftResult.val, RelOp.NOT_EQUAL, rightResult.c_ir, rightResult.val);
                             }
                         }
+                        //else: goto @Tag: return with error BinaryExpr
                     }
                     //else: goto @Tag: return with error BinaryExpr
                 }break;
@@ -1007,10 +1012,13 @@ export function compileExpression(expr:Expression, owedTemps:String[]):ExprResul
                         let temp = getNextTemp();
                         let c_ir = new Array<C_ir_instruction>();
 
+                        let auxTemp1 = getNextTemp();
+
                         c_ir = c_ir.concat(
                             operandLval.c_ir,
                            [new Assignment(temp, Mem.access(operandLval.memKind, operandLval.addr)),
-                            new _3AddrAssignment(Mem.access(operandLval.memKind, operandLval.addr), temp, ArithOp.ADDITION, new Number(1))]
+                            new _3AddrAssignment(auxTemp1, temp, ArithOp.ADDITION, new Number(1)),
+                            new Assignment(Mem.access(operandLval.memKind, operandLval.addr), auxTemp1)]
                         );
 
                         return new ExprResult(operandType, false, temp, c_ir);
@@ -1023,12 +1031,14 @@ export function compileExpression(expr:Expression, owedTemps:String[]):ExprResul
                     operandType = operandLval.myType;
                     if(operandType.kind === MyTypeKind.NUMBER){
                         let temp = getNextTemp();
+                        let tempAux = getNextTemp()
                         let c_ir = new Array<C_ir_instruction>();
 
                         c_ir = c_ir.concat(
                             operandLval.c_ir,
                            [new Assignment(temp, Mem.access(operandLval.memKind, operandLval.addr)),
-                            new _3AddrAssignment(Mem.access(operandLval.memKind, operandLval.addr), temp, ArithOp.SUBSTRACTION, new Number(1))]
+                            new _3AddrAssignment(tempAux, temp, ArithOp.SUBSTRACTION, new Number(1)),
+                            new Assignment(Mem.access(operandLval.memKind, operandLval.addr), tempAux)]
                         );
 
                         return new ExprResult(operandType, false, temp, c_ir);
@@ -1433,12 +1443,14 @@ export function generateComparisonExprResult(left_c_ir:C_ir_instruction[], left_
 
 //BADish name: kinda inconsistent with the other 'generate' methods
 function generateEqualEqualOperation(leftResult:ExprResult, rightResult:ExprResult):ExprResult{
+    
     if(leftResult.myType.kind !== MyTypeKind.VOID  &&
         rightResult.myType.kind !== MyTypeKind.VOID){
 
-        if(leftResult.myType.kind === rightResult.myType.kind){
-            //then it means they are both string
-            if(leftResult.myType.kind === MyTypeKind.STRING){
+        if(MyType.compareTypes(leftResult.myType, rightResult.myType)){
+            
+            //if either is string we have a special case because we have to call the nativefunc: stringNotEqualString
+            if(leftResult.myType.kind === MyTypeKind.STRING || rightResult.myType.kind === MyTypeKind.STRING){
                 let temp = getNextTemp();
                 let c_ir = new Array<C_ir_instruction>();
 
@@ -1454,11 +1466,15 @@ function generateEqualEqualOperation(leftResult:ExprResult, rightResult:ExprResu
                 return new ExprResult(MyType.BOOLEAN, false, temp, c_ir);
             }
             else{
-                //For every other case other than string:
+                //For every other case other than string, we simply compare the exprResult.val 
                 return generateComparisonExprResult(leftResult.c_ir, leftResult.val, RelOp.EQUAL_EQUAL, rightResult.c_ir, rightResult.val);
             }
         }
+        //@Volatile: Throw BinaryExpr error
+        throw MyError.makeMyError(MyErrorKind.TYPE_ERROR, 
+                            `No se puede realizar la operacion: '${ExpressionKind.EQUAL_EQUAL}' con los tipos: '${leftResult.myType.getName()} y '${rightResult.myType.getName()}'`);
     }
+
     else{
         //@Volatile: Throw BinaryExpr error
         throw MyError.makeMyError(MyErrorKind.TYPE_ERROR, 
@@ -1547,10 +1563,12 @@ function compileLValue(expr:Expression, owedTemps:String[]):LValueResult{
 
             let tempDisplayIndex = getNextTemp();
             let tempVarIndex = getNextTemp();
+            let tempAux = getNextTemp();
             //value of variable is in: stack[stack[p + number] + varialbe.offset]
             let c_ir:C_ir_instruction[] = [
                 new _3AddrAssignment(tempDisplayIndex, REG_P, ArithOp.ADDITION, new Number(displayOffset)),
-                new _3AddrAssignment(tempVarIndex, Mem.stackAccess(tempDisplayIndex), ArithOp.ADDITION, new Number(variable.offset)),
+                new Assignment(tempAux, Mem.stackAccess(tempDisplayIndex)),
+                new _3AddrAssignment(tempVarIndex, tempAux, ArithOp.ADDITION, new Number(variable.offset)),
             ];
 
             return new LValueResult(variable.myType, variable.isConst, MemKind.STACK, tempVarIndex, c_ir);
@@ -1782,13 +1800,15 @@ export function compileFuncCall(funcCall:FunctionCallExpression, owedTemps:Strin
         //           por ahora vamos a dejar que genere temporales aunque no los use
         let callerDisplayIndex = getNextTemp();
         let calleeDisplayIndex = getNextTemp();
+        let auxTemp1 = getNextTemp();
         //chapuz porque no quiero generar temps a menos que se vaya a utililzar!:
         if(calleeSignature.nestingDepth <= callerDepth){
             for (let i = 0; i < calleeSignature.nestingDepth; i++) {
                 c_ir = c_ir.concat(
                    [new _3AddrAssignment(calleeDisplayIndex, nextStackFrameBegining, ArithOp.ADDITION, new Number(i)),
                     new _3AddrAssignment(callerDisplayIndex, REG_P, ArithOp.ADDITION, new Number(i)),
-                    new Assignment(Mem.stackAccess(calleeDisplayIndex), Mem.stackAccess(callerDisplayIndex))]
+                    new Assignment(auxTemp1, Mem.stackAccess(callerDisplayIndex)),
+                    new Assignment(Mem.stackAccess(calleeDisplayIndex), auxTemp1)]
                 );
             }
         }
@@ -1797,7 +1817,8 @@ export function compileFuncCall(funcCall:FunctionCallExpression, owedTemps:Strin
                 c_ir = c_ir.concat(
                    [new _3AddrAssignment(calleeDisplayIndex, nextStackFrameBegining, ArithOp.ADDITION, new Number(i)),
                     new _3AddrAssignment(callerDisplayIndex, REG_P, ArithOp.ADDITION, new Number(i)),
-                    new Assignment(Mem.stackAccess(calleeDisplayIndex), Mem.stackAccess(callerDisplayIndex))]
+                    new Assignment(auxTemp1, Mem.stackAccess(callerDisplayIndex)),
+                    new Assignment(Mem.stackAccess(calleeDisplayIndex), auxTemp1)]
                 );
             }
             c_ir = c_ir.concat(
@@ -1941,10 +1962,12 @@ export function compileIdentifierExpr(identExp:IdentifierExpression, owedTemps:S
         let tempDisplayIndex = getNextTemp();
         let tempVarIndex = getNextTemp();
         let tempResult = getNextTemp();
+        let tempAux = getNextTemp();
         //value of variable is in: stack[stack[p + number] + varialbe.offset]
         let c_ir:C_ir_instruction[] = [
             new _3AddrAssignment(tempDisplayIndex, REG_P, ArithOp.ADDITION, new Number(displayOffset)),
-            new _3AddrAssignment(tempVarIndex, Mem.stackAccess(tempDisplayIndex), ArithOp.ADDITION, new Number(variable.offset)),
+            new Assignment(tempAux, Mem.stackAccess(tempDisplayIndex)),
+            new _3AddrAssignment(tempVarIndex, tempAux, ArithOp.ADDITION, new Number(variable.offset)),
             new Assignment(tempResult, Mem.stackAccess(tempVarIndex))
         ];
 
@@ -2830,7 +2853,7 @@ export function compileForOfStatement(forOfStatement:ForOfStatement):C_ir_instru
             //comparamos subType con programmerType
             if(!MyType.compareTypes(programmerVarType, (iterableExprResult.myType.specification as MyType))){
                 //TODO: error message que indique algo de que estamos en forof y que es con el subtype que tienen que coincidir
-                throw new MyError(`Tipos no compatibles: '${programmerVarType.getName()}' y '${(iterableExprResult.myType.specification as MyType).getName}'`)
+                throw new MyError(`Tipos no compatibles: '${programmerVarType.getName()}' y '${(iterableExprResult.myType.specification as MyType).getName()}'`)
             }
         }
         else if(iterableExprResult.myType.kind !== MyTypeKind.ALPHA_ARRAY){

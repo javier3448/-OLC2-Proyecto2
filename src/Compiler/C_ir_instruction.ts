@@ -160,10 +160,10 @@ export class Label{
 //
 export class _3AddrAssignment{
     constructor(
-        //it can be a String:temp Mem:stack/heap_accesss 
-        public dest:(String | Mem),
-        //it can be a String:temp Mem:stack/heap_accesss or an immediate a "constexpr"
-        public left:(String | Mem | Number),
+        //it can be a String:temp 
+        public dest:(String),
+        //it can be a String:temp or an immediate a "constexpr"
+        public left:(String | Number),
 
         public arithOp:ArithOp,
 
@@ -172,7 +172,8 @@ export class _3AddrAssignment{
     ){}
 }
 
-//[temp|mem] = [mem|temp|imm]
+//[!!!!!] EL ENUNCIADO DICE QUE SOLO PUEDE VENIR 1 MEM
+//[temp|] = [temp|imm]
 export class Assignment{
     constructor(
         //it can be a String:temp Mem:stack/heap_accesss 
@@ -192,12 +193,12 @@ export class LabelDeclaration{
     constructor(public label:Label) {   }
 }
 
-// if [temp|mem|imm] relOperator [temp|mem|imm] goto lable
+// if [temp|imm] relOperator [temp|imm] goto lable
 export class Cond_goto{
     constructor(
-        public leftVal:(String | Mem | Number),
+        public leftVal:(String | Number),
         public relOperator:RelOp,
-        public rightVal:(String | Mem | Number),
+        public rightVal:(String | Number),
 
         public label:Label
     ) {   }
@@ -234,14 +235,14 @@ export class FuncClose{
 
 //TODO?: c_ir para printf?
 
-export type C_ir_instruction = (LabelDeclaration | Assignment | _3AddrAssignment | Goto | Cond_goto | FunctionCall | Debug_instruction | FuncOpening | FuncClose | Debug_instruction | Comment);
+export type C_ir_instruction = (LabelDeclaration | Assignment | _3AddrAssignment | Goto | Cond_goto | FunctionCall | Debug_instruction | FuncOpening | FuncClose | Comment);
 
 export function c_ir_instruction_toString(c_ir_ins:C_ir_instruction):string{
     if(c_ir_ins instanceof LabelDeclaration){
         return `${c_ir_ins.label.name}:\n`;
     }
     else if(c_ir_ins instanceof _3AddrAssignment){
-        //        [Temp|Mem] = [Temp|Mem|imm] OP [Temp|Mem|imm];
+        //        [Temp] = [Temp|imm] OP [Temp|imm];
         //Example:  T1 = stack[T2] + 10;
         if(c_ir_ins.arithOp !== ArithOp.MODULUS){
             return `${c_ir_ins.dest.toString()} = ${c_ir_ins.left.toString()} ${arithOpGetSymbol(c_ir_ins.arithOp)} ${c_ir_ins.right.toString()};\n`;
@@ -252,6 +253,7 @@ export function c_ir_instruction_toString(c_ir_ins:C_ir_instruction):string{
         }
     }
     else if(c_ir_ins instanceof Assignment){
+        //[!!!!!] EL ENUNCIADO DICE QUE SOLO PUEDE VENIR 1 MEM
         //        [Temp|Mem] = [Temp|Mem|imm]
         //Example:  T1 = stack[T2] 
         return `${c_ir_ins.dest.toString()} = ${c_ir_ins.source.toString()};\n`;
@@ -271,19 +273,16 @@ export function c_ir_instruction_toString(c_ir_ins:C_ir_instruction):string{
         return c_ir_ins.ins.toString();
     }
     else if(c_ir_ins instanceof FuncOpening){
-        //DEBUG: Basically cheating. For debuggin ONLY
         return `void ${c_ir_ins.funcName}(){\n`;
     }
     else if(c_ir_ins instanceof FuncClose){
-        //DEBUG: Basically cheating. For debuggin ONLY
         return `return;\n}\n`;
     }
     else if(c_ir_ins instanceof Debug_instruction){
-        //DEBUG: Basically cheating. For debuggin ONLY
         return c_ir_ins.ins.toString();
     }
     else if(c_ir_ins instanceof Comment){
-        //DEBUG: Basically cheating. For debuggin ONLY
+        //DEBUG: For debuggin ONLY
         return("//" + c_ir_ins.comment.toString() + "\n").toString();
     }
     else{
@@ -306,7 +305,6 @@ export function c_ir_value_toString(val:(String | Mem | Number)):string{
     }
 }
 
-//DEBUG: Basically cheating. For debuggin ONLY
 export function c_ir_instructions_toString(c_ir_instructions:C_ir_instruction[]):string{
     //MEJORA: hacer un reserve o al menos usar un string buffer
     let result = "";
