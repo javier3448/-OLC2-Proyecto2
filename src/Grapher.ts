@@ -3,7 +3,7 @@ import { Expression, ExpressionKind, LiteralExpression,
           IdentifierExpression, BinaryExpression, UnaryExpression, 
           TernaryExpression, MemberAccessExpression, FunctionCallExpression, 
           ObjectLiteralExpression, PropertyNode, ArrayLiteralExpression, StringLiteral, NewArrayExpression } from "./Ast/Expression";
-import { Statement, WhileStatement, Block, StatementKind, IfStatement, ForStatement, ForInStatement, ForOfStatement, SwitchStatement, DoWhileStatement, SwitchDefault, SwitchCase  } from "./Ast/Statement";
+import { Statement, WhileStatement, AstBlock, StatementKind, IfStatement, ForStatement, ForInStatement, ForOfStatement, SwitchStatement, DoWhileStatement, SwitchDefault, SwitchCase  } from "./Ast/Statement";
 import { AstNode } from "./Ast/AstNode";
 
 import { Declaration, UnprocessedDeclData } from './Ast/Declaration';
@@ -724,7 +724,7 @@ export function graphStatement(g:Digraph, statement:Statement):INode{
             break;
 
         case StatementKind.BlockKind:
-            result = graphBlock(g, statement.child as Block);
+            result = graphBlock(g, statement.child as AstBlock);
             break;
 
         //Jumpers
@@ -762,7 +762,7 @@ export function graphStatement(g:Digraph, statement:Statement):INode{
     return result;
 }
 
-function graphBlock(g:Digraph, block:Block):INode{
+function graphBlock(g:Digraph, block:AstBlock):INode{
 
     const result = g.createNode(`block${AstNode.getNextAstNodeId()}`, {
         [attribute.label]: "Block",

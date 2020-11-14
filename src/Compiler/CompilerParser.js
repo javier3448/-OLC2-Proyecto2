@@ -346,7 +346,7 @@ case 68: case 70:
 break;
 case 71:
 
-        this.$ = new Block($$[$0-1]);
+        this.$ = new AstBlock($$[$0-1]);
     
 break;
 case 72:
@@ -756,7 +756,7 @@ parse: function parse(input) {
     PropertyNode, ObjectLiteralExpression, ArrayLiteralExpression,
     NewArrayExpression } = require('../Ast/Expression');
     const { MemberAccess, AccessKind, FunctionAccess, IndexAccess, AttributeAccess } = require('../Ast/MemberAccess');
-    const { Statement, StatementKind, Block, 
+    const { Statement, StatementKind, AstBlock, 
             WhileStatement, DoWhileStatement, IfStatement, 
             ForStatement, ForOfStatement, ForInStatement, 
             SwitchStatement, SwitchCase, SwitchDefault, 

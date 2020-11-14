@@ -25,7 +25,8 @@ export enum StatementKind{
     ReturnWithValueKind = 'ReturnWithValueKind',
 }
 
-export class Block {
+//chapuz: cambio de nombre para que no tenga conflicto con Block en el optimizer
+export class AstBlock {
     constructor(public statements:Array<Statement>){   }
 }
 
@@ -100,9 +101,9 @@ export class Statement {
     //In Rust this would be an enum Statement, with: if, ifelse, block, assignment ... and other variants
     //child expression para ReturnWithValueKind
     //child null para todos los otros jumpers 
-    public child:(Expression | Declaration | Block | WhileStatement | DoWhileStatement | ForStatement | ForOfStatement | ForInStatement | SwitchStatement | null );
+    public child:(Expression | Declaration | AstBlock | WhileStatement | DoWhileStatement | ForStatement | ForOfStatement | ForInStatement | SwitchStatement | null );
 
-    constructor(statementKind:StatementKind, child:(Expression | Declaration | Block | WhileStatement | DoWhileStatement | ForStatement | ForOfStatement | ForInStatement | SwitchStatement | null ),
+    constructor(statementKind:StatementKind, child:(Expression | Declaration | AstBlock | WhileStatement | DoWhileStatement | ForStatement | ForOfStatement | ForInStatement | SwitchStatement | null ),
                 firstLine:number, firstColumn:number, lastLine:number, lastColumn:number){
 
         this.astNode = new AstNode(firstLine, firstColumn, lastLine, lastColumn);
@@ -120,7 +121,7 @@ export class Statement {
                 }
                 break;
             case StatementKind.BlockKind:
-                if(!(child instanceof Block)){
+                if(!(child instanceof AstBlock)){
                     throw new Error(`constructor de statement no valido para ${statementKind} y ${child}`);
                 }
                 break;

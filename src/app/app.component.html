@@ -330,7 +330,6 @@
 <tbody>
   <tr>
     <td colspan="6">
-        <!-- DEBUGGING ONLY: for the this [(ngModel)] -->
         <ngx-codemirror #textBoxSource [(ngModel)]="sourceString"
             [options]="{
                 lineNumbers: true,
@@ -343,8 +342,7 @@
   </tr>
   <tr>
     <td colspan="3">
-        <!-- DEBUGGING ONLY: for the this [(ngModel)] -->
-        <ngx-codemirror #textBoxSource [(ngModel)]="runtimeInterface.intermediateRepresentation"
+        <ngx-codemirror #textBoxSource [(ngModel)]="c_ir_string"
             [options]="{
                 lineNumbers: true,
                 theme: 'material',
@@ -354,7 +352,7 @@
         ></ngx-codemirror>
     </td>
     <td colspan="3">
-        <ngx-codemirror #textBoxJs [(ngModel)]="runtimeInterface.optimizedIntermediateRepresentation"
+        <ngx-codemirror #textBoxJs [(ngModel)]="optimized_c_ir_string"
             [options]="{
                 lineNumbers: true,
                 theme: 'material',
@@ -368,7 +366,7 @@
     <td colspan="6">
         <mat-tab-group>
           <mat-tab label="AST Ejecucion dot">
-            <ngx-codemirror #textBoxJs [(ngModel)]="runtimeInterface.dotSourceAst"
+            <ngx-codemirror #textBoxJs [(ngModel)]="dotSourceAst"
                 [options]="{
                     lineNumbers: true,
                     theme: 'material',
@@ -389,9 +387,9 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr *ngFor="let entry of runtimeInterface.errorDataSet;">
+                    <tr *ngFor="let entry of outputInterface.errorDataSet;">
                         <td align="center">{{entry.kind}}</td>
-                        <td align="left">{{entry.message}}</td>
+                        <td align="left" style="white-space: pre;">{{entry.message}}</td>
                         <td align="center">{{entry.firstLine}}</td>
                         <td align="center">{{entry.firstColumn}}</td>
                     </tr>
@@ -409,11 +407,33 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr *ngFor="let entry of runtimeInterface.tsDataSet;">
+                    <tr *ngFor="let entry of outputInterface.tsDataSet;">
                         <td align="center">{{entry.scope}}</td>
                         <td align="center">{{entry.name}}</td>
                         <td align="center">{{entry.myType}}</td>
                         <td align="center">{{entry.value}}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </mat-tab>
+          <mat-tab label="Optimizaciones">
+            <table class="table">
+                <thead>
+                    <tr align="center">
+                        <th scope="col" style="width: 10%;">Regla</th>
+                        <th scope="col" style="width: 10%;">Tipo</th>
+                        <th scope="col" style="width: 35%;">Codigo removido</th>
+                        <th scope="col" style="width: 35%;">Codigo agregado</th>
+                        <th scope="col" style="width: 10%;">Linea</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr *ngFor="let entry of optimizations;">
+                        <td align="center" style="width: 10%;">{{entry.regla}}</td>
+                        <td align="center" style="width: 10%;">{{entry.tipo}}</td>
+                        <td align="left" style="width: 35; white-space: pre;">{{entry.removedCode}}</td>
+                        <td align="left" style="width: 35%; white-space: pre;">{{entry.addedCode}}</td>
+                        <td align="center" style="width: 10%;">{{entry.line}}</td>
                     </tr>
                 </tbody>
             </table>

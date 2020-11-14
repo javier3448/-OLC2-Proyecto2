@@ -64,3 +64,26 @@ Having a a better unitialized (we currently have 0) value would have helped a to
 
 IDEA ABOUT CASE INSENSITIVE:
 Talvez si convertimos todo identifier a toLower no vamos a tener mayor problema con eso
+
+
+REFLEXION:
+MEJORA: para el siguiente proyecto deberiamos de ponerle el sufijo Ast a todos los struct
+        nodos del Ast
+
+
+        FUCK YOU TYPESCRIPT!!! 
+        WHY THE FUCK DO YOU LET ME SET A 'Number' to a 'number' and then when I try to use
+        fucking 'instance of' in number I get fucking false fuck you fuck you
+
+
+
+!!!!!!!!!!!!!!!!!!!!!!
+🤔
+TALVEZ SEA MEJOR HACERLE BACKED UP TEMPS DESDE EL C_IR PORQUE ES POSIBLE QUE FASES DE OPTIMIZACION ELMINEN TEMPORALES
+O QUE SE YO, TALVEZ HASTA LOS AGREGAN :/ no se
+TAMBIEN CAMBIARIA DEPENDIENDO DE LOS BRANCHING
+COMO JODIDOS HACE ESO UN COMPILADOR DE VERDAD. SI QUIERA ES UN PROBLEMA??? (TODO: ver el libro?)
+
+
+FUNCTION OPENING AND FUNCTION CLOSING SHOULDNT BE C_IR AT ALL. 
+each func should have its own list of c_irs and we would optimize those

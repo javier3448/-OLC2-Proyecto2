@@ -1,13 +1,16 @@
 import { Component, OnInit } from '@angular/core';
-import { MyError } from 'src/Compiler/MyError';
+import { MyError, MyErrorKind } from 'src/Compiler/MyError';
 
 import { graphAst } from "../Grapher";
 import { parser as parser } from "../Compiler/CompilerParser.js";
 
 import { compile as compile } from "../Compiler/Compiler"
+import { optimize as optimize } from "../Optimizer/Optimizer"
 import { GlobalInstructions } from 'src/Ast/GlobalInstructions';
 import { graphviz } from 'd3-graphviz';
 import { wasmFolder } from '@hpcc-js/wasm';
+import { C_ir_instruction, c_ir_instructions_toString } from 'src/Compiler/C_ir_instruction';
+
 
 //Representacion de una entrada a un scope del Environment
 export class TsEntry{
@@ -20,19 +23,23 @@ export class TsEntry{
 
 }
 
+export class OptimizationEntry{
+  constructor(
+    //BAD: should be an enum
+    public regla:string,
+    public tipo:string,
+    public removedCode:(String | null),
+    public addedCode:(String | null),
+    public line:string,
+  ){   }
+}
+
 //Si ts fuera un lenguaje de verdad esta clase no seria necesaria
 //solo mandariamos un puntero al string donde esta la consola al runner :(
-export class RuntimeInterface {
-  intermediateRepresentation:string = "";
-  optimizedIntermediateRepresentation:string = "";
-  dotSourceAst:string = "";
-  
-  //The tsDataSetHeaders are static in the simbol table
-  //Si tiene menos columnas de las esperadas ()
+//MEJORA: better name, it just has the 'datasets' to print errors and symbol table
+export class OutputInterface {
   tsDataSet:TsEntry[] = [];
   errorDataSet:MyError[] = [];
-
-  //TODO: Tabla de errores
 }
 
 @Component({
@@ -45,11 +52,28 @@ export class AppComponent implements OnInit{
 
   //No podemos hacer que la rutime interface sea estatica porque los ngmodules
   //no funcionan 
-  runtimeInterface: RuntimeInterface = new RuntimeInterface();
+  outputInterface: OutputInterface = new OutputInterface();
+  optimizations:OptimizationEntry[] = [];
+
+  dotSourceAst:string = "";
+
+  c_ir_string:string = "";
+  //The following 3 vars are used to build a string representation of the c_ir so the programmer
+  //can actually see it
+  c_ir_header:string = "";
+  //All the instructions that are there because of the programmer's high level code
+  c_ir_global_instructions:C_ir_instruction[] = [];
+
+
+  optimized_c_ir_string:string = "";
+  //The header and the footer are the same for bot the optimized and un optimized version
+  optimized_c_ir_global_instructions:C_ir_instruction[] = [];
 
   sourceString:string;
 
   ngOnInit(): void {
+
+    wasmFolder('https:cdn.jsdelivr.net/npm/@hpcc-js/wasm@0.3.13/dist');
 
     {
     let testString = `
@@ -114,9 +138,8 @@ let b:number = 20;
 //stack[1] = 20;
     `;
     }
-    //PENDING
+
     {
-      //TODO: write it well, and we have to implement functions first!
       let testString = `
 a();
 func a(){
@@ -125,14 +148,15 @@ func a(){
 let b = 10;
     `;
     }
+
     {
       let testString = `
 let a:number = 20;
 let a:number = 10;//should be an error and this statement should deleted in the first pass!
       `;
     }
+
     {
-      //TODO: write it well, and we have to implement typedef first!
       let testString = `
   let a:aNonExistantCustomType = 1;//should be an error and this statement should be deleted in the first pass!
       `;
@@ -523,7 +547,30 @@ console.log(2 ** 24);
     `;
     }
 
+    {
     let testString = `
+//TODO: quitar
+//optimization demo:
+let a:number = 10;
+//reglas 6,7,8 y 9 no se pueden forzar
+//pero aveces pasan solitas
+a + 0;//regla 10
+a - 0;//regla 11
+a * 1;//regla 12
+a / 1;//regal 13
+a * 2;//regal 14
+a * 0;//regal 15
+a / 0;//regal 16
+while(true){
+    console.log("este codigo no se elimina");
+    break;
+    console.log(2 ** 4 - 9 * (8 - 6 * (3 ** 2 - 6 * 5 - 7 * (9 + 7 ** 3) + 10) - 5 ) + 8 * (36 / 6 - 5 * ( 2 * 3)));
+    console.log("este codigo si se elimina");
+}
+let b:boolean = true;
+if(b){
+    console.log("this should printed");
+}
 function tail(strs:string[]):string[]{
     let result:string[] = new Array(strs.length - 1);
     for(let i:number = 1; i < strs.length; i++){
@@ -779,6 +826,7 @@ print_list_of_lists(replaceInListOfLists("Bicho", ":O", [["Pasta", "Ganar", "Bic
 //   ]
 // ]
   `;
+    }
 
     {
     let testString = `
@@ -1151,7 +1199,6 @@ console.log(factorial(10));//3628800
 `;
   }
 
-  {
           let testString = `
 function tail(strs:string[]):string[]{
     let result:string[] = new Array(strs.length - 1);
@@ -1412,7 +1459,6 @@ print_list_of_lists(replaceInListOfLists("Bicho", ":O", [["Pasta", "Ganar", "Bic
 //   ]
 // ]
     `;
-  }
 
     //BUG: El c_ir generado tira error pero igual pareciera compilar y funcionar bien. :/
     //     es por el orden en que definimos y llamamos a lol1
@@ -1428,34 +1474,17 @@ lol();
 `;
     }
 
-    //TODO revisar que el cambio de orden no afecte el tipo
     {
         let testString = `
 type A = {
     nombre:string,
     apellido:string,
 }
-
 let a:A = { apellido:"Alvarez", nombre:"Javier" };//This should work perfectly fine
-
 console.log(a.nombre + " " + a.apellido);
         `;
     }
 
-    {
-    let testString = `
-type A = {
-    a:string,
-    b:number,
-    c:B
-} 
-type B = {
-    a:boolean
-}
-    `;
-    }
-
-    //TODO:
     {
     let testString = `
 type A = {
@@ -1528,9 +1557,6 @@ a = null;
 //10 ? "FAIL" : "FAIL";//condicion de ternary no es tipo boolean
 //true ? "FAIL" : 10;//tipos diferentes en expression ternaria
 //let b:string = true ? 10 : 20;//string no compatible con number
-//TODO: test with array, mytype, alpha_array, null, string etc... 
-//TODO: how can we test all that dominat type jazz thingy
-//TODO: probar con ternary type = void
 let flag:boolean = true;
 console.log(flag ? "PASS" : "FAIL");//PASS
 flag = false;
@@ -1563,7 +1589,7 @@ do{
 }while(aux());
         `;
     }
-    
+
     {
     let testString = `
 let a:number = 20;
@@ -1589,23 +1615,9 @@ switch(a){
     `;
     }
 
-    //TODO:
-    //test correctness of like the 'triple scope' weirdness that happens with for cycles
-    {
-        let testString = `
-let iterator = 10;
-for (const iterator in {a:"javier", b:"antonio"}) {
-    let iterator = 20;
-    console.log(iterator);
-}//should print 20 2 times
-        `;
-    }
-
     //test de examen final:
         {
         let testString = `
-//BUGgy: T1 y T2 estan como al revez
-//BUGgy: T55 esta raro (en los otros casos primero hacemos el + 1)
 function function1(a:number, b:number, c:number):number{
 	let arr:number[][][] = new Array(a);
     for(let i:number = 0; i < arr.length; i++){
@@ -2567,8 +2579,8 @@ function num_array_pop(array_obj:Array_Obj):number{
     Pila vacia
 */
     `;
-
         }
+
         //Archivos de Entrada/Errores/Errores.ts
         //PASS
         {
@@ -2936,60 +2948,117 @@ function num_array_pop(array_obj:Array_Obj):number{
     }
 
     this.sourceString = testString;
-    wasmFolder('https:cdn.jsdelivr.net/npm/@hpcc-js/wasm@0.3.13/dist');
 
     //Parse:
-    let rootRunner = parser.parse(this.sourceString) as GlobalInstructions;
+    let rootRunner:GlobalInstructions;
+    try {
+        rootRunner = parser.parse(this.sourceString) as GlobalInstructions;
+    } catch (error) {
+        this.outputInterface.errorDataSet.push(MyError.makeMyError(MyErrorKind.SINTACTIC, error.message));
+        console.log(error);
+        return;
+    }
 
     //Reportamos los errores sintacticos y lexicos
-    this.runtimeInterface.errorDataSet = rootRunner.syntaxErrors;
+    this.outputInterface.errorDataSet = rootRunner.syntaxErrors;
 
     //graph:
-    this.runtimeInterface.dotSourceAst = graphAst(rootRunner);
-    graphviz('#ast').renderDot(this.runtimeInterface.dotSourceAst);
+    this.dotSourceAst = graphAst(rootRunner);
+    graphviz('#ast').renderDot(this.dotSourceAst);
 
     //compilamos
-    compile(rootRunner, this.runtimeInterface);
+    let compResult = compile(rootRunner, this.outputInterface);
+
+    this.c_ir_header = compResult.header;
+    this.c_ir_global_instructions = compResult.funcs_c_ir;
+    this.c_ir_string = this.c_ir_header + c_ir_instructions_toString(this.c_ir_global_instructions);
 
     //optimize:
-    //... 
+    this.optimized_c_ir_global_instructions = optimize(compResult.funcs_c_ir, this.optimizations);
+
+    this.optimized_c_ir_string = this.c_ir_header + c_ir_instructions_toString(this.optimized_c_ir_global_instructions);
   }
 
   //TODO: cambiar nombre porque hay conflicto entre compilar y compile
   compilar(textBoxSource){
     //Parse:
-    let rootRunner = parser.parse(this.sourceString) as GlobalInstructions;
+    let rootRunner:GlobalInstructions;
+    try {
+        rootRunner = parser.parse(this.sourceString) as GlobalInstructions;
+    } catch (error) {
+        this.outputInterface.errorDataSet.push(MyError.makeMyError(MyErrorKind.SINTACTIC, error.message));
+        console.log(error);
+        return;
+    }
 
     //Reportamos los errores sintacticos y lexicos
-    this.runtimeInterface.errorDataSet = rootRunner.syntaxErrors;
+    this.outputInterface.errorDataSet = rootRunner.syntaxErrors;
 
     //graph:
-    this.runtimeInterface.dotSourceAst = graphAst(rootRunner);
-    graphviz('#ast').renderDot(this.runtimeInterface.dotSourceAst);
+    this.dotSourceAst = graphAst(rootRunner);
+    graphviz('#ast').renderDot(this.dotSourceAst);
 
     //compilamos
-    compile(rootRunner, this.runtimeInterface);
+    let compResult = compile(rootRunner, this.outputInterface);
+
+    this.c_ir_header = compResult.header;
+    this.c_ir_global_instructions = compResult.funcs_c_ir;
+    this.c_ir_string = this.c_ir_header + c_ir_instructions_toString(this.c_ir_global_instructions);
+
+    //[!!!]
+    //tenemos que vaciar las instrucciones optimizadas de antes tambien!
+    this.optimized_c_ir_global_instructions = [];
+    this.optimized_c_ir_string = "";
   }
 
   optimizar(textBoxSource){
-    throw new Error("not implemented yet!");
+    //[!] asumimos que el arreglo de c_ir instructions no esta vacio entonces tampoco esta 
+    //vacio c_ir_footer y c_ir_header
+    if(this.optimized_c_ir_global_instructions.length !== 0){
+        //optimize:
+        this.optimized_c_ir_global_instructions = optimize(this.optimized_c_ir_global_instructions, this.optimizations);
+
+        this.optimized_c_ir_string = this.c_ir_header + c_ir_instructions_toString(this.optimized_c_ir_global_instructions);
+    }
+    else if(this.c_ir_global_instructions.length !== 0){
+        //optimize:
+        this.optimized_c_ir_global_instructions = optimize(this.c_ir_global_instructions, this.optimizations);
+
+        this.optimized_c_ir_string = this.c_ir_header + c_ir_instructions_toString(this.optimized_c_ir_global_instructions);
+    }
+    else{
+        alert("Tiene que compilar primero");
+    }
   }
 
   test(textBoxSource){
     //Parse:
-    let rootRunner = parser.parse(this.sourceString) as GlobalInstructions;
+    let rootRunner:GlobalInstructions;
+    try {
+        rootRunner = parser.parse(this.sourceString) as GlobalInstructions;
+    } catch (error) {
+        this.outputInterface.errorDataSet.push(MyError.makeMyError(MyErrorKind.SINTACTIC, error.message));
+        console.log(error);
+        return;
+    }
 
     //Reportamos los errores sintacticos y lexicos
-    this.runtimeInterface.errorDataSet = rootRunner.syntaxErrors;
+    this.outputInterface.errorDataSet = rootRunner.syntaxErrors;
 
     //graph:
-    this.runtimeInterface.dotSourceAst = graphAst(rootRunner);
-    graphviz('#ast').renderDot(this.runtimeInterface.dotSourceAst);
+    this.dotSourceAst = graphAst(rootRunner);
+    graphviz('#ast').renderDot(this.dotSourceAst);
 
     //compilamos
-    compile(rootRunner, this.runtimeInterface);
+    let compResult = compile(rootRunner, this.outputInterface);
+
+    this.c_ir_header = compResult.header;
+    this.c_ir_global_instructions = compResult.funcs_c_ir;
+    this.c_ir_string = this.c_ir_header + c_ir_instructions_toString(this.c_ir_global_instructions);
 
     //optimize:
-    //...
+    this.optimized_c_ir_global_instructions = optimize(this.c_ir_global_instructions, this.optimizations);
+
+    this.optimized_c_ir_string = this.c_ir_header + c_ir_instructions_toString(this.optimized_c_ir_global_instructions);
   }
 }

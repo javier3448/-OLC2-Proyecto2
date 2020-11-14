@@ -3,7 +3,6 @@
 //el new hace bulto y quiero poder escribir mas de un constructor y typescript
 //no me deja
 
-//TODO HACER ESTE MERGE DE NAMESPACES PARA TODOS TUS ENUMS
 //asi el valor del enum como tal no tiene que tener su representacion en 
 //string y podemos llamar anEnum.toString comodamente
 export enum ArithOp{
@@ -233,8 +232,6 @@ export class FuncClose{
 
 }
 
-//TODO?: c_ir para printf?
-
 export type C_ir_instruction = (LabelDeclaration | Assignment | _3AddrAssignment | Goto | Cond_goto | FunctionCall | Debug_instruction | FuncOpening | FuncClose | Comment);
 
 export function c_ir_instruction_toString(c_ir_ins:C_ir_instruction):string{
@@ -265,7 +262,6 @@ export function c_ir_instruction_toString(c_ir_ins:C_ir_instruction):string{
         return `if (${c_ir_ins.leftVal.toString()} ${relOpGetSymbol(c_ir_ins.relOperator)} ${c_ir_ins.rightVal.toString()}) goto ${c_ir_ins.label.name};\n`
     }
     else if(c_ir_ins instanceof FunctionCall){
-        //POSSIBLE BUG: if we name a function with a C keyword this gets all messed up
         return `${c_ir_ins.funcName}();\n`;
     }
     else if(c_ir_ins instanceof Debug_instruction){

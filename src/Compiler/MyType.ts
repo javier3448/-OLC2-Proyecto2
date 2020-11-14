@@ -237,7 +237,6 @@ export class MyType
         }
     }
 
-    //TODO: un typeSignature de String con las funciones nativas
     //MEJORA?: estos nombres se confunden el MyTypeKind
     public static STRING = new MyType(MyTypeKind.STRING, null);
     public static NUMBER = new MyType(MyTypeKind.NUMBER, null);
@@ -258,9 +257,6 @@ export class MyType
     public static makeArrayType(subType:MyType):MyType{
         return new MyType(MyTypeKind.ARRAY, subType);
     }
-
-    //TODO: make an assertion that doesnt let us use leftType null and alphaArray and
-    //      see if any part of the compiler fails that assertion
 
     //[ !!! ] compareTypes(A, B) != compareTypes(B, A)
     //Intended use: para declaraciones y asignaciones de variables: 

@@ -1,4 +1,3 @@
-//TODO: AGREGAR RECUPERACION DE ERRORES SINTACTICOS
 %{
     const { Expression, ExpressionKind, 
     UnaryExpression, BinaryExpression, TernaryExpression, LiteralExpression, StringLiteral,
@@ -6,7 +5,7 @@
     PropertyNode, ObjectLiteralExpression, ArrayLiteralExpression,
     NewArrayExpression } = require('../Ast/Expression');
     const { MemberAccess, AccessKind, FunctionAccess, IndexAccess, AttributeAccess } = require('../Ast/MemberAccess');
-    const { Statement, StatementKind, Block, 
+    const { Statement, StatementKind, AstBlock, 
             WhileStatement, DoWhileStatement, IfStatement, 
             ForStatement, ForOfStatement, ForInStatement, 
             SwitchStatement, SwitchCase, SwitchDefault, 
@@ -102,7 +101,6 @@
 
 [0-9]+(\.[0-9]+)?             return 'NUMBER'
 ([a-zA-Z_])[a-zA-Z0-9_ñÑ]*    return 'IDENTIFIER'
-//TODO: mejorar string, esta regex no acepta caracteres especiales como \n \t etc. pero si acepta saltos de linea y todo eso
 (\"[^"]*\")                   return 'STRING'
 (\'[^']*\')                   return 'STRING'
 
@@ -506,7 +504,7 @@ Expression_
 Block
     : '{' StatementList_ '}'
     {
-        $$ = new Block($2);
+        $$ = new AstBlock($2);
     }
 ;
 

@@ -1,6 +1,9 @@
 //MEJORA?: group all this in a bunch of smaller nested modules
 //         like Native_c_ir.Reg.param1 or something like that
 //solo para no tener el monton de string literals dentro de la funcion construct_c_ir_header
+
+import { Assignment, Mem } from './C_ir_instruction';
+
 //en Compiler.ts
 export module Native_c_ir{
 
@@ -415,20 +418,19 @@ export module Native_c_ir{
     }
 `;
 
-    export const stringLitsInitialization = `
-heap[0] = 5;//'size'
-heap[1] = 102;//'f'
-heap[2] = 97;//'a'
-heap[3] = 108;//'l'
-heap[4] = 115;//'s'
-heap[5] = 101;//'e'
-heap[6] = 4;//'size'
-heap[7] = 116;//'t'
-heap[8] = 114;//'r'
-heap[9] = 117;//'u'
-heap[10] = 101;//'e'
-`;
-    export const stringLitsSize = 11;
+    export const stringLitsInitialization = [
+        new Assignment(Mem.heapAccess(new Number(0)), new Number(5)),    //'size'
+        new Assignment(Mem.heapAccess(new Number(1)), new Number(102)),  //'f'
+        new Assignment(Mem.heapAccess(new Number(2)), new Number(97)),   //'a'
+        new Assignment(Mem.heapAccess(new Number(3)), new Number(108)),  //'l'
+        new Assignment(Mem.heapAccess(new Number(4)), new Number(115)),  //'s'
+        new Assignment(Mem.heapAccess(new Number(5)), new Number(101)),  //'e'
+        new Assignment(Mem.heapAccess(new Number(6)), new Number(4)),    //'size'
+        new Assignment(Mem.heapAccess(new Number(7)), new Number(116)),  //'t'
+        new Assignment(Mem.heapAccess(new Number(8)), new Number(114)),  //'r'
+        new Assignment(Mem.heapAccess(new Number(9)), new Number(117)),  //'u'
+        new Assignment(Mem.heapAccess(new Number(10)), new Number(101)), //'e'
+    ];
 
     //MEJORA: find a way to store the native function signatures better.
     //        we should be able to see what params it expects and all that

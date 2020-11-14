@@ -1,10 +1,10 @@
 //TODO (eventually): ordenar y tratar de separar en diferentes archivos
-import { RuntimeInterface, TsEntry } from "../app/app.component";
+import { OutputInterface, TsEntry } from "../app/app.component";
 import { Env, ReturnJumper, VarLocation } from "./Environment";
 import { Variable } from "./Variable";
 import { Global_c_ir } from "./Global_c_ir";
 import { Native_c_ir } from "./Native_c_ir";
-import { ForStatement, IfStatement, Block, Statement, StatementKind, WhileStatement, DoWhileStatement, SwitchStatement, ForOfStatement, ForInStatement, SwitchCase, SwitchDefault } from "../Ast/Statement";
+import { ForStatement, IfStatement, AstBlock, Statement, StatementKind, WhileStatement, DoWhileStatement, SwitchStatement, ForOfStatement, ForInStatement, SwitchCase, SwitchDefault } from "../Ast/Statement";
 import { MyType, MyTypeKind, TypeSignature } from "./MyType";
 import { MyError, MyErrorKind } from './MyError';
 import { StringLiteralByte } from './StringLiteralByte';
@@ -31,7 +31,7 @@ import { MyFunction } from './MyFunction';
 //GENERAL DOC:
 //TERMINOLOGY:Display means something very similar to what the dragon book describes in section 7.3.8
 
-let runtimeInterface:RuntimeInterface;
+let outputInterface:OutputInterface;
 
 export function graficar_ts():void{
     console.log(Env.current);
@@ -39,33 +39,31 @@ export function graficar_ts():void{
     let iter = Env.current;
 
     //agregamos una fila de asteriscos para idicar que estamos empezando otra tabla:
-    runtimeInterface.tsDataSet.push(new TsEntry("••••", "••••", "••••", "••••"));
+    outputInterface.tsDataSet.push(new TsEntry("••••", "••••", "••••", "••••"));
 
     //type signatures
     for (const key in Env.typeSignatures) {
         let typeSignature = Env.typeSignatures[key];
-        runtimeInterface.tsDataSet.push(new TsEntry("Tipo", key, "-", typeSignature.getTypeDescription()));
+        outputInterface.tsDataSet.push(new TsEntry("Tipo", key, "-", typeSignature.getTypeDescription()));
     }
 
     while(iter != null){
         //Function signatures
         for (const key in iter.myFunctions) {
             let funcSignature = iter.myFunctions[key];
-            runtimeInterface.tsDataSet.push(new TsEntry(iter.getName(), key, funcSignature.getTypeString(), "-"));
+            outputInterface.tsDataSet.push(new TsEntry(iter.getName(), key, funcSignature.getTypeString(), "-"));
         }
         //Variables:
         for (const key in iter.myVariables) {
             let variable = iter.myVariables[key];
-            runtimeInterface.tsDataSet.push(new TsEntry(iter.getName(), key, variable.myType.getName(), variable.offset.toString()));
+            outputInterface.tsDataSet.push(new TsEntry(iter.getName(), key, variable.myType.getName(), variable.offset.toString()));
         }
         iter = iter.previous;
     }
 }
 export function resetRuntimeInterface():void{
-    runtimeInterface.tsDataSet = [];
-    runtimeInterface.errorDataSet = [];
-    runtimeInterface.errorDataSet = [];
-    runtimeInterface.intermediateRepresentation = "";
+    outputInterface.tsDataSet = [];
+    outputInterface.errorDataSet = [];
 }
 
 //Contiene todos los string literals encontrados en el source code
@@ -96,7 +94,7 @@ export const REG_P:String = new String("p");
 //pointer the fist free position in the heap
 export const REG_H:String = new String("h");
 
-function construct_c_ir_header_and_funcs(funcs_c_ir:C_ir_instruction[]):string{
+function construct_c_ir_header():string{
     //El primer numero entero que un IEEE754 no puede 
     //For double, 9,007,199,254,740,993 (2^53 + 1). entonces no tenemos que preocuparnos de: 'stack[(int) someDoube]'
     let header = `#include <stdio.h> 
@@ -122,54 +120,23 @@ double h = 0;
 
     header += Native_c_ir.funcDefs;
 
-    header += c_ir_instructions_toString(funcs_c_ir);   
-
-    header += `\n\nint main(){\n`;
-
-    header += '//We allocate all the string literals:\n' +
-               '//Native string literals:' + 
-               Native_c_ir.stringLitsInitialization;
-
-    header += "//Non native string literals:\n";
-    for(let i = 0; i < stringLiteralsBuffer.length; i++){
-        let stringLitByte = stringLiteralsBuffer[i];
-        let charRepresentation = (stringLitByte.isSize ? 'size' : String.fromCharCode(stringLitByte.val));
-        //chapuz para que no imprima literalmente un salgo de line
-        if(charRepresentation == "\n"){
-            charRepresentation = "\\n";
-        }
-        else if(charRepresentation == "\r"){
-            charRepresentation = "\\r";
-        }
-        else if(charRepresentation == "\t"){
-            charRepresentation = "\\t";
-        }
-        header += `heap[${i + Native_c_ir.stringLitsSize}] = ${stringLitByte.val};//'${charRepresentation}'\n`
-    }
-    //we place the heap pointer in the first available position
-    header += `h = ${stringLiteralsBuffer.length + Native_c_ir.stringLitsSize};\n\n`
-
     return header;
 }
 
-function construct_c_ir_foot():string{
-    let foot = "";//cerramos el main
-
-    //DEBUG: para debuggear facilmente las expresiones imprimimos el valor
-    //       del ultimo temporal
-    //       Si es T0 nuesto c_ir no compila
-    //foot += "\n";
-    //foot += `printf("%f\\n", T${tempCount});\n`;
-
-    foot += "\nreturn 0;\n}";
-
-    return foot;
+export class CompilationResult {
+    /**
+     *
+     */
+    constructor(
+        public header:string,
+        public funcs_c_ir:C_ir_instruction[]
+    ) {   }
 }
 
-export function compile(root:GlobalInstructions, _runtimeInterface:RuntimeInterface):void{
+export function compile(root:GlobalInstructions, _outputInterface:OutputInterface):CompilationResult{
 
     //varciar todas las 'interfaces' necesarias de runtimeInterface
-    runtimeInterface = _runtimeInterface;
+    outputInterface = _outputInterface;
     resetRuntimeInterface();
 
     Env.initEnvironment();
@@ -183,17 +150,17 @@ export function compile(root:GlobalInstructions, _runtimeInterface:RuntimeInterf
 
     let global_c_ir = compileGlobalInstructions(root);
 
-    runtimeInterface.intermediateRepresentation = construct_c_ir_header_and_funcs(global_c_ir.funcs_c_ir);
-    runtimeInterface.intermediateRepresentation += c_ir_instructions_toString(global_c_ir.statements_c_ir);
-    runtimeInterface.intermediateRepresentation += construct_c_ir_foot();
-
     graficar_ts();
+
+    return new CompilationResult(
+        construct_c_ir_header(), 
+        global_c_ir,
+    );
 }
 
-export function compileGlobalInstructions(globalInstructions:GlobalInstructions):Global_c_ir{
+export function compileGlobalInstructions(globalInstructions:GlobalInstructions):C_ir_instruction[]{
 
-    let funcs_c_ir:C_ir_instruction[] = new Array();
-    let statements_c_ir:C_ir_instruction[] = new Array();
+    let c_ir:C_ir_instruction[] = new Array();
 
     compileTypeDefs(globalInstructions.typeDefs);
 
@@ -206,11 +173,51 @@ export function compileGlobalInstructions(globalInstructions:GlobalInstructions)
     //globales
     declarationsPrepass(globalInstructions.statements);
 
-    funcs_c_ir = compileFunction(globalInstructions.functionDefs, 0);
+    //ponemos todas las funciones definidas por el programador antes que el main
+    c_ir = compileFunctions(globalInstructions.functionDefs, 0);
+    
+    //tenemos que compilar todo antes que podamos generar el codigo para declarar los string literals
+    let statements_c_ir = compileStatements(globalInstructions.statements);
 
-    statements_c_ir = compileStatements(globalInstructions.statements);
+    //WE GENERATE THE c_ir THAT ALLOCATE THE STRING LITERALS
 
-    return new Global_c_ir(funcs_c_ir, statements_c_ir);
+    //We allocate all the string literals:
+    //Native string literals:
+    c_ir = c_ir.concat(
+       [new FuncOpening("main")],
+        Native_c_ir.stringLitsInitialization,
+    );
+
+    //Non native string literals:
+    for(let i = 0; i < stringLiteralsBuffer.length; i++){
+        let stringLitByte = stringLiteralsBuffer[i];
+        //TODO: find a way we can print the char being represented in a comment next to the assigment or something
+        //let charRepresentation = (stringLitByte.isSize ? 'size' : String.fromCharCode(stringLitByte.val));
+        c_ir.push(new Assignment(Mem.heapAccess(new Number(i + Native_c_ir.stringLitsInitialization.length)), new Number(stringLitByte.val)));
+    }
+    //we place the heap pointer in the first available position
+    c_ir.push(new Assignment(REG_H, new Number(stringLiteralsBuffer.length + Native_c_ir.stringLitsInitialization.length)));
+
+    c_ir = c_ir.concat(
+        //DEBUG: ES UN CHAPUZ HORRIBLE PARA PROBAR CIERTAS LAS OPTIMIZACIONES.
+        //PORQUE EL C_IR QUE GENERO NUNCA GENERA ESE CODIGO ESPECIFICAMENTE ENTONCES,
+        //NO SE APLICAN
+       [new _3AddrAssignment(Native_c_ir._param1, Native_c_ir._param1, ArithOp.ADDITION, new Number(0)),
+        new _3AddrAssignment(Native_c_ir._param1, Native_c_ir._param1, ArithOp.SUBSTRACTION, new Number(0)),
+        new _3AddrAssignment(Native_c_ir._param1, Native_c_ir._param1, ArithOp.MULTIPLICATION, new Number(1)),
+        new _3AddrAssignment(Native_c_ir._param1, Native_c_ir._param1, ArithOp.DIVISION, new Number(1)),
+        new _3AddrAssignment(Native_c_ir._param1, Native_c_ir._param2, ArithOp.ADDITION, new Number(0)),
+        new _3AddrAssignment(Native_c_ir._param1, Native_c_ir._param2, ArithOp.SUBSTRACTION, new Number(0)),
+        new _3AddrAssignment(Native_c_ir._param1, Native_c_ir._param2, ArithOp.MULTIPLICATION, new Number(1)),
+        new _3AddrAssignment(Native_c_ir._param1, Native_c_ir._param2, ArithOp.DIVISION, new Number(1))],
+       statements_c_ir,
+        //chapuz horrible para que la el FuncClose de main este siempre en un
+        //bloque label
+       [new LabelDeclaration(new Label(getNextLabel())),
+        new FuncClose()]
+    );
+
+    return c_ir;
 }
 
 export function compileTypeDefs(typeDefs:TypeDef[]):void{
@@ -220,7 +227,7 @@ export function compileTypeDefs(typeDefs:TypeDef[]):void{
         } catch (error) {
             if(error instanceof MyError){
                 console.log(error);
-                runtimeInterface.errorDataSet.push(error);
+                outputInterface.errorDataSet.push(error);
             }
             else{
                 throw error;
@@ -241,7 +248,7 @@ export function compileTypeDefs(typeDefs:TypeDef[]):void{
             let myError = new MyError(`No se encontro definicion para el tipo: '${key}'. Se definira con {} para continuar la compilacion`);
             //This error doesnt have a location
             console.log(myError);
-            runtimeInterface.errorDataSet.push(myError);
+            outputInterface.errorDataSet.push(myError);
             myType.kind = MyTypeKind.CUSTOM;
             myType.specification = new TypeSignature(key);
         }
@@ -277,7 +284,7 @@ export function declarationsPrepass(statements:Statement[]):void{
             let myError = MyError.makeMyError(MyErrorKind.TYPE_ERROR, "Variables const deben ser inicializadas");
             myError.setLocation(stmt.astNode);
             console.log(myError);
-            runtimeInterface.errorDataSet.push(myError);
+            outputInterface.errorDataSet.push(myError);
             continue;
         }
 
@@ -291,7 +298,7 @@ export function declarationsPrepass(statements:Statement[]):void{
                 //reportamos el error
                 myError.setLocation(stmt.astNode);
                 console.log(myError);
-                runtimeInterface.errorDataSet.push(myError);
+                outputInterface.errorDataSet.push(myError);
                 continue;
             }
             throw myError;
@@ -306,7 +313,7 @@ export function declarationsPrepass(statements:Statement[]):void{
                 //reportamos el error
                 myError.setLocation(stmt.astNode);
                 console.log(myError);
-                runtimeInterface.errorDataSet.push(myError);
+                outputInterface.errorDataSet.push(myError);
                 continue;
             }
             throw myError;
@@ -347,7 +354,7 @@ export class SaneFunc{
     ) {   }
 }
 
-export function compileFunction(functions:FunctionDef[], nestingDepth:number):C_ir_instruction[]{
+export function compileFunctions(functions:FunctionDef[], nestingDepth:number):C_ir_instruction[]{
     let saneFuncs = new Array<SaneFunc>();
     for (const functionDecl of functions) {
         //no tira exception porque el solito reporta cualquier error que ocurra
@@ -368,7 +375,7 @@ export function compileFunction(functions:FunctionDef[], nestingDepth:number):C_
         } catch (error) {
             if(error instanceof MyError){
                 console.log(error);
-                runtimeInterface.errorDataSet.push(error);
+                outputInterface.errorDataSet.push(error);
             }
             else{
                 throw error;
@@ -394,13 +401,13 @@ export function compileFunctionDecl(functionDefNode:FunctionDef, nestingDepth:nu
                 throw originalError;
             }
             console.log(originalError);
-            runtimeInterface.errorDataSet.push(originalError);
+            outputInterface.errorDataSet.push(originalError);
             let myError = MyError.makeMyError(
                 MyErrorKind.DEFINITION, 
                 `No se puede definir la funcion:${name} porque el parametro: ${paramNode.name} no tiene un tipo valido`
             );
             console.log(myError);
-            runtimeInterface.errorDataSet.push(myError);
+            outputInterface.errorDataSet.push(myError);
             return null;
         }
 
@@ -414,7 +421,7 @@ export function compileFunctionDecl(functionDefNode:FunctionDef, nestingDepth:nu
                     `No se puede definir la funcion:${name} porque tiene dos o mas parametros con el nombre: ${paramNode.name}`
                 );
                 console.log(myError);
-                runtimeInterface.errorDataSet.push(myError);
+                outputInterface.errorDataSet.push(myError);
                 return null;
             }
         }
@@ -429,14 +436,14 @@ export function compileFunctionDecl(functionDefNode:FunctionDef, nestingDepth:nu
             throw originalError;
         }
         console.log(originalError);
-        runtimeInterface.errorDataSet.push(originalError);
+        outputInterface.errorDataSet.push(originalError);
         let myError = MyError.makeMyError(
             MyErrorKind.DEFINITION, 
             `No se puede definir la funcion:${name} tipo de retorno no valido`,
         );
         myError.setLocation(functionDefNode.astNode);
         console.log(myError);
-        runtimeInterface.errorDataSet.push(myError);
+        outputInterface.errorDataSet.push(myError);
         return null;
     }
 
@@ -451,7 +458,7 @@ export function compileFunctionDecl(functionDefNode:FunctionDef, nestingDepth:nu
         //error ya trae mensaje, por eso solo necesitamos hacer el setLocation
         error.setLocation(functionDefNode.astNode);
         console.log(error);
-        runtimeInterface.errorDataSet.push(error);
+        outputInterface.errorDataSet.push(error);
         return null;
     }
 
@@ -494,7 +501,7 @@ export function compileFunctionDef(saneFunc:SaneFunc, nestingDepth:number):C_ir_
     //prepass de declaracion. 
     declarationsPrepass(saneFunc.statements);
     //luego compilamos sus otras funciones 
-    let nestedFuncs_c_ir = compileFunction(saneFunc.funcDefs, nestingDepth + 1);
+    let nestedFuncs_c_ir = compileFunctions(saneFunc.funcDefs, nestingDepth + 1);
     //Luego compilamos sus statements
     let statements_c_ir = compileStatements(saneFunc.statements);
 
@@ -506,6 +513,9 @@ export function compileFunctionDef(saneFunc:SaneFunc, nestingDepth:number):C_ir_
         nestedFuncs_c_ir,
        [new FuncOpening(saneFunc.signature.realName)],
         statements_c_ir,
+        //if the instruction FuncClose is not in a 'LabelBlock' we completely fuck up the optimizer
+        //because the closing } of the function might get optimized out!!!!!
+        //aaahhhhh
        [new LabelDeclaration(returnLabel),
         new FuncClose()],
     )
@@ -580,7 +590,7 @@ export function compileStatement(statement:Statement):C_ir_instruction[]{
                 return compileIf(child as IfStatement);
 
             case StatementKind.BlockKind:
-                return compileBlock(child as Block);
+                return compileBlock(child as AstBlock);
 
             case StatementKind.SwitchKind:
                 return compileSwitchStatement(child as SwitchStatement);
@@ -670,7 +680,7 @@ export function compileStatement(statement:Statement):C_ir_instruction[]{
                 myError.setLocation(statement.astNode);
             }
             console.log(myError);
-            runtimeInterface.errorDataSet.push(myError);
+            outputInterface.errorDataSet.push(myError);
             return [];
         }else{
             throw myError;
@@ -1553,7 +1563,7 @@ function compileLValue(expr:Expression, owedTemps:String[]):LValueResult{
         else if(varLocation === VarLocation.CURRENT_STACK_FRAME){
             let tempResult = getNextTemp();
             let c_ir:C_ir_instruction[] = [
-                new _3AddrAssignment(tempResult, REG_P, ArithOp.ADDITION, variable.offset),
+                new _3AddrAssignment(tempResult, REG_P, ArithOp.ADDITION, new Number(variable.offset)),
             ];
 
             return new LValueResult(variable.myType, variable.isConst, MemKind.STACK, tempResult, c_ir);
@@ -1623,7 +1633,7 @@ function compileLValue(expr:Expression, owedTemps:String[]):LValueResult{
 
                         c_ir = c_ir.concat(
                             leftExprResult.c_ir,
-                           [new _3AddrAssignment(temp, leftExprResult.val, ArithOp.ADDITION, attributeOffset)]
+                           [new _3AddrAssignment(temp, leftExprResult.val, ArithOp.ADDITION, new Number(attributeOffset))]
                         );
 
                         return new LValueResult(attributeType, false, MemKind.HEAP, temp, c_ir);
@@ -1950,7 +1960,7 @@ export function compileIdentifierExpr(identExp:IdentifierExpression, owedTemps:S
         let temp = getNextTemp();
         let stackFrameAcessTemp = getNextTemp();//p+offset
         let c_ir:C_ir_instruction[] = [
-            new _3AddrAssignment(stackFrameAcessTemp, REG_P, ArithOp.ADDITION, variable.offset),
+            new _3AddrAssignment(stackFrameAcessTemp, REG_P, ArithOp.ADDITION, new Number(variable.offset)),
             new Assignment(temp, Mem.stackAccess(stackFrameAcessTemp))
         ];
 
@@ -1986,17 +1996,16 @@ export function compileLitExpression(lit:LiteralExpression, owedTemps:String[]):
         //BUG?:
         //[!] if this ExprResult doesnt get generated we will have had allocated
         //    string literals that wont be used!
-        let stringIndex:Number = new Number(stringLiteralsBuffer.length + Native_c_ir.stringLitsSize);
+        let stringIndex:Number = new Number(stringLiteralsBuffer.length + Native_c_ir.stringLitsInitialization.length);
         stringLiteralsBuffer = stringLiteralsBuffer.concat(lit.literal.numberArrayRespresentation);
-        //POSSIBLE BUG: I dont know if it really is constExpr. 
         return new ExprResult(MyType.STRING, true, stringIndex, []);
     }
     else if(lit.literal instanceof Number){
-        return new ExprResult(MyType.NUMBER, true, lit.literal.valueOf(), []);
+        return new ExprResult(MyType.NUMBER, true, new Number(lit.literal.valueOf()), []);
     }
     else if(lit.literal instanceof Boolean){
         let val = (lit.literal.valueOf() ? 1 : 0);
-        return new ExprResult(MyType.BOOLEAN, true, val, []);
+        return new ExprResult(MyType.BOOLEAN, true, new Number(val), []);
     }
     else if(lit.literal == null){
         return new ExprResult(MyType.NULL, true, new Number(-1), []);
@@ -2067,7 +2076,6 @@ export function compileObjectLitExpression(objLiteral:ObjectLiteralExpression, o
         }
     }
     else{
-        //@FIXME:
         //honestly I dont fucking know what to do in this case. 
         //what the fuck does '{}' mean???? should it be null??
         //should it be a pointer to a heap structure that has size
@@ -2141,7 +2149,6 @@ export function compileArrayLitExpr(arrayLit:ArrayLiteralExpression, owedTemps:S
            new _3AddrAssignment(hTempCopy, hTempCopy, ArithOp.ADDITION, new Number(1))]
         );
 
-        //BUG: Si alguna exprs es tipo ALPHA_ARRAY (particularment la primera) no se que putas pasa con todo el puto programa
         for (let i = 1; i < exprs.length; i++) {
             let exprResult = compileExpression(exprs[i], newOwedTemps);
             if(!MyType.compareTypes(subType, exprResult.myType)){
@@ -2162,7 +2169,7 @@ export function compileArrayLitExpr(arrayLit:ArrayLiteralExpression, owedTemps:S
 
     let tempResult = getNextTemp();
     c_ir = c_ir.concat(
-        [new _3AddrAssignment(tempResult, hTempCopy, ArithOp.SUBSTRACTION, (exprs.length + 1) )]
+        [new _3AddrAssignment(tempResult, hTempCopy, ArithOp.SUBSTRACTION, new Number(exprs.length + 1) )]
     )
     
     return new ExprResult(resultType, false, tempResult, c_ir);
@@ -2203,7 +2210,7 @@ export function compileDeclaration(declaration:Declaration):C_ir_instruction[]{
             //descartamos la declaracion
             if(myError instanceof MyError){
                 console.log(myError);
-                runtimeInterface.errorDataSet.push(myError);
+                outputInterface.errorDataSet.push(myError);
                 //creamos el error de esta declaracion
                 let declError = MyError.makeMyError(
                     MyErrorKind.TYPE_ERROR, 
@@ -2211,7 +2218,7 @@ export function compileDeclaration(declaration:Declaration):C_ir_instruction[]{
                 );
                 declError.setLocation(declaration.astNode);
                 console.log(declError);
-                runtimeInterface.errorDataSet.push(declError);
+                outputInterface.errorDataSet.push(declError);
 
                 //generamos el temp y el c_ir para un valor default del tipo de la variable
                 exprVal = getNextTemp();
@@ -2232,7 +2239,7 @@ export function compileDeclaration(declaration:Declaration):C_ir_instruction[]{
             );
             error.setLocation(declaration.astNode);
             console.log(error);
-            runtimeInterface.errorDataSet.push(error);
+            outputInterface.errorDataSet.push(error);
 
             //generamos el temp y el c_ir para un valor default del tipo de la variable
             exprVal = getNextTemp();
@@ -2278,7 +2285,7 @@ export function generateDeclaration_c_ir(exprVal:(String | Number), exprC_ir:C_i
 
     c_ir = c_ir.concat(
         exprC_ir,
-       [new _3AddrAssignment(varPointerTemp, REG_P, ArithOp.ADDITION, variable.offset),
+       [new _3AddrAssignment(varPointerTemp, REG_P, ArithOp.ADDITION, new Number(variable.offset)),
         new Assignment(Mem.stackAccess(varPointerTemp), exprVal)],
     );
 
@@ -2332,7 +2339,7 @@ export function compileMemberAccess(memberAccessExpr:MemberAccessExpression, owe
 
                     c_ir = c_ir.concat(
                         leftExprResult.c_ir,
-                       [new _3AddrAssignment(memberIndexTemp, leftExprResult.val, ArithOp.ADDITION, attributeOffset),
+                       [new _3AddrAssignment(memberIndexTemp, leftExprResult.val, ArithOp.ADDITION, new Number(attributeOffset)),
                         new Assignment(temp, Mem.heapAccess(memberIndexTemp))]
                     );
 
@@ -2624,7 +2631,6 @@ export function compileTypeNode_fromTypeDef(typeNode:MyTypeNode):MyType{
     }
     if(typeNode.kind === MyTypeNodeKind.GENERIC_ARRAY || typeNode.kind === MyTypeNodeKind.BOXY_ARRAY){
         let arrayTypeNode = typeNode.spec as ArrayTypeNode;
-        //It is very important that we dont call runNonPropertyMyTypeNode. Here. If we do we will get a pretty nasty bug
         return MyType.makeArrayType(compileTypeNode_fromTypeDef(arrayTypeNode.subType));
     }
 
@@ -2900,7 +2906,7 @@ export function compileForOfStatement(forOfStatement:ForOfStatement):C_ir_instru
             iterableExprResult.c_ir,
             //le damos valor a iterator
             //stack[p+iteratorOffset]=iterable.val
-           [new _3AddrAssignment(iteratorVarStackIndex, REG_P, ArithOp.ADDITION, iteratorVarOffset),
+           [new _3AddrAssignment(iteratorVarStackIndex, REG_P, ArithOp.ADDITION, new Number(iteratorVarOffset)),
             new Assignment(Mem.stackAccess(iteratorVarStackIndex), iterableExprResult.val),
 
 
@@ -2910,7 +2916,7 @@ export function compileForOfStatement(forOfStatement:ForOfStatement):C_ir_instru
             new Assignment(endVarAux2, Mem.heapAccess(endVarAux1)),
             new _3AddrAssignment(endVarAux1, endVarAux1, ArithOp.ADDITION, endVarAux2),
             new _3AddrAssignment(endVarAux1, endVarAux1, ArithOp.ADDITION, new Number(1)),
-            new _3AddrAssignment(endVarStackIndex, REG_P, ArithOp.ADDITION, endVarOffset),
+            new _3AddrAssignment(endVarStackIndex, REG_P, ArithOp.ADDITION, new Number(endVarOffset)),
             new Assignment(Mem.stackAccess(endVarStackIndex), endVarAux1),
 
             new LabelDeclaration(continueLabel),
@@ -2919,7 +2925,7 @@ export function compileForOfStatement(forOfStatement:ForOfStatement):C_ir_instru
             //stack[p+iteratorOffset] = stack[p+iteratorOffset] + 1
             //we need to recaculate the iteratorVarStackIndex of the variable because we might have destroyed
             //that temp by the time we jump back to 'begLabel'
-            new _3AddrAssignment(iteratorVarStackIndex, REG_P, ArithOp.ADDITION, iteratorVarOffset),
+            new _3AddrAssignment(iteratorVarStackIndex, REG_P, ArithOp.ADDITION, new Number(iteratorVarOffset)),
             new Assignment(iteratorVarAux1, Mem.stackAccess(iteratorVarStackIndex)),
             new _3AddrAssignment(iteratorVarAux1, iteratorVarAux1, ArithOp.ADDITION, new Number(1)),
             new Assignment(Mem.stackAccess(iteratorVarStackIndex), iteratorVarAux1),
@@ -2928,12 +2934,12 @@ export function compileForOfStatement(forOfStatement:ForOfStatement):C_ir_instru
             //if(iterVarAux1 == stack[p + endOffset]) goto breakLabel
             //                   ^--we need to recalculate end because we might have destroyed 
             //that temp by the time we jump back to 'begLabel'
-            new _3AddrAssignment(endVarStackIndex, REG_P, ArithOp.ADDITION, endVarOffset),
+            new _3AddrAssignment(endVarStackIndex, REG_P, ArithOp.ADDITION, new Number(endVarOffset)),
             new Assignment(endVarAux1, Mem.stackAccess(endVarStackIndex)),
             new Cond_goto(iteratorVarAux1, RelOp.EQUAL_EQUAL, endVarAux1, breakLabel),
         
             //stack[p+programmerVarOffset] = heap[iteratorVarAux1]
-            new _3AddrAssignment(programmerVarStackIndex, REG_P, ArithOp.ADDITION, programmerVar.offset),
+            new _3AddrAssignment(programmerVarStackIndex, REG_P, ArithOp.ADDITION, new Number(programmerVar.offset)),
             new Assignment(programmerVarAux1, Mem.heapAccess(iteratorVarAux1)),
             new Assignment(Mem.stackAccess(programmerVarStackIndex), programmerVarAux1),
         ]
@@ -3052,7 +3058,7 @@ export function compileForInStatement(forInStatement:ForInStatement):C_ir_instru
             enumerableExprResult.c_ir,
             //le damos valor a iterator
             //stack[p+iteratorOffset]=iterable.val
-           [new _3AddrAssignment(iteratorVarStackIndex, REG_P, ArithOp.ADDITION, iteratorVarOffset),
+           [new _3AddrAssignment(iteratorVarStackIndex, REG_P, ArithOp.ADDITION, new Number(iteratorVarOffset)),
             new Assignment(Mem.stackAccess(iteratorVarStackIndex), enumerableExprResult.val),
 
 
@@ -3062,11 +3068,11 @@ export function compileForInStatement(forInStatement:ForInStatement):C_ir_instru
             new Assignment(endVarAux2, Mem.heapAccess(endVarAux1)),
             new _3AddrAssignment(endVarAux1, endVarAux1, ArithOp.ADDITION, endVarAux2),
             new _3AddrAssignment(endVarAux1, endVarAux1, ArithOp.ADDITION, new Number(1)),
-            new _3AddrAssignment(endVarStackIndex, REG_P, ArithOp.ADDITION, endVarOffset),
+            new _3AddrAssignment(endVarStackIndex, REG_P, ArithOp.ADDITION, new Number(endVarOffset)),
             new Assignment(Mem.stackAccess(endVarStackIndex), endVarAux1),
 
             //setamos el valor inicial de programmerVar 
-            new _3AddrAssignment(programmerVarStackIndex, REG_P, ArithOp.ADDITION, programmerVar.offset),
+            new _3AddrAssignment(programmerVarStackIndex, REG_P, ArithOp.ADDITION, new Number(programmerVar.offset)),
             new Assignment(Mem.stackAccess(programmerVarStackIndex), new Number(-1)),
 
             new LabelDeclaration(continueLabel),
@@ -3075,7 +3081,7 @@ export function compileForInStatement(forInStatement:ForInStatement):C_ir_instru
             //stack[p+iteratorOffset] = stack[p+iteratorOffset] + 1
             //we need to recaculate the iteratorVarStackIndex of the variable because we might have destroyed
             //that temp by the time we jump back to 'begLabel'
-            new _3AddrAssignment(iteratorVarStackIndex, REG_P, ArithOp.ADDITION, iteratorVarOffset),
+            new _3AddrAssignment(iteratorVarStackIndex, REG_P, ArithOp.ADDITION, new Number(iteratorVarOffset)),
             new Assignment(iteratorVarAux1, Mem.stackAccess(iteratorVarStackIndex)),
             new _3AddrAssignment(iteratorVarAux1, iteratorVarAux1, ArithOp.ADDITION, new Number(1)),
             new Assignment(Mem.stackAccess(iteratorVarStackIndex), iteratorVarAux1),
@@ -3084,12 +3090,12 @@ export function compileForInStatement(forInStatement:ForInStatement):C_ir_instru
             //if(iterVarAux1 == stack[p + endOffset]) goto breakLabel
             //                   ^--we need to recalculate end because we might have destroyed 
             //that temp by the time we jump back to 'begLabel'
-            new _3AddrAssignment(endVarStackIndex, REG_P, ArithOp.ADDITION, endVarOffset),
+            new _3AddrAssignment(endVarStackIndex, REG_P, ArithOp.ADDITION, new Number(endVarOffset)),
             new Assignment(endVarAux1, Mem.stackAccess(endVarStackIndex)),
             new Cond_goto(iteratorVarAux1, RelOp.EQUAL_EQUAL, endVarAux1, breakLabel),
         
             //stack[p+programmerVarOffset] = heap[iteratorVarAux1]
-            new _3AddrAssignment(programmerVarStackIndex, REG_P, ArithOp.ADDITION, programmerVar.offset),
+            new _3AddrAssignment(programmerVarStackIndex, REG_P, ArithOp.ADDITION, new Number(programmerVar.offset)),
             new Assignment(programmerVarAux1, Mem.stackAccess(programmerVarStackIndex)),
             new _3AddrAssignment(programmerVarAux1, programmerVarAux1, ArithOp.ADDITION, new Number(1)),
             new Assignment(Mem.stackAccess(programmerVarStackIndex), programmerVarAux1),
@@ -3145,12 +3151,15 @@ export function compileIf(ifStatement:IfStatement):C_ir_instruction[]{
         else_c_ir = compileStatement(ifStatement.elseStatment);
     }
 
+    let trueLabel = new Label(getNextLabel());
     let elseLabel = new Label(getNextLabel());
     let endLabel = new Label(getNextLabel());
     let result_c_ir = new Array<C_ir_instruction>();
     result_c_ir = result_c_ir.concat(
         condResult.c_ir,
-       [new Cond_goto(condResult.val, RelOp.NOT_EQUAL, new Number(1), elseLabel)],
+       [new Cond_goto(condResult.val, RelOp.EQUAL_EQUAL, new Number(1), trueLabel),
+        new Goto(elseLabel)],
+       [new LabelDeclaration(trueLabel)],
         stmts_c_ir,
        [new Goto(endLabel),
         new LabelDeclaration(elseLabel)],
@@ -3161,7 +3170,7 @@ export function compileIf(ifStatement:IfStatement):C_ir_instruction[]{
     return result_c_ir;
 }
 
-export function compileBlock(block:Block):C_ir_instruction[]{
+export function compileBlock(block:AstBlock):C_ir_instruction[]{
     //We compile its statements in a different scope:
     Env.pushBlockScope();
     let stmts_c_ir = new Array<C_ir_instruction>();
